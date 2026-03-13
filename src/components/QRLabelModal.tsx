@@ -85,7 +85,7 @@ export default function QRLabelModal({ equipo: e, onClose }: Props) {
         </div>
 
         {/* Preview Area - Compacta */}
-        <div style={{ padding: '24px', background: '#f1f5f9', display: 'flex', flexDirecton: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ padding: '24px', background: '#f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ 
             background: '#fff', borderRadius: 20, border: `3px solid ${statusColor}`, 
             padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
