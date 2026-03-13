@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ─────────────────────────────────────────────
+//  INSTRUMENTOS Y EQUIPOS
+// ─────────────────────────────────────────────
+model InstrumentoEquipo {
+  ID_Equipo                 String    @id
+  Tipo                      String                    // EQUIPO | INSTRUMENTO
+  Codigo_Interno            String
+  Nombre_Equipo             String
+  Marca                     String?
+  Modelo                    String?
+  Serie                     String?
+  Rango_Medida              String?
+  Resolucion                String?
+  Tolerancia_Aceptable      Float
+  Unidad_Tolerancia         String?
+  Area_Asignada             String?
+  Responsable               String?
+  Periodicidad_Meses        Int
+  Fecha_Ultima_Verificacion DateTime?
+  Fecha_Proximo_Control     DateTime?
+  Foto_Equipo               String?
+  Estado                    String                    // OPERATIVO | NO_APTO | BAJA
+
+  historiales               HistorialVerificacion[]
+}
+
+// ─────────────────────────────────────────────
+//  PATRONES DE REFERENCIA
+// ─────────────────────────────────────────────
+model PatronReferencia {
+  ID_Patron                     String    @id
+  Codigo                        String
+  Nombre_Patron                 String
+  Fecha_Calibracion_Externa     DateTime?
+  Fecha_Vencimiento_Certificado DateTime?
+  N_Certificado                 String?
+  Proveedor_Laboratorio         String?
+  PDF_Certificado               String?
+  Estado_Vigencia               String                // VIGENTE | VENCIDO
+
+  historiales                   HistorialVerificacion[]
+}
+
+// ─────────────────────────────────────────────
+//  HISTORIAL DE VERIFICACIONES
+// ─────────────────────────────────────────────
+model HistorialVerificacion {
+  ID_Log                  String    @id @default(uuid())
+  FK_ID_Equipo            String
+  Fecha_Ejecucion         DateTime  @default(now())
+  FK_ID_Patron_Usado      String?
+  Medida_Instrumento      Float?
+  Medida_Patron           Float?
+  Variacion_Calculada     Float?
+  Resultado_Status        String                        // APTO | NO_APTO
+  Tecnico_Ejecutor        String
+  Firma_Digital           String?
+  Observaciones           String?
+  PDF_Certificado_interno String?
+
+  equipo   InstrumentoEquipo  @relation(fields: [FK_ID_Equipo], references: [ID_Equipo])
+  patron   PatronReferencia?  @relation(fields: [FK_ID_Patron_Usado], references: [ID_Patron])
+
+  @@index([FK_ID_Equipo])
+  @@index([Fecha_Ejecucion])
+}
+
+// ─────────────────────────────────────────────
+//  USUARIOS
+// ─────────────────────────────────────────────
+model Usuario {
+  Email         String  @id
+  Nombre        String
+  Rol           String  // Admin | Técnico | Lector
+  Firma_Imagen  String?
+}
