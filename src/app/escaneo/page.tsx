@@ -5,24 +5,27 @@ import { ScanLine, XCircle, Search, ShieldCheck, FileDigit, Activity, RefreshCw,
 import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes } from '@/lib/metrologia'
 import VerificationModal from '@/components/VerificationModal'
 
-interface Equipo {
-  ID_Equipo: string
-  Codigo_Interno: string
-  Nombre_Equipo: string
-  Tipo: string
-  Estado: string
-  Tolerancia_Aceptable: number
-  Unidad_Tolerancia: string | null
-  Responsable: string | null
-  Periodicidad_Meses: number
-  Fecha_Proximo_Control: string | null
-  Area_Asignada: string | null
+interface PrintableAsset {
+  id: string
+  codigo: string
+  nombre: string
+  tipo: string
+  subtipo?: string
+  estado: string
+  ubicacion?: string
+  responsable?: string
+  fechaUltima: string | null
+  fechaProxima: string | null
+  periodicidad?: number
+  tolerancia?: string
+  isPatron: boolean
+  original?: any
 }
 
 export default function EscaneoPage() {
-  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [equipos, setEquipos] = useState<PrintableAsset[]>([])
   const [codigoIngresado, setCodigoIngresado] = useState('')
-  const [encontrado, setEncontrado] = useState<Equipo | null>(null)
+  const [encontrado, setEncontrado] = useState<PrintableAsset | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -35,20 +38,57 @@ export default function EscaneoPage() {
   const [showTroubleshooter, setShowTroubleshooter] = useState(false)
 
   const scannerRef = useRef<Html5Qrcode | null>(null)
-  const equiposRef = useRef<Equipo[]>([])
+  const assetsRef = useRef<PrintableAsset[]>([])
   const isInitializing = useRef(false)
 
   useEffect(() => {
-    fetch('/api/equipos')
-      .then(r => r.json())
-      .then(data => {
-        setEquipos(data)
-        equiposRef.current = data
-        setIsLoading(false)
-      })
-      .catch(err => console.error("Error loading data", err))
+    const loadData = async () => {
+      try {
+        const [resEquipos, resPatrones] = await Promise.all([
+          fetch('/api/equipos').then(r => r.json()),
+          fetch('/api/patrones').then(r => r.json())
+        ])
 
-    // Listar cámaras
+        const normalized: PrintableAsset[] = [
+          ...resEquipos.map((e: any) => ({
+            id: e.ID_Equipo,
+            codigo: e.Codigo_Interno,
+            nombre: e.Nombre_Equipo,
+            tipo: 'EQUIPO/INSTRUMENTO',
+            subtipo: e.Tipo,
+            estado: e.Estado,
+            ubicacion: e.Area_Asignada,
+            responsable: e.Responsable,
+            fechaUltima: e.Fecha_Ultima_Verificacion,
+            fechaProxima: e.Fecha_Proximo_Control,
+            periodicidad: e.Periodicidad_Meses,
+            tolerancia: `±${e.Tolerancia_Aceptable} ${e.Unidad_Tolerancia || ''}`,
+            isPatron: false,
+            original: e
+          })),
+          ...resPatrones.map((p: any) => ({
+            id: p.ID_Patron,
+            codigo: p.Codigo,
+            nombre: p.Nombre_Patron,
+            tipo: 'PATRÓN DE REFERENCIA',
+            estado: p.Estado_Vigencia === 'VIGENTE' ? 'OPERATIVO' : 'FUERA_SERVICIO',
+            fechaUltima: p.Fecha_Calibracion_Externa,
+            fechaProxima: p.Fecha_Vencimiento_Certificado,
+            isPatron: true,
+            original: p
+          }))
+        ]
+
+        setEquipos(normalized as any)
+        assetsRef.current = normalized
+        setIsLoading(false)
+      } catch (err) {
+        console.error("Error loading data", err)
+      }
+    }
+
+    loadData()
+    // ... rest
     if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
       navigator.mediaDevices.enumerateDevices()
         .then(devices => {
@@ -145,15 +185,17 @@ export default function EscaneoPage() {
     }
   }
 
+
+
   const handleOnScanSuccess = async (decodedText: string) => {
-    const found = equiposRef.current.find(e => 
-      e.Codigo_Interno.toUpperCase() === decodedText.toUpperCase() || 
-      e.ID_Equipo.toUpperCase() === decodedText.toUpperCase()
+    const found = assetsRef.current.find(e => 
+      e.codigo.toUpperCase() === decodedText.toUpperCase() || 
+      e.id.toUpperCase() === decodedText.toUpperCase()
     )
     
     if (found) { 
       setCodigoIngresado(decodedText)
-      setEncontrado(found)
+      setEncontrado(found as any)
       setNotFound(false)
       await forceStopHardware()
     } else {
@@ -164,9 +206,9 @@ export default function EscaneoPage() {
   function handleSearch() {
     const q = codigoIngresado.trim().toUpperCase()
     if (!q) return
-    const found = equipos.find(e => e.Codigo_Interno.toUpperCase() === q || e.ID_Equipo.toUpperCase() === q)
+    const found = assetsRef.current.find(e => e.codigo.toUpperCase() === q || e.id.toUpperCase() === q)
     if (found) { 
-      setEncontrado(found)
+      setEncontrado(found as any)
       setNotFound(false)
       forceStopHardware()
     } else { 
@@ -184,8 +226,9 @@ export default function EscaneoPage() {
     setShowTroubleshooter(false)
   }
 
-  const sLabel = encontrado ? semaforoLabel(calcularSemaforo(encontrado.Fecha_Proximo_Control)) : ''
-  const sColor = encontrado ? semaforoHex(calcularSemaforo(encontrado.Fecha_Proximo_Control)) : ''
+  const sLabel = encontrado ? semaforoLabel(calcularSemaforo((encontrado as unknown as PrintableAsset).fechaProxima)) : ''
+  const sColor = encontrado ? semaforoHex(calcularSemaforo((encontrado as unknown as PrintableAsset).fechaProxima)) : ''
+  const assetFound = encontrado as unknown as PrintableAsset
 
   return (
     <div className="escaneo-container">
@@ -297,11 +340,11 @@ export default function EscaneoPage() {
             <div className="ficha-header" style={{ borderLeft: `8px solid ${sColor}`, padding: '24px 20px' }}>
               <div className="ficha-header-main">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <span className="code-badge" style={{ marginBottom: 0 }}>{encontrado.Codigo_Interno}</span>
-                  <span className="type-tag" style={{ background: 'var(--snow-2)', color: 'var(--text-soft)', padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800 }}>{encontrado.Tipo}</span>
+                  <span className="code-badge" style={{ marginBottom: 0 }}>{assetFound.codigo}</span>
+                  <span className="type-tag" style={{ background: 'var(--snow-2)', color: 'var(--text-soft)', padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800 }}>{assetFound.subtipo || assetFound.tipo}</span>
                 </div>
-                <h2 style={{ fontSize: 24, margin: '0 0 4px 0' }}>{encontrado.Nombre_Equipo}</h2>
-                <div className="area-tag" style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>{encontrado.Area_Asignada ?? 'Ubicación General'}</div>
+                <h2 style={{ fontSize: 24, margin: '0 0 4px 0' }}>{assetFound.nombre}</h2>
+                <div className="area-tag" style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>{assetFound.ubicacion || 'Ubicación General'}</div>
               </div>
               <div className="status-indicator-compact" style={{ textAlign: 'right' }}>
                 <div className="status-text" style={{ color: sColor, fontSize: 10, marginBottom: 4 }}>{sLabel}</div>
@@ -311,7 +354,7 @@ export default function EscaneoPage() {
 
             <div className="next-verification-hero" style={{ 
               background: `${sColor}11`, 
-              margin: '0 20px 20px', 
+              margin: '0 20px 10px', 
               padding: '20px', 
               borderRadius: 20, 
               border: `1px dashed ${sColor}44`,
@@ -322,29 +365,51 @@ export default function EscaneoPage() {
               textAlign: 'center'
             }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Próxima Verificación</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{formatFecha(encontrado.Fecha_Proximo_Control)}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: sColor }}>{diasRestantes(encontrado.Fecha_Proximo_Control)}</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{formatFecha(assetFound.fechaProxima)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: sColor }}>{diasRestantes(assetFound.fechaProxima)}</div>
+            </div>
+
+            <div className="last-verification-strip" style={{ 
+              background: '#f8fafc',
+              margin: '0 20px 20px',
+              padding: '12px 20px',
+              borderRadius: 16,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              border: '1px solid #e2e8f0'
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                {assetFound.isPatron ? 'Última Calibración' : 'Última Verificación'}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>
+                {formatFecha(assetFound.fechaUltima) || 'No registrada'}
+              </span>
             </div>
 
             <div className="ficha-grid">
-              <div className="ficha-spec-card" style={{ padding: '16px' }}>
-                <div className="spec-title" style={{ fontSize: 11, marginBottom: 12 }}><FileDigit size={14} /> Datos del Equipo</div>
-                <div className="spec-item-compact"><label>Responsable</label><span>{encontrado.Responsable || 'No asignado'}</span></div>
-                <div className="spec-item-compact"><label>Tolerancia</label><span>±{encontrado.Tolerancia_Aceptable} {encontrado.Unidad_Tolerancia || ''}</span></div>
-                <div className="spec-item-compact"><label>ID Sistema</label><span style={{ fontSize: 12, opacity: 0.6 }}>{encontrado.ID_Equipo}</span></div>
-              </div>
+              {!assetFound.isPatron && (
+                <div className="ficha-spec-card" style={{ padding: '16px' }}>
+                  <div className="spec-title" style={{ fontSize: 11, marginBottom: 12 }}><FileDigit size={14} /> Datos del Equipo</div>
+                  <div className="spec-item-compact"><label>Responsable</label><span>{assetFound.responsable || 'No asignado'}</span></div>
+                  <div className="spec-item-compact"><label>Tolerancia</label><span>{assetFound.tolerancia}</span></div>
+                  <div className="spec-item-compact"><label>ID Sistema</label><span style={{ fontSize: 12, opacity: 0.6 }}>{assetFound.id}</span></div>
+                </div>
+              )}
 
               <div className="ficha-spec-card" style={{ padding: '16px' }}>
-                <div className="spec-title" style={{ fontSize: 11, marginBottom: 12 }}><Activity size={14} /> Control y Frecuencia</div>
-                <div className="spec-item-compact"><label>Periodicidad</label><span>Cada {encontrado.Periodicidad_Meses} meses</span></div>
-                <div className="spec-item-compact"><label>Estado Actual</label><span style={{ color: sColor }}>{encontrado.Estado}</span></div>
+                <div className="spec-title" style={{ fontSize: 11, marginBottom: 12 }}><Activity size={14} /> Control y Estatus</div>
+                <div className="spec-item-compact"><label>Periodicidad</label><span>{assetFound.periodicidad ? `Cada ${assetFound.periodicidad} meses` : 'N/A'}</span></div>
+                <div className="spec-item-compact"><label>Estado Actual</label><span style={{ color: sColor }}>{assetFound.estado}</span></div>
               </div>
             </div>
 
             <div className="ficha-actions">
-              <button className="btn btn-cyan btn-xl" onClick={() => setShowModal(true)}>
-                <ShieldCheck size={20} /> Registrar Verificación
-              </button>
+              {!assetFound.isPatron && (
+                <button className="btn btn-cyan btn-xl" onClick={() => setShowModal(true)}>
+                  <ShieldCheck size={20} /> Registrar Verificación
+                </button>
+              )}
               <button className="btn btn-ghost" onClick={handleReset}>
                 <RefreshCw size={18} /> Escanear otro QR
               </button>
@@ -353,10 +418,10 @@ export default function EscaneoPage() {
         </div>
       )}
 
-      {showModal && encontrado && (
+      {showModal && assetFound.original && (
         <VerificationModal
-          equipo={encontrado}
-          equipos={equipos}
+          equipo={assetFound.original}
+          equipos={assetsRef.current.map(a => a.original).filter(Boolean)}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); handleReset(); }}
         />
