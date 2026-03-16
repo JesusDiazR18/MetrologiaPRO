@@ -294,34 +294,50 @@ export default function EscaneoPage() {
       ) : (
         <div className="ficha-tecnica-focus">
           <div className="ficha-card">
-            <div className="ficha-header" style={{ borderLeft: `6px solid ${sColor}` }}>
+            <div className="ficha-header" style={{ borderLeft: `8px solid ${sColor}`, padding: '24px 20px' }}>
               <div className="ficha-header-main">
-                <div className="code-badge">{encontrado.Codigo_Interno}</div>
-                <h2>{encontrado.Nombre_Equipo}</h2>
-                <div className="meta-info">
-                   <span className="type-tag">{encontrado.Tipo}</span>
-                   <span className="area-tag">{encontrado.Area_Asignada ?? 'Ubicación General'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <span className="code-badge" style={{ marginBottom: 0 }}>{encontrado.Codigo_Interno}</span>
+                  <span className="type-tag" style={{ background: 'var(--snow-2)', color: 'var(--text-soft)', padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800 }}>{encontrado.Tipo}</span>
                 </div>
+                <h2 style={{ fontSize: 24, margin: '0 0 4px 0' }}>{encontrado.Nombre_Equipo}</h2>
+                <div className="area-tag" style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>{encontrado.Area_Asignada ?? 'Ubicación General'}</div>
               </div>
-              <div className="status-indicator">
-                <div className="status-dot-large" style={{ background: sColor, boxShadow: `0 0 24px ${sColor}88` }} />
-                <div className="status-text" style={{ color: sColor }}>{sLabel}</div>
+              <div className="status-indicator-compact" style={{ textAlign: 'right' }}>
+                <div className="status-text" style={{ color: sColor, fontSize: 10, marginBottom: 4 }}>{sLabel}</div>
+                <div className="status-dot-large" style={{ background: sColor, boxShadow: `0 0 20px ${sColor}66`, width: 16, height: 16, marginLeft: 'auto' }} />
               </div>
             </div>
 
+            <div className="next-verification-hero" style={{ 
+              background: `${sColor}11`, 
+              margin: '0 20px 20px', 
+              padding: '20px', 
+              borderRadius: 20, 
+              border: `1px dashed ${sColor}44`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8,
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Próxima Verificación</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{formatFecha(encontrado.Fecha_Proximo_Control)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: sColor }}>{diasRestantes(encontrado.Fecha_Proximo_Control)}</div>
+            </div>
+
             <div className="ficha-grid">
-              <div className="ficha-spec-card">
-                <div className="spec-title"><FileDigit size={16} /> Especificaciones</div>
-                <div className="spec-item"><label>ID</label><span>{encontrado.ID_Equipo}</span></div>
-                <div className="spec-item"><label>Responsable</label><span>{encontrado.Responsable || 'No asignado'}</span></div>
-                <div className="spec-item"><label>Tolerancia</label><span>±{encontrado.Tolerancia_Aceptable} {encontrado.Unidad_Tolerancia || ''}</span></div>
+              <div className="ficha-spec-card" style={{ padding: '16px' }}>
+                <div className="spec-title" style={{ fontSize: 11, marginBottom: 12 }}><FileDigit size={14} /> Datos del Equipo</div>
+                <div className="spec-item-compact"><label>Responsable</label><span>{encontrado.Responsable || 'No asignado'}</span></div>
+                <div className="spec-item-compact"><label>Tolerancia</label><span>±{encontrado.Tolerancia_Aceptable} {encontrado.Unidad_Tolerancia || ''}</span></div>
+                <div className="spec-item-compact"><label>ID Sistema</label><span style={{ fontSize: 12, opacity: 0.6 }}>{encontrado.ID_Equipo}</span></div>
               </div>
 
-              <div className="ficha-spec-card">
-                <div className="spec-title"><Activity size={16} /> Metrología</div>
-                <div className="spec-item"><label>Próximo Control</label><span style={{ color: sColor, fontWeight: 900 }}>{formatFecha(encontrado.Fecha_Proximo_Control)}</span></div>
-                <div className="spec-item"><label>Vence en</label><span>{diasRestantes(encontrado.Fecha_Proximo_Control)}</span></div>
-                <div className="spec-item"><label>Ciclo</label><span>{encontrado.Periodicidad_Meses} meses</span></div>
+              <div className="ficha-spec-card" style={{ padding: '16px' }}>
+                <div className="spec-title" style={{ fontSize: 11, marginBottom: 12 }}><Activity size={14} /> Control y Frecuencia</div>
+                <div className="spec-item-compact"><label>Periodicidad</label><span>Cada {encontrado.Periodicidad_Meses} meses</span></div>
+                <div className="spec-item-compact"><label>Estado Actual</label><span style={{ color: sColor }}>{encontrado.Estado}</span></div>
               </div>
             </div>
 
@@ -403,8 +419,13 @@ export default function EscaneoPage() {
         .spec-item label { display: block; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
         .spec-item span { font-size: 16px; font-weight: 700; color: #1e293b; }
         
-        .ficha-actions { padding: 0 40px 40px; display: flex; flex-direction: column; gap: 16px; }
-        .btn-xl { padding: 24px !important; font-size: 18px !important; font-weight: 900 !important; border-radius: 20px !important; background: var(--accent) !important; color: #000 !important; box-shadow: 0 20px 40px -10px rgba(0,229,255,0.4) !important; border:none !important; cursor: pointer; }
+        .ficha-actions { padding: 0 20px 30px; display: flex; flex-direction: column; gap: 12px; }
+        .btn-xl { padding: 20px !important; font-size: 16px !important; font-weight: 900 !important; border-radius: 16px !important; background: var(--accent) !important; color: #000 !important; box-shadow: 0 15px 30px -10px rgba(0,229,255,0.4) !important; border:none !important; cursor: pointer; }
+        
+        .spec-item-compact { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--snow-2); }
+        .spec-item-compact:last-child { border-bottom: none; }
+        .spec-item-compact label { font-size: 11px; color: var(--text-soft); font-weight: 700; }
+        .spec-item-compact span { font-size: 13px; font-weight: 700; color: var(--text-main); }
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
