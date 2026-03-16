@@ -34,13 +34,27 @@ interface Stats {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   async function loadStats() {
-    setLoading(true)
-    const r = await fetch('/api/estadisticas')
-    const data = await r.json()
-    setStats(data)
-    setLoading(false)
+    try {
+      setLoading(true)
+      setError(null)
+      const r = await fetch('/api/estadisticas')
+      
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({}))
+        throw new Error(errData.details || `Error del servidor (${r.status})`)
+      }
+
+      const data = await r.json()
+      setStats(data)
+    } catch (err: any) {
+      console.error('Error loading stats:', err)
+      setError(err.message || 'Error al conectar con el centro de datos')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadStats() }, [])
@@ -50,6 +64,17 @@ export default function DashboardPage() {
       <div className="loading-center">
         <div className="spinner" />
         <p>Sincronizando Sistema Metrológico Pro...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="empty-state" style={{ color: 'var(--danger)', background: 'var(--danger-dim)', border: '1px solid var(--danger)' }}>
+        <AlertCircle size={48} />
+        <h2 style={{ marginTop: 16 }}>Anomalía en el Centro de Datos</h2>
+        <p>{error}</p>
+        <button onClick={loadStats} className="btn btn-primary" style={{ marginTop: 16 }}>Reintentar Sincronización</button>
       </div>
     )
   }
