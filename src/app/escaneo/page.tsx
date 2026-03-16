@@ -206,15 +206,21 @@ function EscaneoContent() {
   const handleOnScanSuccess = async (decodedText: string) => {
     let searchCode = decodedText
     
-    // Normalización: si es una URL, extraer el parámetro 'q'
+    // Normalización extrema: si es una URL, extraer el parámetro 'q' sin importar el dominio
     try {
-      if (decodedText.startsWith('http')) {
+      if (decodedText.includes('?q=')) {
+        const urlParams = new URLSearchParams(decodedText.split('?')[1])
+        const q = urlParams.get('q')
+        if (q) searchCode = q
+      } else if (decodedText.startsWith('http')) {
         const url = new URL(decodedText)
         const q = url.searchParams.get('q')
         if (q) searchCode = q
       }
     } catch (e) {
-      // No es una URL válida, procedemos con el texto original
+      // Intentar una extracción manual simple si falla URL
+      const match = decodedText.match(/[?&]q=([^&]+)/)
+      if (match) searchCode = match[1]
     }
 
     const found = assetsRef.current.find(e => 
