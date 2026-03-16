@@ -427,7 +427,14 @@ function EquiposContent() {
       )}
       {qrLabelEquipo && (
         <QRLabelModal
-          equipo={qrLabelEquipo as any}
+          asset={{
+            id: qrLabelEquipo.ID_Equipo,
+            code: qrLabelEquipo.Codigo_Interno,
+            name: qrLabelEquipo.Nombre_Equipo,
+            status: qrLabelEquipo.Estado,
+            statusLabel: semaforoLabel(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control)),
+            statusColor: qrLabelEquipo.Estado === 'FUERA_DE_SERVICIO' ? '#ef4444' : semaforoHex(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control))
+          }}
           onClose={() => setQrLabelEquipo(null)}
         />
       )}

@@ -3,28 +3,24 @@ import { QRCodeSVG } from 'qrcode.react'
 import { X, Printer } from 'lucide-react'
 import { semaforoHex, calcularSemaforo } from '@/lib/metrologia'
 
-interface Equipo {
-  ID_Equipo: string
-  Codigo_Interno: string
-  Nombre_Equipo: string
-  Tipo: string
-  Estado: string
-  Responsable?: string | null
-  Area_Asignada?: string | null
-  Periodicidad_Meses?: number
-  Fecha_Proximo_Control?: string | null
-  historiales?: { Fecha_Ejecucion: string; Resultado_Status: string; Tecnico_Ejecutor: string }[]
+interface PrintableAsset {
+  id: string
+  code: string
+  name: string
+  status: string
+  statusLabel: string
+  statusColor: string
+  nextDate?: string | null
 }
 
 interface Props {
-  equipo: Equipo
+  asset: PrintableAsset
   onClose: () => void
 }
 
-export default function QRLabelModal({ equipo: e, onClose }: Props) {
-  const semaforo = calcularSemaforo(e.Fecha_Proximo_Control ?? null)
-  const statusColor = semaforoHex(semaforo)
-  const statusLabel = semaforo === 'VERDE' ? 'AL DÍA' : semaforo === 'AMARILLO' ? 'PRÓXIMO VENCIM.' : 'VENCIDO'
+export default function QRLabelModal({ asset: a, onClose }: Props) {
+  const statusColor = a.statusColor
+  const statusLabel = a.statusLabel
 
   function handlePrint() {
     const w = window.open('', '_blank', 'width=400,height=500')
@@ -33,37 +29,33 @@ export default function QRLabelModal({ equipo: e, onClose }: Props) {
     const svgHtml = svgEl ? svgEl.outerHTML : ''
 
     w.document.write(`<!DOCTYPE html><html><head>
-      <title>Etiqueta ${e.Codigo_Interno}</title>
+      <title>Etiqueta ${a.code}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .label { width: 300px; padding: 20px; border: 2px solid ${statusColor}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .qr-wrap { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .info { text-align: center; width: 100%; }
-        .header-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; }
-        .info-code { font-size: 28px; font-weight: 900; color: #0f172a; }
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; color: #fff; background: ${statusColor}; white-space: nowrap; }
-        .info-name { font-size: 14px; font-weight: 700; color: #64748b; line-height: 1.2; }
-        .footer { margin-top: 8px; font-size: 9px; color: #94a3b8; }
+        .label { width: 300px; padding: 24px; border: 3px solid ${statusColor}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+        .qr-wrap { background: #fff; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .info-code { font-size: 32px; font-weight: 900; color: #0f172a; line-height: 1; }
+        .status-badge { padding: 6px 14px; border-radius: 30px; font-size: 11px; font-weight: 800; color: #fff; background: ${statusColor}; text-transform: uppercase; }
+        .info-name { font-size: 16px; font-weight: 700; color: #475569; line-height: 1.2; margin-top: 4px; }
+        .footer { margin-top: 12px; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
       </style>
     </head><body>
       <div class="label">
         <div class="qr-wrap">${svgHtml}</div>
-        <div class="info">
-          <div class="header-row">
-            <span class="info-code">${e.Codigo_Interno}</span>
-            <span class="status-badge">${statusLabel}</span>
-          </div>
-          <div class="info-name">${e.Nombre_Equipo}</div>
-          <div class="footer">Polifusion Metrology Control PRO</div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+          <span class="info-code">${a.code}</span>
+          <span class="status-badge">${statusLabel}</span>
         </div>
+        <div class="info-name">${a.name}</div>
+        <div class="footer">Polifusion Metrology PRO</div>
       </div>
     </body></html>`)
     w.document.close()
     setTimeout(() => { w.print(); w.close() }, 800)
   }
 
-  const scanUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/escaneo?id=${e.Codigo_Interno}` : e.Codigo_Interno
+  const scanUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/escaneo?id=${a.code}` : a.code
 
   return (
     <div 
@@ -107,14 +99,15 @@ export default function QRLabelModal({ equipo: e, onClose }: Props) {
             {/* Simple Info - Estado al lado del código */}
             <div style={{ textAlign: 'center', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
-                <span style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{e.Codigo_Interno}</span>
+                <span style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{a.code}</span>
                 <span style={{ 
                   display: 'inline-block', padding: '6px 14px', borderRadius: '30px', 
                   color: '#fff', background: statusColor, fontSize: '11px', fontWeight: 800, letterSpacing: '0.05em',
-                  boxShadow: `0 4px 10px ${statusColor}44`
+                  boxShadow: `0 4px 10px ${statusColor}44`,
+                  textTransform: 'uppercase'
                 }}>{statusLabel}</span>
               </div>
-              <div style={{ fontSize: '16px', color: '#64748b', fontWeight: 700, lineHeight: 1.3, maxWidth: '300px', margin: '0 auto' }}>{e.Nombre_Equipo}</div>
+              <div style={{ fontSize: '16px', color: '#64748b', fontWeight: 700, lineHeight: 1.3, maxWidth: '300px', margin: '0 auto' }}>{a.name}</div>
             </div>
           </div>
         </div>

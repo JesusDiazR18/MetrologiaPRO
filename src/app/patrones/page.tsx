@@ -1,8 +1,9 @@
 'use client'
 import React, { useEffect, useState, useRef } from 'react'
-import { FlaskConical, Plus, CheckCircle, XCircle, FileText, Upload, Eye, Trash2, RefreshCcw } from 'lucide-react'
+import { FlaskConical, Plus, CheckCircle, XCircle, FileText, Upload, Eye, Trash2, RefreshCcw, QrCode, Printer } from 'lucide-react'
 import { formatFecha } from '@/lib/metrologia'
 import CreatePatronModal from '@/components/CreatePatronModal'
+import QRLabelModal from '@/components/QRLabelModal'
 
 interface Patron {
   ID_Patron: string
@@ -22,6 +23,7 @@ export default function PatronesPage() {
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [qrLabelAsset, setQrLabelAsset] = useState<any | null>(null)
 
   useEffect(() => {
     loadPatrones()
@@ -156,23 +158,35 @@ export default function PatronesPage() {
                         <div style={{ padding: '20px 32px', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : 'var(--danger)'}`, display: 'flex', gap: 40 }}>
                           <div className="qr-card" style={{ 
                             background: '#fff', 
-                            padding: 16, 
-                            borderRadius: 12, 
-                            boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+                            padding: 20, 
+                            borderRadius: 16, 
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             textAlign: 'center',
-                            gap: 12,
-                            width: 180
+                            gap: 16,
+                            width: 200,
+                            border: '1px solid var(--snow-3)'
                           }}>
-                            <img 
-                              src={`https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${p.Codigo}`} 
-                              alt="QR"
-                              style={{ width: 120, height: 120 }}
-                            />
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-soft)' }}>{p.Codigo}</div>
-                            <button className="btn btn-ghost btn-xs" onClick={() => window.print()}>Imprimir QR</button>
+                            <div style={{ background: 'var(-- snow-1)', padding: 12, borderRadius: 12 }}>
+                              <QrCode size={48} color="var(--accent)" />
+                            </div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Etiqueta de Patrón</div>
+                            <button 
+                              className="btn btn-cyan btn-sm" 
+                              style={{ width: '100%' }}
+                              onClick={() => setQrLabelAsset({
+                                id: p.ID_Patron,
+                                code: p.Codigo,
+                                name: p.Nombre_Patron,
+                                status: p.Estado_Vigencia,
+                                statusLabel: p.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : 'VENCIDO',
+                                statusColor: p.Estado_Vigencia === 'VIGENTE' ? '#10b981' : '#ef4444'
+                              })}
+                            >
+                              <Printer size={14} /> Imprimir Etiqueta
+                            </button>
                           </div>
                           
                           <div style={{ flex: 1 }}>
