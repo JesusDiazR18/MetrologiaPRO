@@ -701,7 +701,32 @@ tr:hover { transform: translateX(4px); }
   .page { padding: 16px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid-3 { grid-template-columns: 1fr; }
-  .dashboard-grid { grid-template-columns: 1fr; }
+  /* Meora Responsividad Móvil */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .sidebar-premium {
+    display: none; /* Se recomienda un menú hamburguesa que activaremos por JS o CSS */
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .card-glass {
+    padding: 1.5rem 1rem;
+  }
+
+  .text-title {
+    font-size: 1.5rem;
+  }
   .topbar-title { font-size: 15px; }
   .btn-scan span { display: none; }
 }

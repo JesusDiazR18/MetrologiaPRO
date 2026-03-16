@@ -131,8 +131,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           boxShadow: scrolled ? '0 10px 30px -10px rgba(0,0,0,0.08)' : 'none'
         }}>
           <button
-            style={{ display: 'none', background: '#f1f5f9', border: 'none', cursor: 'pointer', padding: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
-            className="mobile-menu-btn"
+            style={{ 
+              display: 'flex', 
+              background: '#f1f5f9', 
+              border: 'none', 
+              cursor: 'pointer', 
+              padding: 10, 
+              borderRadius: 12, 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}
+            className="mobile-toggle"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu size={20} color="#1e293b" />
