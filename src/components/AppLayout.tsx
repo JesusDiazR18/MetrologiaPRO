@@ -149,14 +149,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="topbar-title" style={{ 
-              fontSize: scrolled ? 16 : 20, 
+              fontSize: scrolled ? 15 : 17, 
               fontWeight: 900, 
               color: '#0f172a', 
               lineHeight: 1.1,
               letterSpacing: '-0.02em',
               transition: 'all 0.3s'
             }}>{currentPage}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Metrología Inteligente</div>
+            <div className="mobile-hide" style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Metrología Inteligente</div>
           </div>
 
           <div className="topbar-search-container" style={{ 
@@ -228,31 +228,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 
 
-        <main className="page">
+        <main className="page" style={{ width: '100%', maxWidth: '100%' }}>
           {children}
         </main>
       </div>
 
-      {/* Bottom Nav (Mobile) */}
-      <nav className="bottom-nav">
-        <div className="bottom-nav-items">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`bottom-nav-item ${pathname === href ? 'active' : ''}`}
-            >
-              <Icon size={22} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
-
       {/* Mobile sidebar toggle CSS override */}
       <style>{`
         @media (max-width: 768px) {
-          #mobile-menu-btn { display: flex !important; }
+          .mobile-toggle { display: flex !important; margin-right: -10px; }
+          .topbar { height: 60px !important; padding: 0 16px !important; gap: 12px !important; }
+          .btn-scan span { display: none; }
+          .btn-scan { padding: 10px !important; border-radius: 12px !important; }
+          .mobile-hide { display: none !important; }
+          .topbar-search-container { display: none !important; }
+          .bottom-nav { display: none !important; }
+          .main-content { padding-bottom: 0 !important; }
+          .page { padding: 12px !important; }
         }
       `}</style>
     </div>
