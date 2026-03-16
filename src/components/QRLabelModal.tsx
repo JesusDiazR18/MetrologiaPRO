@@ -55,7 +55,7 @@ export default function QRLabelModal({ asset: a, onClose }: Props) {
     setTimeout(() => { w.print(); w.close() }, 800)
   }
 
-  const scanUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/escaneo?id=${a.code}` : a.code
+  const scanUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/escaneo?q=${a.code}` : a.code
 
   return (
     <div 

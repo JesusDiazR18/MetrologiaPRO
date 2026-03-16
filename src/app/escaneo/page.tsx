@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Html5Qrcode } from 'html5-qrcode'
 import { ScanLine, XCircle, Search, ShieldCheck, FileDigit, Activity, RefreshCw, Camera, AlertCircle, Settings, ChevronRight } from 'lucide-react'
 import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes } from '@/lib/metrologia'
@@ -22,7 +23,10 @@ interface PrintableAsset {
   original?: any
 }
 
-export default function EscaneoPage() {
+function EscaneoContent() {
+  const searchParams = useSearchParams()
+  const queryCode = searchParams.get('q')
+
   const [equipos, setEquipos] = useState<PrintableAsset[]>([])
   const [codigoIngresado, setCodigoIngresado] = useState('')
   const [encontrado, setEncontrado] = useState<PrintableAsset | null>(null)
@@ -82,6 +86,18 @@ export default function EscaneoPage() {
         setEquipos(normalized as any)
         assetsRef.current = normalized
         setIsLoading(false)
+
+        // Auto-búsqueda si hay parámetro en la URL
+        if (queryCode) {
+          const found = normalized.find(e => 
+            e.codigo.toUpperCase() === queryCode.toUpperCase() || 
+            e.id.toUpperCase() === queryCode.toUpperCase()
+          )
+          if (found) {
+            setEncontrado(found)
+            setCodigoIngresado(queryCode)
+          }
+        }
       } catch (err) {
         console.error("Error loading data", err)
       }
@@ -501,5 +517,17 @@ export default function EscaneoPage() {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function EscaneoPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-soft)', fontStyle: 'italic' }}>
+        Cargando sistema de escaneo universal...
+      </div>
+    }>
+      <EscaneoContent />
+    </Suspense>
   )
 }
