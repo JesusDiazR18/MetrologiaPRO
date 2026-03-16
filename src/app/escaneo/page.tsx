@@ -204,13 +204,26 @@ function EscaneoContent() {
 
 
   const handleOnScanSuccess = async (decodedText: string) => {
+    let searchCode = decodedText
+    
+    // Normalización: si es una URL, extraer el parámetro 'q'
+    try {
+      if (decodedText.startsWith('http')) {
+        const url = new URL(decodedText)
+        const q = url.searchParams.get('q')
+        if (q) searchCode = q
+      }
+    } catch (e) {
+      // No es una URL válida, procedemos con el texto original
+    }
+
     const found = assetsRef.current.find(e => 
-      e.codigo.toUpperCase() === decodedText.toUpperCase() || 
-      e.id.toUpperCase() === decodedText.toUpperCase()
+      e.codigo.toUpperCase() === searchCode.toUpperCase() || 
+      e.id.toUpperCase() === searchCode.toUpperCase()
     )
     
     if (found) { 
-      setCodigoIngresado(decodedText)
+      setCodigoIngresado(searchCode)
       setEncontrado(found as any)
       setNotFound(false)
       await forceStopHardware()

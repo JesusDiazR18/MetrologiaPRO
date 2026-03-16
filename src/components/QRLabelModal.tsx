@@ -55,7 +55,7 @@ export default function QRLabelModal({ asset: a, onClose }: Props) {
     setTimeout(() => { w.print(); w.close() }, 800)
   }
 
-  const scanUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/escaneo?q=${a.code}` : a.code
+  const scanUrl = `https://metrologia-plf.vercel.app/escaneo?q=${a.code}`
 
   return (
     <div 
