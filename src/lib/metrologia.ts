@@ -75,3 +75,10 @@ export function formatFechaLarga(date: Date | string | null | undefined): string
     day: 'numeric'
   }).format(new Date(date)).replace(/^\w/, (c) => c.toUpperCase())
 }
+
+export function getScanUrl(code: string): string {
+  if (typeof window === 'undefined') {
+    return `https://metrologia-plf.vercel.app/escaneo?q=${code}`
+  }
+  return `${window.location.origin}/escaneo?q=${code}`
+}

@@ -1,7 +1,7 @@
 'use client'
 import { QRCodeSVG } from 'qrcode.react'
 import { X, Printer } from 'lucide-react'
-import { semaforoHex, calcularSemaforo } from '@/lib/metrologia'
+import { semaforoHex, calcularSemaforo, getScanUrl } from '@/lib/metrologia'
 
 interface PrintableAsset {
   id: string
@@ -55,9 +55,7 @@ export default function QRLabelModal({ asset: a, onClose }: Props) {
     setTimeout(() => { w.print(); w.close() }, 800)
   }
 
-  const scanUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/escaneo?q=${a.code}`
-    : `https://metrologia-plf.vercel.app/escaneo?q=${a.code}`
+  const scanUrl = getScanUrl(a.code)
 
   return (
     <div 

@@ -1,7 +1,8 @@
 'use client'
 import React, { useEffect, useState, useRef } from 'react'
 import { FlaskConical, Plus, CheckCircle, XCircle, FileText, Upload, Eye, Trash2, RefreshCcw, QrCode, Printer } from 'lucide-react'
-import { formatFecha } from '@/lib/metrologia'
+import { formatFecha, getScanUrl } from '@/lib/metrologia'
+import { QRCodeSVG } from 'qrcode.react'
 import CreatePatronModal from '@/components/CreatePatronModal'
 import QRLabelModal from '@/components/QRLabelModal'
 
@@ -156,37 +157,47 @@ export default function PatronesPage() {
                     <tr>
                       <td colSpan={7} style={{ padding: 0, background: 'var(--snow-1)' }}>
                         <div style={{ padding: '20px 32px', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : 'var(--danger)'}`, display: 'flex', gap: 40 }}>
-                          <div className="qr-card" style={{ 
-                            background: '#fff', 
-                            padding: 20, 
-                            borderRadius: 16, 
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            gap: 16,
-                            width: 200,
-                            border: '1px solid var(--snow-3)'
-                          }}>
-                            <div style={{ background: 'var(-- snow-1)', padding: 12, borderRadius: 12 }}>
-                              <QrCode size={48} color="var(--accent)" />
+                          <div 
+                            className="qr-card" 
+                            style={{ 
+                              background: '#fff', 
+                              padding: 24, 
+                              borderRadius: 20, 
+                              boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              gap: 16,
+                              width: 220,
+                              border: '1px solid var(--snow-3)',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={ev => { ev.stopPropagation(); setQrLabelAsset({
+                              id: p.ID_Patron,
+                              code: p.Codigo,
+                              name: p.Nombre_Patron,
+                              status: p.Estado_Vigencia,
+                              statusLabel: p.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : 'VENCIDO',
+                              statusColor: p.Estado_Vigencia === 'VIGENTE' ? '#10b981' : '#ef4444'
+                            })}}
+                            title="Haz clic para ver e imprimir la etiqueta"
+                          >
+                            <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)' }}>
+                              <QRCodeSVG
+                                value={getScanUrl(p.Codigo)}
+                                size={120}
+                                bgColor="#ffffff"
+                                fgColor="#0f172a"
+                                level="H"
+                                style={{ display: 'block', borderRadius: 4 }}
+                              />
                             </div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Etiqueta de Patrón</div>
-                            <button 
-                              className="btn btn-cyan btn-sm" 
-                              style={{ width: '100%' }}
-                              onClick={() => setQrLabelAsset({
-                                id: p.ID_Patron,
-                                code: p.Codigo,
-                                name: p.Nombre_Patron,
-                                status: p.Estado_Vigencia,
-                                statusLabel: p.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : 'VENCIDO',
-                                statusColor: p.Estado_Vigencia === 'VIGENTE' ? '#10b981' : '#ef4444'
-                              })}
-                            >
-                              <Printer size={14} /> Imprimir Etiqueta
-                            </button>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', marginBottom: 4, textTransform: 'uppercase' }}>CÓDIGO DIGITAL QR</div>
+                              <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '3px 10px', borderRadius: 999 }}>🖨️ Clic para imprimir</div>
+                            </div>
                           </div>
                           
                           <div style={{ flex: 1 }}>

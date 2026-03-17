@@ -7,7 +7,7 @@ import {
   ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity 
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
-import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes } from '@/lib/metrologia'
+import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes, getScanUrl } from '@/lib/metrologia'
 import VerificationModal from '@/components/VerificationModal'
 import CreateEquipoModal from '@/components/CreateEquipoModal'
 import QRLabelModal from '@/components/QRLabelModal'
@@ -278,7 +278,7 @@ function EquiposContent() {
                                   >
                                     <div style={{ background: '#fff', padding: 10, borderRadius: 14, display: 'inline-block', boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
                                       <QRCodeSVG
-                                        value={e.Codigo_Interno}
+                                        value={getScanUrl(e.Codigo_Interno)}
                                         size={100}
                                         bgColor="#ffffff"
                                         fgColor="#0f172a"
