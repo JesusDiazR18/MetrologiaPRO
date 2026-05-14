@@ -4,13 +4,15 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ClipboardList, Search, SlidersHorizontal, Plus, ChevronsDown, 
-  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity 
+  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2 
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes, getScanUrl } from '@/lib/metrologia'
+import { generateTechnicalSheetPDF } from '@/lib/reports'
 import VerificationModal from '@/components/VerificationModal'
 import CreateEquipoModal from '@/components/CreateEquipoModal'
 import QRLabelModal from '@/components/QRLabelModal'
+import { toast } from 'react-hot-toast'
 
 interface Equipo {
   ID_Equipo: string
@@ -62,14 +64,20 @@ function EquiposContent() {
     try {
       const r = await fetch('/api/equipos?' + params.toString())
       const data = await r.json()
-      setEquipos(data)
       
-      // Auto-expand if exact match or single result
-      if (query && data.length === 1) {
-        setExpanded(data[0].ID_Equipo)
-      } else if (query) {
-        const exact = data.find((e: Equipo) => e.Codigo_Interno.toLowerCase() === query.toLowerCase())
-        if (exact) setExpanded(exact.ID_Equipo)
+      if (Array.isArray(data)) {
+        setEquipos(data)
+        
+        // Auto-expand if exact match or single result
+        if (query && data.length === 1) {
+          setExpanded(data[0].ID_Equipo)
+        } else if (query) {
+          const exact = data.find((e: Equipo) => e.Codigo_Interno.toLowerCase() === query.toLowerCase())
+          if (exact) setExpanded(exact.ID_Equipo)
+        }
+      } else {
+        console.error("API returned non-array data:", data)
+        setEquipos([])
       }
     } catch (e) {
       console.error("Error loading equipos", e)
@@ -91,47 +99,64 @@ function EquiposContent() {
   const handleDeBaja = async (id: string, nombre: string) => {
     const motivo = prompt(`¿Estás seguro de que deseas poner el equipo "${nombre}" FUERA DE SERVICIO? Por favor, indica el motivo:`)
     if (motivo === null) return 
-    if (!motivo.trim()) return alert('Debes indicar un motivo para dar de baja el equipo.')
+    if (!motivo.trim()) return toast.error('Debes indicar un motivo para dar de baja el equipo.')
     
-    try {
-      const res = await fetch(`/api/equipos/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          estado: 'FUERA_DE_SERVICIO',
-          observaciones: `MOTIVO DE BAJA: ${motivo}`
-        })
+    const updatePromise = fetch(`/api/equipos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        estado: 'FUERA_DE_SERVICIO',
+        observaciones: `MOTIVO DE BAJA: ${motivo}`
       })
-      if (res.ok) {
-        load(q, tipo)
-      } else {
-        alert('Error al actualizar el estado')
-      }
-    } catch (e) {
-      alert('Error de red')
-    }
+    }).then(res => {
+      if (!res.ok) throw new Error('Error al actualizar el estado')
+      load(q, tipo)
+    })
+
+    toast.promise(updatePromise, {
+      loading: 'Procesando...',
+      success: 'Equipo dado de baja correctamente',
+      error: 'Error de red o servidor'
+    })
   }
 
   const handleHabilitar = async (id: string, nombre: string) => {
     if (!confirm(`¿Estás seguro de que deseas volver a HABILITAR el equipo "${nombre}"?`)) return
     
-    try {
-      const res = await fetch(`/api/equipos/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          estado: 'OPERATIVO',
-          observaciones: `EQUIPO RE-HABILITADO: El equipo vuelve a estar disponible para su uso.`
-        })
+    const updatePromise = fetch(`/api/equipos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        estado: 'OPERATIVO',
+        observaciones: `EQUIPO RE-HABILITADO: El equipo vuelve a estar disponible para su uso.`
       })
-      if (res.ok) {
-        load(q, tipo)
-      } else {
-        alert('Error al habilitar el equipo')
-      }
-    } catch (e) {
-      alert('Error de red')
-    }
+    }).then(res => {
+      if (!res.ok) throw new Error('Error al habilitar el equipo')
+      load(q, tipo)
+    })
+
+    toast.promise(updatePromise, {
+      loading: 'Habilitando...',
+      success: 'Equipo restaurado a Operativo',
+      error: 'Error de red o servidor'
+    })
+  }
+
+  const handleEliminarHistorial = async (idLog: string, activoNombre: string) => {
+    if (!confirm(`¿Estás seguro de que deseas ELIMINAR permanentemente esta verificación del historial de "${activoNombre}"?\n\nLas fechas de próxima verificación se recalcularán automáticamente.`)) return
+    
+    const deletePromise = fetch(`/api/historial/${idLog}`, {
+      method: 'DELETE'
+    }).then(res => {
+      if (!res.ok) throw new Error('Error al eliminar el registro')
+      load(q, tipo)
+    })
+
+    toast.promise(deletePromise, {
+      loading: 'Eliminando registro...',
+      success: 'Verificación eliminada y fechas actualizadas',
+      error: 'Error al eliminar el registro'
+    })
   }
 
   const handleSearch = () => { load(q, tipo) }
@@ -195,33 +220,33 @@ function EquiposContent() {
               <thead>
                 <tr>
                   <th style={{ width: 60 }}></th>
-                  <th>Identificación</th>
+                  <th className="desktop-only">Identificación</th>
                   <th>Nombre del Equipo</th>
-                  <th>Responsable / Estado</th>
+                  <th className="desktop-only">Responsable / Estado</th>
                   <th>Próxima Verif.</th>
                   <th style={{ textAlign: 'right' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {equipos.map((e) => {
-                  const semaforo = calcularSemaforo(e.Fecha_Proximo_Control)
+                  const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
                   const isExpanded = expanded === e.ID_Equipo
-                  const isFuera = e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'OBSOLETO' || e.Estado === 'NO_APTO';
-                  const statusColor = isFuera ? 'var(--danger)' : semaforoHex(semaforo);
+                  const statusColor = semaforoHex(semaforo);
                   
                   return (
                     <React.Fragment key={e.ID_Equipo}>
                       <tr 
                         onClick={() => setExpanded(isExpanded ? null : e.ID_Equipo)}
                         style={{ cursor: 'pointer' }}
+                        className="mobile-card-row"
                       >
-                        <td>
+                        <td className="mobile-hide">
                           <div className="semaforo-dot" style={{ 
                             background: statusColor,
                             boxShadow: `0 0 15px ${statusColor}66`
                           }} />
                         </td>
-                        <td>
+                        <td className="desktop-only">
                           <span style={{ 
                             fontFamily: 'var(--font-mono)', 
                             fontWeight: 700, 
@@ -231,11 +256,15 @@ function EquiposContent() {
                             borderRadius: '4px'
                           }}>{e.Codigo_Interno}</span>
                         </td>
-                        <td>
-                          <div style={{ fontWeight: 700, fontSize: 15 }}>{e.Nombre_Equipo}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
+                        <td className="mobile-card-title">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <div className="mobile-only semaforo-dot" style={{ background: statusColor, boxShadow: `0 0 15px ${statusColor}66` }} />
+                            <div style={{ fontWeight: 700, fontSize: 15 }}>{e.Nombre_Equipo}</div>
+                          </div>
+                          <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
+                          <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{e.Codigo_Interno} · {e.Area_Asignada ?? 'Sin área'}</div>
                         </td>
-                        <td>
+                        <td className="desktop-only">
                           <div style={{ fontSize: 13, fontWeight: 500 }}>{e.Responsable ?? '—'}</div>
                           <div style={{ 
                             fontSize: 11, 
@@ -244,21 +273,21 @@ function EquiposContent() {
                             textTransform: 'uppercase',
                             marginTop: 4
                           }}>
-                            {e.Estado === 'FUERA_DE_SERVICIO' ? '● FUERA DE SERVICIO' : `● ${semaforoLabel(semaforo)}`}
+                            ● {semaforoLabel(semaforo, e.Estado)}
                           </div>
                         </td>
-                        <td>
+                        <td className="mobile-card-info">
                           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}>{formatFecha(e.Fecha_Proximo_Control)}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{diasRestantes(e.Fecha_Proximo_Control)}</div>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <td style={{ textAlign: 'right' }} className="mobile-card-actions">
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button 
                             className="btn-scan" 
                             style={{ padding: '6px 14px', fontSize: 11, background: 'var(--accent)', color: '#000', fontWeight: 800, borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0, 229, 255, 0.3)' }}
                             onClick={(ev) => { ev.stopPropagation(); setModalEquipo(e); }}
                             >Verificar</button>
-                            <div style={{ color: 'var(--text-dim)', padding: '0 8px' }}>
+                            <div style={{ color: 'var(--text-dim)', padding: '0 4px' }}>
                               {isExpanded ? <ChevronsUp size={18} /> : <ChevronsDown size={18} />}
                             </div>
                           </div>
@@ -267,12 +296,12 @@ function EquiposContent() {
                       {isExpanded && (
                         <tr>
                           <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
-                            <div style={{ padding: '24px 40px', borderLeft: `4px solid ${statusColor}` }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: 24, marginBottom: 24 }}>
-                                <div className="expanded-details" style={{ animation: 'slideDown 0.3s ease-out' }}>
+                            <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${statusColor}` }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 24, marginBottom: 24 }}>
+                                <div className="expanded-details" style={{ animation: 'slideDown 0.3s ease-out', gridColumn: '1 / -1' }}>
                                   <div 
                                     className="card" 
-                                    style={{ padding: 24, display: 'flex', gap: 16, background: 'var(--page-bg-soft)', alignItems: 'center', flexDirection: 'column', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    style={{ padding: 24, display: 'flex', gap: 16, background: 'var(--page-bg-soft)', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', cursor: 'pointer', transition: 'all 0.2s' }}
                                     onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(e) }}
                                     title="Haz clic para ver e imprimir la etiqueta"
                                   >
@@ -288,12 +317,21 @@ function EquiposContent() {
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
                                       <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', marginBottom: 6 }}>CÓDIGO DIGITAL QR</div>
-                                      <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '3px 10px', borderRadius: 999  }}>🖨️ Clic para imprimir etiqueta</div>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '3px 10px', borderRadius: 999  }}>🖨️ Clic para imprimir etiqueta</div>
+                                        <button 
+                                          className="btn btn-ghost btn-sm" 
+                                          style={{ fontSize: 10, padding: '4px 8px', border: '1px solid var(--accent-dim)', color: 'var(--accent)' }}
+                                          onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(e); }}
+                                        >
+                                          📄 Descargar Ficha PDF
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, width: '100%', gridColumn: '1 / -1' }}>
                                   <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                                       <FileDigit size={16} color="var(--accent)" />
@@ -354,6 +392,7 @@ function EquiposContent() {
                                     <th>Resultado</th>
                                     <th>Técnico</th>
                                       <th>Observaciones</th>
+                                      <th style={{ textAlign: 'center' }}>Acción</th>
                                      </tr>
                                   </thead>
                                   <tbody>
@@ -366,8 +405,18 @@ function EquiposContent() {
                                         {h.Resultado_Status}
                                         </span>
                                         </td>
-                                        <td>{h.Tecnico_Ejecutor}</td>
-                                         <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 200, whiteSpace: 'normal' }}>{h.Observaciones || '—'}</td>
+                                         <td>{h.Tecnico_Ejecutor}</td>
+                                          <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 200, whiteSpace: 'normal' }}>{h.Observaciones || '—'}</td>
+                                          <td style={{ textAlign: 'center' }}>
+                                            <button 
+                                              className="btn btn-ghost btn-xs" 
+                                              style={{ color: 'var(--danger)', padding: '4px' }}
+                                              onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, e.Nombre_Equipo) }}
+                                              title="Eliminar este registro"
+                                            >
+                                              <Trash2 size={14} />
+                                            </button>
+                                          </td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -409,6 +458,35 @@ function EquiposContent() {
           font-size: 10px;
           padding: 4px 8px;
         }
+        @media (max-width: 768px) {
+          .mobile-only { display: block !important; }
+          .desktop-only { display: none !important; }
+          .page-header { 
+            flex-direction: column; 
+            align-items: flex-start !important; 
+            gap: 16px;
+            margin-bottom: 20px !important;
+          }
+          .page-header div:last-child {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .table-container {
+             border-radius: 12px;
+             margin: 0 -4px;
+          }
+          .data-table th { padding: 12px 8px !important; font-size: 11px !important; }
+          .data-table td { padding: 12px 8px !important; }
+          .mobile-card-title { max-width: 140px; }
+          .mobile-card-info { font-size: 12px !important; }
+          .btn-scan {
+            padding: 8px 10px !important;
+            font-size: 10px !important;
+          }
+          .expanded-details .card {
+            padding: 16px !important;
+          }
+        }
       `}</style>
 
       {modalEquipo !== null && (
@@ -432,8 +510,8 @@ function EquiposContent() {
             code: qrLabelEquipo.Codigo_Interno,
             name: qrLabelEquipo.Nombre_Equipo,
             status: qrLabelEquipo.Estado,
-            statusLabel: semaforoLabel(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control)),
-            statusColor: qrLabelEquipo.Estado === 'FUERA_DE_SERVICIO' ? '#ef4444' : semaforoHex(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control))
+            statusLabel: semaforoLabel(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control, qrLabelEquipo.Estado), qrLabelEquipo.Estado),
+            statusColor: semaforoHex(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control, qrLabelEquipo.Estado))
           }}
           onClose={() => setQrLabelEquipo(null)}
         />

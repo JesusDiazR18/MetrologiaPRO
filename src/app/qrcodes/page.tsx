@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { QrCode, Printer, Search } from 'lucide-react'
+import { QrCode, Printer, Search, CheckCircle2, Settings2, Trash2, X, Scaling, Grid3X3, Layers } from 'lucide-react'
 import { calcularSemaforo, semaforoHex } from '@/lib/metrologia'
 import { QRCodeSVG } from 'qrcode.react'
 
@@ -19,6 +19,13 @@ export default function QRCodesPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'ALL' | 'EQUIPO' | 'INSTRUMENTO'>('ALL')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showPrintOptions, setShowPrintOptions] = useState(false)
+  
+  // Opciones de Impresión
+  const [printSize, setPrintSize] = useState<'STANDARD' | 'MINI'>('STANDARD')
+  const [printCols, setPrintCols] = useState(3)
+  const [printGaps, setPrintGaps] = useState(10) // mm
 
   useEffect(() => {
     let active = true
@@ -26,7 +33,12 @@ export default function QRCodesPage() {
       .then(r => r.json())
       .then(data => {
         if (active) {
-          setEquipos(data)
+          if (Array.isArray(data)) {
+            setEquipos(data)
+          } else {
+            console.error("QR Codes API returned non-array:", data)
+            setEquipos([])
+          }
           setLoading(false)
         }
       })
@@ -39,8 +51,7 @@ export default function QRCodesPage() {
     return () => { active = false }
   }, [])
 
-
-  const allActive = equipos.filter(e => e.Estado !== 'OBSOLETO' && e.Estado !== 'FUERA_DE_SERVICIO')
+  const allActive = equipos // Permitir imprimir todos, el filtro ya se encarga de buscar
   
   const filtered = allActive.filter(e => {
     const matchSearch = !search || 
@@ -51,188 +62,264 @@ export default function QRCodesPage() {
     return matchSearch && matchFilter
   })
 
-  const equiposCount = filtered.filter(e => e.Tipo === 'EQUIPO').length
-  const instCount = filtered.filter(e => e.Tipo === 'INSTRUMENTO').length
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
 
-  function handlePrintBatch(targetEquipos: Equipo[]) {
-    if (targetEquipos.length === 0) return
-    const w = window.open('', '_blank')
-    if (!w) return
+  const selectAllFiltered = () => {
+    const next = new Set(selectedIds)
+    filtered.forEach(e => next.add(e.ID_Equipo))
+    setSelectedIds(next)
+  }
 
+  const clearSelection = () => setSelectedIds(new Set())
+
+  function generatePrintHTML(targetEquipos: Equipo[]) {
     const scanUrlBase = `${window.location.protocol}//${window.location.host}/escaneo?id=`
+    const sizeMap = {
+      STANDARD: { w: 60, h: 40, qr: 100, fontCode: 14, fontName: 8 },
+      MINI: { w: 30, h: 18, qr: 50, fontCode: 9, fontName: 6 }
+    }[printSize]
 
-    w.document.write(`<!DOCTYPE html><html><head>
-      <title>Impresión de Etiquetas por Lotes</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; padding: 10mm; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10mm; }
-        .label { 
-          width: 60mm; height: 40mm; outline: 1px dashed #ccc; padding: 3mm; 
-          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2mm; 
-          page-break-inside: avoid;
-        }
-        .qr-wrap { background: #fff; padding: 1mm; border: 1px solid #eee; }
-        .info { text-align: center; width: 100%; }
-        .header-row { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 2px; }
-        .info-code { font-size: 14pt; font-weight: 900; color: #000; }
-        .status-badge { font-size: 7pt; font-weight: 800; border: 1px solid #000; padding: 1px 4px; border-radius: 10px; }
-        .info-name { font-size: 8pt; font-weight: 700; color: #333; line-height: 1.1; max-width: 50mm; overflow: hidden; }
-        @media print {
-          .label { outline: none; border: 1px solid #eee; }
-        }
-      </style>
-    </head><body><div class="grid">`)
-
+    let labelsHTML = ''
     targetEquipos.forEach(e => {
-      const semaforo = calcularSemaforo(e.Fecha_Proximo_Control)
-      const statusLabel = semaforo === 'VERDE' ? 'AL DÍA' : semaforo === 'AMARILLO' ? 'PRÓX. VENC.' : 'VENCIDO'
+      const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
+      const statusLabel = semaforo === 'VERDE' ? 'AL DÍA' : semaforo === 'AMARILLO' ? 'PRÓX. VENC.' : (e.Estado === 'OBSOLETO' ? 'BAJA' : 'VENCIDO')
       const statusColor = semaforoHex(semaforo)
+      const qrData = encodeURIComponent(scanUrlBase + e.Codigo_Interno)
       
-      // We need a way to get the SVG HTML. In a real app we'd use a server-side generator or a library that returns string.
-      // For this hacky client-side print, we will use a hidden Canvas or just another QRCodeSVG in the parent and grab it.
-      // Alternatively, we can just write the logic to generate them in the new window if we include the library there, 
-      // but simpler is to use a data URL if possible.
-      
-      w.document.write(`
+      labelsHTML += `
         <div class="label">
           <div class="qr-wrap">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(scanUrlBase + e.Codigo_Interno)}" width="100" height="100" />
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}" style="width: ${sizeMap.qr}px; height: ${sizeMap.qr}px;" />
           </div>
           <div class="info">
             <div class="header-row">
-              <span class="info-code">${e.Codigo_Interno}</span>
-              <span class="status-badge" style="border-color: ${statusColor}; color: ${statusColor}">${statusLabel}</span>
+              <span class="info-code" style="font-size: ${sizeMap.fontCode}pt">${e.Codigo_Interno}</span>
+              ${printSize === 'STANDARD' ? `<span class="status-badge" style="border-color: ${statusColor}; color: ${statusColor}">${statusLabel}</span>` : ''}
             </div>
-            <div class="info-name">${e.Nombre_Equipo}</div>
+            <div class="info-name" style="font-size: ${sizeMap.fontName}pt">${e.Nombre_Equipo}</div>
           </div>
         </div>
-      `)
+      `
     })
 
-    w.document.write(`</div></body></html>`)
+    return `<!DOCTYPE html><html><head>
+      <title>QMS - Impresión de Etiquetas</title>
+      <style>
+        @page { margin: 0; size: auto; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #fff; padding: 15mm; }
+        .grid { 
+          display: grid; 
+          grid-template-columns: repeat(${printCols}, 1fr); 
+          gap: ${printGaps}mm; 
+          justify-items: center;
+        }
+        .label { 
+          width: ${sizeMap.w}mm; 
+          height: ${sizeMap.h}mm; 
+          border: 1px solid #eee; 
+          padding: 3mm; 
+          display: flex; 
+          flex-direction: ${printSize === 'MINI' ? 'row' : 'column'}; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 3mm; 
+          page-break-inside: avoid;
+          background: #fff;
+          border-radius: 2mm;
+        }
+        .qr-wrap { display: flex; align-items: center; justify-content: center; }
+        .info { text-align: ${printSize === 'MINI' ? 'left' : 'center'}; flex: 1; }
+        .header-row { display: flex; align-items: center; justify-content: ${printSize === 'MINI' ? 'flex-start' : 'center'}; gap: 6px; margin-bottom: 2px; }
+        .info-code { font-weight: 900; color: #000; letter-spacing: -0.02em; }
+        .status-badge { font-size: 6pt; font-weight: 800; border: 1px solid #000; padding: 1px 4px; border-radius: 4px; text-transform: uppercase; }
+        .info-name { font-weight: 700; color: #444; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        @media print {
+          body { padding: 10mm; }
+          .label { border: 1px solid #eee; }
+        }
+      </style>
+    </head><body><div class="grid">${labelsHTML}</div></body></html>`
+  }
+
+  const handlePrintSelected = () => {
+    const targetEquipos = allActive.filter(e => selectedIds.has(e.ID_Equipo))
+    if (targetEquipos.length === 0) return alert('Selecciona al menos un equipo')
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(generatePrintHTML(targetEquipos))
     w.document.close()
     setTimeout(() => { w.print(); w.close() }, 1000)
   }
 
-  function handlePrintRange() {
-    const from = prompt('Desde el código (ej: E-01):')
-    const to = prompt('Hasta el código (ej: E-10):')
-    if (!from || !to) return
-    
-    const range = allActive.filter(e => {
-      const code = e.Codigo_Interno
-      return code >= from && code <= to
-    }).sort((a,b) => a.Codigo_Interno.localeCompare(b.Codigo_Interno))
-
-    if (range.length === 0) {
-      alert('No se encontraron activos en ese rango.')
-      return
-    }
-    handlePrintBatch(range)
-  }
-
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div className="page-header">
-        <div className="page-header-icon"><QrCode size={22} /></div>
+    <div style={{ animation: 'fadeIn 0.5s ease-out', position: 'relative' }}>
+      <div className="page-header" style={{ marginBottom: 32 }}>
+        <div className="page-header-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)' }}>
+          <QrCode size={22} color="#fff" />
+        </div>
         <div>
-          <h1>Galería de Etiquetas QR</h1>
-          <p>Gestión masiva e impresión de etiquetas para auditoría</p>
+          <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.03em' }}>Galería de Etiquetas QR</h1>
+          <p style={{ color: '#64748b', fontWeight: 500 }}>Impresión masiva y gestión de activos para auditoría</p>
         </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
-          <div className="filter-pills">
+        <div className="header-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
+          {selectedIds.size > 0 && (
+            <div className="selection-badge" style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: '8px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0369a1' }}>{selectedIds.size} seleccionados</span>
+              <button onClick={clearSelection} style={{ background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer' }}><X size={14} /></button>
+            </div>
+          )}
+          
+          <div className="filter-group-premium" style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 14 }}>
             {(['ALL', 'EQUIPO', 'INSTRUMENTO'] as const).map(f => (
               <button
                 key={f}
-                className={`pill ${filter === f ? 'active' : ''}`}
+                className={`filter-tab ${filter === f ? 'active' : ''}`}
                 onClick={() => setFilter(f)}
+                style={{
+                  border: 'none', background: filter === f ? '#fff' : 'transparent',
+                  padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                  color: filter === f ? '#0f172a' : '#64748b', cursor: 'pointer', transition: 'all 0.2s',
+                  boxShadow: filter === f ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
+                }}
               >
-                {f === 'ALL' 
-                  ? `Todos (${allActive.length})` 
-                  : f === 'EQUIPO' 
-                    ? `Equipos (${allActive.filter(e => e.Tipo === 'EQUIPO').length})`
-                    : `Instrumentos (${allActive.filter(e => e.Tipo === 'INSTRUMENTO').length})`
-                }
+                {f === 'ALL' ? 'Todos' : f === 'EQUIPO' ? 'Equipos' : 'Instr.'}
               </button>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" onClick={() => handlePrintBatch(filtered)}>
-              <Printer size={16} />
-              Imprimir Filtrados
-            </button>
-            <button className="btn btn-ghost" style={{ background: 'var(--snow-2)' }} onClick={handlePrintRange}>
-              <Printer size={16} />
-              Por Rango
-            </button>
-          </div>
+          <button 
+            className="btn-print-master" 
+            onClick={() => setShowPrintOptions(!showPrintOptions)}
+            style={{ 
+              background: '#0f172a', color: '#fff', border: 'none', padding: '12px 20px', 
+              borderRadius: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10,
+              boxShadow: '0 10px 20px rgba(0,0,0,0.1)', cursor: 'pointer'
+            }}
+          >
+            <Printer size={18} color="var(--accent)" />
+            {selectedIds.size > 0 ? 'Configurar Impresión' : 'Imprimir Etiquetas'}
+          </button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="topbar-search" style={{ marginBottom: 24 }}>
-        <Search size={18} />
+      {showPrintOptions && (
+        <div className="print-config-panel" style={{ 
+          background: '#fff', borderRadius: 20, padding: 24, marginBottom: 32,
+          border: '2px solid #f1f5f9', boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24,
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Scaling size={14} /> Tamaño de Etiqueta
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button 
+                onClick={() => setPrintSize('STANDARD')}
+                className={`config-btn ${printSize === 'STANDARD' ? 'active' : ''}`}
+              >Estándar (60x40)</button>
+              <button 
+                onClick={() => setPrintSize('MINI')}
+                className={`config-btn ${printSize === 'MINI' ? 'active' : ''}`}
+              >Mini (30x18)</button>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Grid3X3 size={14} /> Columnas por Hoja
+            </label>
+            <input 
+              type="range" min="1" max="5" value={printCols} 
+              onChange={e => setPrintCols(parseInt(e.target.value))}
+              style={{ width: '100%' }}
+            />
+            <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>{printCols} Columnas</div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Layers size={14} /> Espaciado (mm)
+            </label>
+            <input 
+              type="number" value={printGaps} 
+              onChange={e => setPrintGaps(parseInt(e.target.value))}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button 
+              onClick={handlePrintSelected}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', color: '#fff', border: 'none', padding: '14px', borderRadius: 14, fontWeight: 800, cursor: 'pointer' }}
+            >
+              🚀 Iniciar Impresión de {selectedIds.size || filtered.length} etiquetas
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Global Selection Info */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+          <button className="btn-secondary-light" onClick={selectAllFiltered}>
+            Seleccionar todos los filtrados ({filtered.length})
+          </button>
+      </div>
+
+      <div className="topbar-search-modern" style={{ position: 'relative', marginBottom: 32 }}>
+        <Search style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={20} />
         <input
-          placeholder="Buscar por código, nombre o área..."
+          placeholder="Filtrar por código, nombre, área o responsable..."
           value={search}
           onChange={e => setSearch(e.target.value)}
+          style={{
+            width: '100%', padding: '18px 24px 18px 56px', borderRadius: 20, border: '2px solid #f1f5f9',
+            fontSize: 16, fontWeight: 500, outline: 'none', transition: 'all 0.2s', background: '#fff'
+          }}
         />
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-soft)' }}>
-          Cargando activos...
+        <div style={{ textAlign: 'center', padding: 100 }}>
+          <div className="spinner" />
+          <p style={{ marginTop: 20, fontWeight: 600, color: '#64748b' }}>Cargando activos...</p>
         </div>
       ) : (
-        <div className="qr-grid">
+        <div className="qr-grid-premium">
           {filtered.map(e => {
-            const semaforo = calcularSemaforo(e.Fecha_Proximo_Control)
+            const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
             const statusColor = semaforoHex(semaforo)
-            const isEquipo = e.Tipo === 'EQUIPO'
-            const statusLabel = semaforo === 'VERDE' ? 'AL DÍA' : semaforo === 'AMARILLO' ? 'PRÓX. VENC.' : 'VENCIDO'
+            const isSelected = selectedIds.has(e.ID_Equipo)
             const scanUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/escaneo?id=${e.Codigo_Interno}`
 
             return (
-              <div key={e.ID_Equipo} className="qr-card">
-                <div className="qr-status-bar" style={{ background: statusColor }} />
-                
-                <div style={{ padding: '12px 14px 0', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div className="qr-type-badge" style={{ padding: 0 }}>
-                    {isEquipo ? '⚙️' : '🔬'} {e.Tipo}
-                  </div>
-                  <button 
-                    className="btn-print-mini"
-                    onClick={() => handlePrintBatch([e])}
-                    title="Imprimir etiqueta individual"
-                  >
-                    <Printer size={12} />
-                  </button>
+              <div 
+                key={e.ID_Equipo} 
+                className={`qr-premium-card ${isSelected ? 'selected' : ''}`}
+                onClick={() => toggleSelect(e.ID_Equipo)}
+              >
+                <div className="card-selector">
+                  {isSelected ? <CheckCircle2 size={24} color="#0ea5e9" strokeWidth={3} /> : <div className="selector-circle" />}
                 </div>
 
-                <div className="qr-image-wrap" style={{ padding: '8px 14px 12px' }}>
-                  <QRCodeSVG
-                    value={scanUrl}
-                    size={140}
-                    bgColor="#ffffff"
-                    fgColor="#0f172a"
-                    level="H"
-                    style={{ display: 'block', borderRadius: 6, border: '1px solid #eee' }}
-                  />
+                <div className="qr-img-box">
+                  <QRCodeSVG value={scanUrl} size={150} level="H" />
                 </div>
 
-                <div className="qr-info">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
-                    <div className="qr-code">{e.Codigo_Interno}</div>
-                    <div style={{ 
-                      fontSize: 8, fontWeight: 800, padding: '2px 6px', borderRadius: 10, 
-                      color: '#fff', background: statusColor, textTransform: 'uppercase'
-                    }}>{statusLabel}</div>
+                <div className="card-footer">
+                  <div className="footer-code">{e.Codigo_Interno}</div>
+                  <div className="footer-name">{e.Nombre_Equipo}</div>
+                  <div className="footer-meta">
+                     <span className="status-dot" style={{ background: statusColor }} />
+                     {e.Area_Asignada || 'General'}
                   </div>
-                  <div className="qr-name" title={e.Nombre_Equipo}>{e.Nombre_Equipo}</div>
-                  <div className="qr-area">{e.Area_Asignada ?? 'Sin área'}</div>
                 </div>
               </div>
             )
@@ -241,144 +328,47 @@ export default function QRCodesPage() {
       )}
 
       <style jsx>{`
-        .btn-print-mini {
-          background: var(--snow-2);
-          border: none;
-          color: var(--text-soft);
-          padding: 4px;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s;
+        .config-btn {
+          flex: 1; border: 2px solid #f1f5f9; background: #fff; padding: 10px; border-radius: 12px;
+          font-size: 11px; font-weight: 800; color: #64748b; cursor: pointer; transition: all 0.2s;
         }
-        .btn-print-mini:hover {
-          background: var(--accent);
-          color: #fff;
-        }
-        .filter-pills {
-          display: flex;
-          background: var(--snow-2);
-          padding: 4px;
-          border-radius: 12px;
-          gap: 4px;
-        }
-        .pill {
-          border: none;
-          background: none;
-          padding: 6px 14px;
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--text-soft);
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          white-space: nowrap;
-        }
-        .pill.active {
-          background: #fff;
-          color: var(--accent);
-          box-shadow: var(--shadow-sm);
-        }
-        .qr-grid {
+        .config-btn.active { border-color: #0ea5e9; color: #0ea5e9; background: #f0f9ff; }
+        
+        .qr-grid-premium {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 24px;
         }
-        .qr-card {
-          background: #fff;
-          border-radius: 16px;
-          overflow: hidden;
-          box-shadow: var(--shadow-sm);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          transition: all 0.25s ease;
-          border: 1px solid var(--snow-3);
-          position: relative;
+        .qr-premium-card {
+          background: #fff; border-radius: 24px; border: 2px solid #f1f5f9; padding: 24px;
+          display: flex; flex-direction: column; align-items: center; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          cursor: pointer; position: relative;
         }
-        .qr-card:hover {
-          transform: translateY(-4px);
-          box-shadow: var(--shadow-premium);
-        }
-        .qr-status-bar {
-          width: 100%;
-          height: 4px;
-          flex-shrink: 0;
-        }
-        .qr-type-badge {
-          font-size: 9px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--text-soft);
-          padding: 8px 12px 0;
-          align-self: flex-start;
-        }
-        .qr-image-wrap {
-          padding: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .qr-info {
-          padding: 0 14px 8px;
-          text-align: center;
-          width: 100%;
-          box-sizing: border-box;
-        }
-        .qr-code {
-          font-size: 15px;
-          font-weight: 800;
-          color: var(--accent);
-          margin-bottom: 4px;
-        }
-        .qr-name {
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--text-main);
-          margin-bottom: 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          width: 100%;
-        }
-        .qr-area {
-          font-size: 10px;
-          color: var(--text-soft);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          width: 100%;
-        }
-        .qr-footer {
-          padding: 8px 14px;
-          border-top: 1px solid var(--snow-2);
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          box-sizing: border-box;
-        }
-        .qr-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-        @media print {
-          .page-header, .topbar-search { display: none !important; }
-          .card { display: none !important; }
-          .qr-grid {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-          }
-          .qr-card {
-            break-inside: avoid;
-            box-shadow: none;
-            border: 1px solid #ddd;
-          }
-          .qr-card:hover {
-            transform: none;
-          }
+        .qr-premium-card.selected { border-color: #0ea5e9; background: #f0f9ff; transform: scale(1.02); }
+        .qr-premium-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.06); }
+        
+        .card-selector { position: absolute; top: 16px; right: 16px; }
+        .selector-circle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #e2e8f0; background: #fff; }
+        
+        .qr-img-box { background: #fff; padding: 12px; border-radius: 16px; border: 1px solid #f1f5f9; margin-bottom: 20px; }
+        
+        .card-footer { text-align: center; width: 100%; }
+        .footer-code { font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
+        .footer-name { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 12px; line-height: 1.2; height: 28px; overflow: hidden; }
+        .footer-meta { display: flex; alignItems: center; justifyContent: center; gap: 8px; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        .btn-secondary-light { background: #f1f5f9; border: none; padding: 10px 18px; borderRadius: 12px; fontSize: 12px; fontWeight: 700; color: #475569; cursor: pointer; }
+        
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        @media (max-width: 768px) {
+          .header-actions { flex-direction: column; align-items: stretch !important; width: 100%; }
+          .qr-grid-premium { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+          .qr-premium-card { padding: 16px; }
+          .footer-code { font-size: 15px; }
+          .qr-img-box { margin-bottom: 12px; }
+          .qr-img-box :global(svg) { width: 100px !important; height: 100px !important; }
         }
       `}</style>
     </div>

@@ -7,6 +7,15 @@ export async function GET(request: Request) {
     const q = searchParams.get('q') ?? ''
     const tipo = searchParams.get('tipo') ?? ''
     const estado = searchParams.get('estado') ?? ''
+    const suggest = searchParams.get('suggestId') === 'true'
+
+    if (suggest && tipo) {
+      const prefix = tipo === 'EQUIPO' ? 'EQ' : 'INS'
+      const year = new Date().getFullYear()
+      const count = await prisma.instrumentoEquipo.count({ where: { Tipo: tipo } })
+      const nextId = `${prefix}-${year}-${(count + 1).toString().padStart(3, '0')}`
+      return NextResponse.json({ nextId })
+    }
 
     console.log(`[API Equipos] GET q="${q}", tipo="${tipo}", estado="${estado}"`)
 
@@ -35,7 +44,11 @@ export async function GET(request: Request) {
     return NextResponse.json(equipos)
   } catch (error: any) {
     console.error('[API Equipos GET Error]:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    // Devolvemos un array vacío para evitar que el frontend falle con .map()
+    return NextResponse.json([], { 
+      status: 500,
+      statusText: error.message 
+    })
   }
 }
 

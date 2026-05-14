@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Props {
   onClose: () => void
@@ -21,6 +21,23 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Efecto para sugerir ID automáticamente
+  useEffect(() => {
+    if (formData.Tipo) {
+      fetch(`/api/equipos?suggestId=true&tipo=${formData.Tipo}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.nextId) {
+            setFormData(prev => ({ 
+              ...prev, 
+              ID_Equipo: d.nextId,
+              Codigo_Interno: `QMS-${d.nextId}` // Sugerencia automática de código QR
+            }))
+          }
+        })
+    }
+  }, [formData.Tipo])
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
@@ -107,13 +124,18 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">Código Interno (QR) *</label>
-                <input 
-                  className="form-control" 
-                  value={formData.Codigo_Interno} 
-                  onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})}
-                  placeholder="Ej: QMS-MET-01"
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    className="form-control" 
+                    value={formData.Codigo_Interno} 
+                    onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})}
+                    placeholder="Ej: QMS-MET-01"
+                    required
+                  />
+                  <div style={{ fontSize: 9, color: 'var(--accent)', marginTop: 4, fontWeight: 700 }}>
+                    ✨ GENERADO AUTOMÁTICAMENTE
+                  </div>
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Área Asignada</label>
@@ -178,6 +200,37 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
           </div>
         </form>
       </div>
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .modal {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            border-radius: 0 !important;
+            display: flex;
+            flex-direction: column;
+          }
+          .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px !important;
+          }
+          .grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .modal-footer {
+            padding: 16px !important;
+            background: #fff;
+            border-top: 1px solid #f1f5f9;
+          }
+          .btn {
+            padding: 12px !important;
+            font-size: 14px !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

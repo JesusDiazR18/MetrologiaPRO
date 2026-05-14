@@ -1,0 +1,22 @@
+{
+  "name": "Control Metrológico Pro",
+  "short_name": "Metrología",
+  "description": "Gestión profesional de instrumentos, equipos y patrones de referencia.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

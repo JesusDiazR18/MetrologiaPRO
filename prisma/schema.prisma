@@ -35,6 +35,9 @@ model InstrumentoEquipo {
   Estado                    String                    // OPERATIVO | NO_APTO | BAJA
 
   historiales               HistorialVerificacion[]
+
+  @@index([Codigo_Interno])
+  @@index([Tipo])
 }
 
 // ─────────────────────────────────────────────
@@ -52,6 +55,8 @@ model PatronReferencia {
   Estado_Vigencia               String                // VIGENTE | VENCIDO
 
   historiales                   HistorialVerificacion[]
+
+  @@index([Codigo])
 }
 
 // ─────────────────────────────────────────────

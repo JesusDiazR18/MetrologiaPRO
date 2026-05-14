@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
-  const patrones = await prisma.patronReferencia.findMany({ orderBy: { Codigo: 'asc' } })
+  const patrones = await prisma.patronReferencia.findMany({ 
+    include: { historiales: { orderBy: { Fecha_Ejecucion: 'desc' }, take: 10 } },
+    orderBy: { Codigo: 'asc' } 
+  })
   return NextResponse.json(patrones)
 }
 

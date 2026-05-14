@@ -108,7 +108,7 @@ export default function CalendarioPage() {
           boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
           border: '1px solid #f1f5f9'
         }}>
-          <div style={{ 
+          <div className="calendar-header-controls" style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
@@ -220,13 +220,14 @@ export default function CalendarioPage() {
                     marginBottom: 8,
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: 6
-                  }}>
+                  }} className="day-number">
                     {format(day, 'd')}
-                    {today && <span style={{ fontSize: 9, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', padding: '2px 6px', borderRadius: 6, border: '1px solid rgba(37, 99, 235, 0.2)' }}>Hoy</span>}
+                    {today && <span className="today-badge" style={{ fontSize: 9, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', padding: '2px 6px', borderRadius: 6, border: '1px solid rgba(37, 99, 235, 0.2)' }}>Hoy</span>}
                   </div>
 
-                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                  <div className="day-dots" style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
                     {dayItems.map(e => (
                       <div 
                         key={e.ID_Equipo} 
@@ -393,6 +394,38 @@ export default function CalendarioPage() {
           .calendar-main-grid {
             grid-template-columns: 1fr !important;
           }
+        }
+        @media (max-width: 768px) {
+          .calendar-header-controls {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 16px;
+          }
+          .cal-day-box {
+            min-height: 50px !important;
+            padding: 4px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          .day-number {
+            margin-bottom: 0 !important;
+            font-size: 13px !important;
+          }
+          .today-badge, .day-dots {
+            display: none !important;
+          }
+          .calendar-main-grid {
+            gap: 16px !important;
+            width: 100% !important;
+            overflow-x: hidden !important;
+          }
+          .card {
+            padding: 8px !important;
+            border-radius: 12px !important;
+          }
+          h2 { font-size: 15px !important; }
         }
       `}</style>
     </div>

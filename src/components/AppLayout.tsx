@@ -56,7 +56,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const currentPage = navItems.find(n => n.href === pathname)?.label ?? 'Panel'
 
-
+  // Si estamos en la vista pública "visor", ocultamos toda la estructura de la app
+  if (pathname.startsWith('/visor')) {
+    return (
+      <div className="app-layout">
+        <main className="page" style={{ width: '100%', maxWidth: '100%', padding: 0 }}>
+          {children}
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="app-layout">
@@ -116,20 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="main-content">
         {/* Topbar Ultra-Premium */}
-        <header className={`topbar ${scrolled ? 'scrolled' : ''}`} style={{
-          backdropFilter: 'blur(20px) saturate(180%)',
-          background: 'rgba(255, 255, 255, 0.7)',
-          borderBottom: '1px solid rgba(226, 232, 240, 0.5)',
-          padding: scrolled ? '10px 32px' : '16px 32px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 32,
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: scrolled ? '0 10px 30px -10px rgba(0,0,0,0.08)' : 'none'
-        }}>
+        <header className={`topbar ${scrolled ? 'scrolled' : ''}`}>
           <button
             style={{ 
               display: 'flex', 
@@ -156,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               letterSpacing: '-0.02em',
               transition: 'all 0.3s'
             }}>{currentPage}</div>
-            <div className="mobile-hide" style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Metrología Inteligente</div>
+            <div className="desktop-only" style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Metrología Inteligente</div>
           </div>
 
           <div className="topbar-search-container" style={{ 
@@ -228,23 +224,107 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 
 
-        <main className="page" style={{ width: '100%', maxWidth: '100%' }}>
+        <main className="page" style={{ 
+          width: '100%', 
+          maxWidth: '100%',
+          minHeight: 'calc(100vh - 60px)',
+          display: 'block',
+          position: 'relative'
+        }}>
           {children}
         </main>
       </div>
 
+      {/* Bottom Navigation para Móviles - Estilo iOS/Android Nativo */}
+      <nav className="bottom-nav">
+        {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => {
+          const active = pathname === href
+          return (
+            <Link key={href} href={href} className={`bottom-nav-item ${active ? 'active' : ''}`}>
+              <Icon size={20} />
+              <span>{label.split(' ')[0]}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
       {/* Mobile sidebar toggle CSS override */}
       <style>{`
         @media (max-width: 768px) {
-          .mobile-toggle { display: flex !important; margin-right: -10px; }
-          .topbar { height: 60px !important; padding: 0 16px !important; gap: 12px !important; }
-          .btn-scan span { display: none; }
-          .btn-scan { padding: 10px !important; border-radius: 12px !important; }
-          .mobile-hide { display: none !important; }
+          .mobile-toggle { display: flex !important; }
+          .topbar { 
+            height: 60px !important; 
+            padding: 0 16px !important; 
+            gap: 12px !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+          }
           .topbar-search-container { display: none !important; }
-          .bottom-nav { display: none !important; }
-          .main-content { padding-bottom: 0 !important; }
-          .page { padding: 12px !important; }
+          .btn-scan { 
+            padding: 8px 12px !important; 
+            border-radius: 12px !important; 
+            background: #f1f5f9 !important;
+            box-shadow: none !important;
+            color: #1e293b !important;
+            border: 1px solid #e2e8f0 !important;
+          }
+          .btn-scan span { display: none; }
+          .btn-scan svg { color: var(--accent) !important; }
+          
+          .main-content { 
+            padding-bottom: 80px !important; /* Más espacio para el bottom nav y evitar solapamiento */
+            overflow-y: visible !important;
+            height: auto !important;
+          }
+          .page { 
+            padding: 12px 6px !important; 
+            overflow-x: hidden !important; 
+            overflow-y: visible !important;
+            display: block !important;
+          }
+
+          .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 1000;
+          }
+          .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+            color: #94a3b8;
+            transition: all 0.2s;
+            flex: 1;
+          }
+          .bottom-nav-item span {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+          }
+          .bottom-nav-item.active {
+            color: #0ea5e9;
+          }
+          .bottom-nav-item.active svg {
+            transform: translateY(-2px);
+            filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.3));
+          }
+        }
+        @media (min-width: 769px) {
+          .bottom-nav { display: none; }
         }
       `}</style>
     </div>
