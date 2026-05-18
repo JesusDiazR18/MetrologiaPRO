@@ -33,6 +33,10 @@ model InstrumentoEquipo {
   Fecha_Proximo_Control     DateTime?
   Foto_Equipo               String?
   Estado                    String                    // OPERATIVO | NO_APTO | BAJA
+  PDF_Certificado               String?
+  Fecha_Vencimiento_Certificado DateTime?
+  N_Certificado                 String?
+  Proveedor_Servicio            String?
 
   historiales               HistorialVerificacion[]
 

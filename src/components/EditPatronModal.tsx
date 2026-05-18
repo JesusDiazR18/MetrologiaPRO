@@ -1,62 +1,50 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface Props {
+  patron: any
   onClose: () => void
   onSaved: () => void
 }
 
-export default function CreatePatronModal({ onClose, onSaved }: Props) {
+export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
   const [formData, setFormData] = useState({
-    ID_Patron: '',
-    Codigo: '',
-    Nombre_Patron: '',
-    Fecha_Calibracion_Externa: new Date().toISOString().split('T')[0],
-    Fecha_Vencimiento_Certificado: '',
-    N_Certificado: '',
-    Proveedor_Laboratorio: '',
-    Estado_Vigencia: 'VIGENTE'
+    Codigo: patron.Codigo || '',
+    Nombre_Patron: patron.Nombre_Patron || '',
+    Fecha_Calibracion_Externa: patron.Fecha_Calibracion_Externa ? new Date(patron.Fecha_Calibracion_Externa).toISOString().split('T')[0] : '',
+    Fecha_Vencimiento_Certificado: patron.Fecha_Vencimiento_Certificado ? new Date(patron.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
+    N_Certificado: patron.N_Certificado || '',
+    Proveedor_Laboratorio: patron.Proveedor_Laboratorio || '',
+    Estado_Vigencia: patron.Estado_Vigencia || 'VIGENTE'
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetch('/api/patrones?suggestId=true')
-      .then(r => r.json())
-      .then(d => {
-        if (d.nextId) {
-          setFormData(prev => ({
-            ...prev,
-            ID_Patron: d.nextId,
-            Codigo: `QMS-${d.nextId}`
-          }))
-        }
-      })
-  }, [])
-
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
-    if (!formData.ID_Patron || !formData.Nombre_Patron || !formData.Codigo) {
-      setError('ID, Nombre y Código son obligatorios')
+    if (!formData.Nombre_Patron || !formData.Codigo) {
+      setError('Nombre y Código son obligatorios')
       return
     }
     setSaving(true)
     setError('')
     try {
-      const r = await fetch('/api/patrones', {
-        method: 'POST',
+      const payload = {
+        ...formData,
+        Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
+        Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
+      }
+
+      const r = await fetch(`/api/patrones/${patron.ID_Patron}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
-          Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
-        })
+        body: JSON.stringify(payload)
       })
       if (r.ok) {
         onSaved()
       } else {
         const d = await r.json()
-        setError(d.error ?? 'Error al guardar el patrón')
+        setError(d.error ?? 'Error al actualizar el patrón')
       }
     } catch (err) {
       setError('Error de conexión')
@@ -71,12 +59,12 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
         <div className="modal-header">
           <div style={{ width: 38, height: 38, background: 'var(--oxford-blue)', borderRadius: 12, display: 'grid', placeItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" strokeWidth="2.5">
-              <path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/>
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </div>
           <div>
-            <span className="modal-title" style={{ fontSize: 18, fontWeight: 700 }}>Nuevo Patrón de Referencia</span>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Registro e identificación de patrón estándar</div>
+            <span className="modal-title" style={{ fontSize: 18, fontWeight: 700 }}>Editar Patrón ({patron.ID_Patron})</span>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Modificación de datos y vigencia de calibración</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 24, marginLeft: 'auto' }}>×</button>
         </div>
@@ -88,18 +76,20 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
               <div className="section-title">1. Identificación del Patrón</div>
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">ID Sistema (Automático) *</label>
-                  <input className="form-control" value={formData.ID_Patron} onChange={e => setFormData({...formData, ID_Patron: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Código Interno (QR) *</label>
+                  <label className="form-label">Código Interno *</label>
                   <input className="form-control" value={formData.Codigo} onChange={e => setFormData({...formData, Codigo: e.target.value})} required />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Estado de Vigencia</label>
+                  <select className="form-control" value={formData.Estado_Vigencia} onChange={e => setFormData({...formData, Estado_Vigencia: e.target.value})}>
+                    <option value="VIGENTE">VIGENTE / APTO</option>
+                    <option value="VENCIDO">VENCIDO / FUERA DE NORMA</option>
+                  </select>
+                </div>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Nombre del Patrón *</label>
-                <input className="form-control" value={formData.Nombre_Patron} onChange={e => setFormData({...formData, Nombre_Patron: e.target.value})} placeholder="Ej: Masa Patrón 1kg Clase E2" required />
+                <input className="form-control" value={formData.Nombre_Patron} onChange={e => setFormData({...formData, Nombre_Patron: e.target.value})} required />
               </div>
             </div>
 
@@ -119,27 +109,19 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
               <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">N° Certificado</label>
-                  <input className="form-control" value={formData.N_Certificado} onChange={e => setFormData({...formData, N_Certificado: e.target.value})} placeholder="Ej: CERT-2026-001" />
+                  <input className="form-control" value={formData.N_Certificado} onChange={e => setFormData({...formData, N_Certificado: e.target.value})} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Proveedor / Laboratorio</label>
-                  <input className="form-control" value={formData.Proveedor_Laboratorio} onChange={e => setFormData({...formData, Proveedor_Laboratorio: e.target.value})} placeholder="Ej: Metrología Nacional" />
+                  <input className="form-control" value={formData.Proveedor_Laboratorio} onChange={e => setFormData({...formData, Proveedor_Laboratorio: e.target.value})} />
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Estado de Vigencia</label>
-                <select className="form-control" value={formData.Estado_Vigencia} onChange={e => setFormData({...formData, Estado_Vigencia: e.target.value})}>
-                  <option value="VIGENTE">VIGENTE / APTO</option>
-                  <option value="VENCIDO">VENCIDO / FUERA DE NORMA</option>
-                </select>
               </div>
             </div>
           </div>
           <div className="modal-footer" style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '20px 28px', display: 'flex', justifyContent: 'flex-end', gap: 12, background: 'var(--snow-1)' }}>
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-cyan" disabled={saving}>
-              {saving ? '⏳ Guardando...' : '✓ Registrar Patrón'}
+              {saving ? '⏳ Guardando Cambios...' : '✓ Guardar Cambios'}
             </button>
           </div>
         </form>

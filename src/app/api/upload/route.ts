@@ -7,10 +7,15 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const idPatron = formData.get('idPatron') as string
+    const assetId = formData.get('assetId') as string || formData.get('idPatron') as string
+    const assetType = formData.get('assetType') as string || 'PATRON'
+    const nCert = formData.get('nCert') as string
+    const prov = formData.get('prov') as string
+    const fechaCal = formData.get('fechaCal') as string
+    const fechaVenc = formData.get('fechaVenc') as string
 
-    if (!file || !idPatron) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    if (!file || !assetId) {
+      return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 })
     }
 
     const bytes = await file.arrayBuffer()
@@ -23,10 +28,30 @@ export async function POST(request: Request) {
     await writeFile(path, buffer)
     const publicPath = `/uploads/certificados/${fileName}`
 
-    const updated = await prisma.patronReferencia.update({
-      where: { ID_Patron: idPatron },
-      data: { PDF_Certificado: publicPath }
-    })
+    let updated
+    if (assetType === 'EQUIPO' || assetType === 'INSTRUMENTO') {
+      const updateData: any = { PDF_Certificado: publicPath }
+      if (nCert) updateData.N_Certificado = nCert
+      if (prov) updateData.Proveedor_Servicio = prov
+      if (fechaCal) updateData.Fecha_Ultima_Verificacion = new Date(fechaCal)
+      if (fechaVenc) updateData.Fecha_Vencimiento_Certificado = new Date(fechaVenc)
+
+      updated = await prisma.instrumentoEquipo.update({
+        where: { ID_Equipo: assetId },
+        data: updateData
+      })
+    } else {
+      const updateData: any = { PDF_Certificado: publicPath }
+      if (nCert) updateData.N_Certificado = nCert
+      if (prov) updateData.Proveedor_Laboratorio = prov
+      if (fechaCal) updateData.Fecha_Calibracion_Externa = new Date(fechaCal)
+      if (fechaVenc) updateData.Fecha_Vencimiento_Certificado = new Date(fechaVenc)
+
+      updated = await prisma.patronReferencia.update({
+        where: { ID_Patron: assetId },
+        data: updateData
+      })
+    }
 
     return NextResponse.json({ success: true, path: publicPath, updated })
   } catch (error) {

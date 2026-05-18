@@ -4,13 +4,15 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ClipboardList, Search, SlidersHorizontal, Plus, ChevronsDown, 
-  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2 
+  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2, FileText, Edit, RefreshCw
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes, getScanUrl } from '@/lib/metrologia'
 import { generateTechnicalSheetPDF } from '@/lib/reports'
 import VerificationModal from '@/components/VerificationModal'
 import CreateEquipoModal from '@/components/CreateEquipoModal'
+import EditEquipoModal from '@/components/EditEquipoModal'
+import RenewCertModal from '@/components/RenewCertModal'
 import QRLabelModal from '@/components/QRLabelModal'
 import { toast } from 'react-hot-toast'
 
@@ -19,6 +21,11 @@ interface Equipo {
   Tipo: string
   Codigo_Interno: string
   Nombre_Equipo: string
+  Marca?: string
+  Modelo?: string
+  Serie?: string
+  Rango_Medida?: string
+  Resolucion?: string
   Tolerancia_Aceptable: number
   Unidad_Tolerancia: string | null
   Area_Asignada: string | null
@@ -27,6 +34,10 @@ interface Equipo {
   Fecha_Ultima_Verificacion: string | null
   Fecha_Proximo_Control: string | null
   Estado: string
+  N_Certificado?: string | null
+  Proveedor_Servicio?: string | null
+  Fecha_Vencimiento_Certificado?: string | null
+  PDF_Certificado?: string | null
   historiales: {
     ID_Log: string
     Fecha_Ejecucion: string
@@ -53,6 +64,8 @@ function EquiposContent() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [modalEquipo, setModalEquipo] = useState<Equipo | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editEquipo, setEditEquipo] = useState<Equipo | null>(null)
+  const [renewEquipo, setRenewEquipo] = useState<Equipo | null>(null)
   const [qrLabelEquipo, setQrLabelEquipo] = useState<Equipo | null>(null)
   const searchParams = useSearchParams()
 
@@ -67,8 +80,6 @@ function EquiposContent() {
       
       if (Array.isArray(data)) {
         setEquipos(data)
-        
-        // Auto-expand if exact match or single result
         if (query && data.length === 1) {
           setExpanded(data[0].ID_Equipo)
         } else if (query) {
@@ -142,6 +153,21 @@ function EquiposContent() {
     })
   }
 
+  const handleEliminarActivo = async (id: string, nombre: string) => {
+    if (!confirm(`🚨 ADVERTENCIA: ¿Estás completamente seguro de que deseas ELIMINAR el activo "${nombre}" (${id}) y todo su historial de verificaciones?\n\nEsta acción no se puede deshacer.`)) return
+    
+    const deletePromise = fetch(`/api/equipos/${id}`, { method: 'DELETE' }).then(res => {
+      if (!res.ok) throw new Error('Error al eliminar')
+      load(q, tipo)
+    })
+
+    toast.promise(deletePromise, {
+      loading: 'Eliminando activo...',
+      success: 'Activo e historial eliminados correctamente',
+      error: 'Error al eliminar el activo'
+    })
+  }
+
   const handleEliminarHistorial = async (idLog: string, activoNombre: string) => {
     if (!confirm(`¿Estás seguro de que deseas ELIMINAR permanentemente esta verificación del historial de "${activoNombre}"?\n\nLas fechas de próxima verificación se recalcularán automáticamente.`)) return
     
@@ -159,8 +185,6 @@ function EquiposContent() {
     })
   }
 
-  const handleSearch = () => { load(q, tipo) }
-
   return (
     <div>
       <div className="page-header">
@@ -168,8 +192,8 @@ function EquiposContent() {
           <ClipboardList size={22} />
         </div>
         <div>
-          <h1>Fichas Técnicas</h1>
-          <p>Gestión y seguimiento de instrumentos del sistema QMS</p>
+          <h1>Fichas Técnicas e Instrumentos</h1>
+          <p>Catálogo centralizado de activos metrológicos del sistema QMS</p>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
           <button className="btn btn-ghost" onClick={() => setShowCreateModal(true)}>
@@ -184,19 +208,29 @@ function EquiposContent() {
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="card-body">
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ marginRight: 'auto' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtros de Vista</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 280px' }}>
+              <Search size={18} color="var(--text-dim)" />
+              <input 
+                type="text" 
+                placeholder="Buscar por ID, nombre o código QR..." 
+                value={q} 
+                onChange={e => { setQ(e.target.value); load(e.target.value, tipo) }}
+                style={{ background: 'transparent', border: 'none', color: '#fff', width: '100%', outline: 'none', fontSize: 14 }}
+              />
             </div>
-            <select 
-              className="btn-scan" 
-              style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid var(--glass-border)', boxShadow: 'none' }}
-              value={tipo} 
-              onChange={e => { setTipo(e.target.value); load(q, e.target.value) }}
-            >
-              <option value="">Todos los tipos</option>
-              <option value="EQUIPO">Equipos</option>
-              <option value="INSTRUMENTO">Instrumentos</option>
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Filtro:</span>
+              <select 
+                className="btn-scan" 
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid var(--glass-border)', boxShadow: 'none' }}
+                value={tipo} 
+                onChange={e => { setTipo(e.target.value); load(q, e.target.value) }}
+              >
+                <option value="">Todos los tipos</option>
+                <option value="EQUIPO">Equipos</option>
+                <option value="INSTRUMENTO">Instrumentos</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -206,7 +240,7 @@ function EquiposContent() {
         {loading ? (
           <div className="card-body" style={{ textAlign: 'center', padding: 60 }}>
             <div className="spinner" style={{ margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--text-dim)' }}>Sincronizando base de datos...</p>
+            <p style={{ color: 'var(--text-dim)' }}>Sincronizando base de datos metrológica...</p>
           </div>
         ) : equipos.length === 0 ? (
           <div className="card-body" style={{ textAlign: 'center', padding: 80 }}>
@@ -231,7 +265,7 @@ function EquiposContent() {
                 {equipos.map((e) => {
                   const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
                   const isExpanded = expanded === e.ID_Equipo
-                  const statusColor = semaforoHex(semaforo);
+                  const statusColor = semaforoHex(semaforo)
                   
                   return (
                     <React.Fragment key={e.ID_Equipo}>
@@ -331,15 +365,15 @@ function EquiposContent() {
                                   </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, width: '100%', gridColumn: '1 / -1' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', gridColumn: '1 / -1' }}>
                                   <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                                       <FileDigit size={16} color="var(--accent)" />
                                       <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
                                     </div>
                                     <div className="spec-row">
-                                      <span className="spec-label">Modelo</span>
-                                      <span className="spec-value">Standard Series v2</span>
+                                      <span className="spec-label">Modelo / Serie</span>
+                                      <span className="spec-value">{e.Modelo || '—'} / {e.Serie || '—'}</span>
                                     </div>
                                     <div className="spec-row">
                                       <span className="spec-label">Tolerancia</span>
@@ -352,6 +386,35 @@ function EquiposContent() {
                                     <div className="spec-row" style={{ marginTop: -4 }}>
                                       <span className="spec-label">Intervalo</span>
                                       <span className="spec-value">{e.Periodicidad_Meses} Meses</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                      <FileText size={16} color="var(--cyan)" />
+                                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certificado Digital</span>
+                                    </div>
+                                    <div className="spec-row">
+                                      <span className="spec-label">N° Certificado</span>
+                                      <span className="spec-value">{e.N_Certificado || '—'}</span>
+                                    </div>
+                                    <div className="spec-row">
+                                      <span className="spec-label">Proveedor</span>
+                                      <span className="spec-value">{e.Proveedor_Servicio || '—'}</span>
+                                    </div>
+                                    <div className="spec-row">
+                                      <span className="spec-label">Vencimiento</span>
+                                      <span className="spec-value">{e.Fecha_Vencimiento_Certificado ? formatFecha(e.Fecha_Vencimiento_Certificado) : '—'}</span>
+                                    </div>
+                                    <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                      {e.PDF_Certificado && (
+                                        <a href={e.PDF_Certificado} target="_blank" rel="noreferrer" className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)' }}>
+                                          👁️ Ver PDF
+                                        </a>
+                                      )}
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
+                                        <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renovar Cert
+                                      </button>
                                     </div>
                                   </div>
 
@@ -372,12 +435,18 @@ function EquiposContent() {
                                       <span className="spec-label">Estado Sist.</span>
                                       <span className="spec-value" style={{ color: statusColor }}>{e.Estado}</span>
                                     </div>
-                                    <div style={{ marginTop: 10, textAlign: 'right' }}>
+                                    <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(e) }}>
+                                        <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
+                                      </button>
                                       {e.Estado === 'FUERA_DE_SERVICIO' ? (
-                                        <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', padding: '0 4px' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(e.ID_Equipo, e.Nombre_Equipo) }}>Re-habilitar Activo</button>
+                                        <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(e.ID_Equipo, e.Nombre_Equipo) }}>Re-habilitar</button>
                                       ) : (
-                                        <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)', padding: '0 4px' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(e.ID_Equipo, e.Nombre_Equipo) }}>Dar de Baja</button>
+                                        <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(e.ID_Equipo, e.Nombre_Equipo) }}>Dar de Baja</button>
                                       )}
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(e.ID_Equipo, e.Nombre_Equipo) }}>
+                                        <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -501,6 +570,28 @@ function EquiposContent() {
         <CreateEquipoModal 
           onClose={() => setShowCreateModal(false)}
           onSaved={() => { setShowCreateModal(false); load(q, tipo) }}
+        />
+      )}
+      {editEquipo && (
+        <EditEquipoModal
+          equipo={editEquipo}
+          onClose={() => setEditEquipo(null)}
+          onSaved={() => { setEditEquipo(null); load(q, tipo) }}
+        />
+      )}
+      {renewEquipo && (
+        <RenewCertModal
+          asset={{
+            id: renewEquipo.ID_Equipo,
+            name: renewEquipo.Nombre_Equipo,
+            type: renewEquipo.Tipo as any,
+            nCert: renewEquipo.N_Certificado ?? undefined,
+            prov: renewEquipo.Proveedor_Servicio ?? undefined,
+            fechaCal: renewEquipo.Fecha_Ultima_Verificacion ? new Date(renewEquipo.Fecha_Ultima_Verificacion).toISOString().split('T')[0] : undefined,
+            fechaVenc: renewEquipo.Fecha_Vencimiento_Certificado ? new Date(renewEquipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : undefined
+          }}
+          onClose={() => setRenewEquipo(null)}
+          onSaved={() => { setRenewEquipo(null); load(q, tipo) }}
         />
       )}
       {qrLabelEquipo && (

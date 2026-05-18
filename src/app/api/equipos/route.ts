@@ -10,10 +10,10 @@ export async function GET(request: Request) {
     const suggest = searchParams.get('suggestId') === 'true'
 
     if (suggest && tipo) {
-      const prefix = tipo === 'EQUIPO' ? 'EQ' : 'INS'
-      const year = new Date().getFullYear()
+      const prefix = tipo === 'EQUIPO' ? 'E' : 'I'
       const count = await prisma.instrumentoEquipo.count({ where: { Tipo: tipo } })
-      const nextId = `${prefix}-${year}-${(count + 1).toString().padStart(3, '0')}`
+      const num = (count + 1).toString().padStart(2, '0')
+      const nextId = `${prefix}-${num}`
       return NextResponse.json({ nextId })
     }
 
@@ -56,7 +56,27 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     console.log('[API Equipos] POST body:', body)
-    const equipo = await prisma.instrumentoEquipo.create({ data: body })
+    
+    // Si no tiene fecha de última verificación, le asignamos hoy
+    const now = new Date()
+    const ultima = body.Fecha_Ultima_Verificacion ? new Date(body.Fecha_Ultima_Verificacion) : now
+    
+    // Calculamos próxima fecha según la periodicidad
+    const meses = parseInt(body.Periodicidad_Meses) || 12
+    const proximo = body.Fecha_Proximo_Control ? new Date(body.Fecha_Proximo_Control) : new Date(ultima)
+    if (!body.Fecha_Proximo_Control) {
+      proximo.setMonth(proximo.getMonth() + meses)
+    }
+
+    const equipo = await prisma.instrumentoEquipo.create({ 
+      data: {
+        ...body,
+        Fecha_Ultima_Verificacion: ultima,
+        Fecha_Proximo_Control: proximo,
+        Periodicidad_Meses: meses,
+        Tolerancia_Aceptable: parseFloat(body.Tolerancia_Aceptable) || 0
+      } 
+    })
     return NextResponse.json(equipo, { status: 201 })
   } catch (error: any) {
     console.error('[API Equipos POST Error]:', error)
