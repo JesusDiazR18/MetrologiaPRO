@@ -112,7 +112,14 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                   <select 
                     className="form-control" 
                     value={formData.Tipo} 
-                    onChange={e => setFormData({...formData, Tipo: e.target.value})}
+                    onChange={e => {
+                      const val = e.target.value
+                      setFormData(prev => ({
+                        ...prev, 
+                        Tipo: val,
+                        ...(val === 'INSTRUMENTO' ? { N_Certificado: '', Proveedor_Servicio: '', Fecha_Vencimiento_Certificado: '' } : {})
+                      }))
+                    }}
                   >
                     <option value="EQUIPO">Equipo</option>
                     <option value="INSTRUMENTO">Instrumento</option>
@@ -214,23 +221,25 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
               </div>
             </div>
 
-            <div className="form-section">
-              <div className="section-title">3. Certificado de Calibración / Servicio</div>
-              <div className="grid-3">
-                <div className="form-group">
-                  <label className="form-label">N° Certificado</label>
-                  <input className="form-control" value={formData.N_Certificado} onChange={e => setFormData({...formData, N_Certificado: e.target.value})} placeholder="Ej: CERT-2026-09" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Proveedor / Laboratorio</label>
-                  <input className="form-control" value={formData.Proveedor_Servicio} onChange={e => setFormData({...formData, Proveedor_Servicio: e.target.value})} placeholder="Ej: Metrología Externa S.A." />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Vencimiento Certificado</label>
-                  <input className="form-control" type="date" value={formData.Fecha_Vencimiento_Certificado} onChange={e => setFormData({...formData, Fecha_Vencimiento_Certificado: e.target.value})} />
+            {formData.Tipo === 'EQUIPO' && (
+              <div className="form-section">
+                <div className="section-title">3. Certificado de Calibración / Servicio</div>
+                <div className="grid-3">
+                  <div className="form-group">
+                    <label className="form-label">N° Certificado</label>
+                    <input className="form-control" value={formData.N_Certificado} onChange={e => setFormData({...formData, N_Certificado: e.target.value})} placeholder="Ej: CERT-2026-09" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Proveedor / Laboratorio</label>
+                    <input className="form-control" value={formData.Proveedor_Servicio} onChange={e => setFormData({...formData, Proveedor_Servicio: e.target.value})} placeholder="Ej: Metrología Externa S.A." />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Vencimiento Certificado</label>
+                    <input className="form-control" type="date" value={formData.Fecha_Vencimiento_Certificado} onChange={e => setFormData({...formData, Fecha_Vencimiento_Certificado: e.target.value})} />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
           <div className="modal-footer" style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '20px 28px', display: 'flex', justifyContent: 'flex-end', gap: 12, background: 'var(--snow-1)' }}>
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>

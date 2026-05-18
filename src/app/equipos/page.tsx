@@ -389,34 +389,48 @@ function EquiposContent() {
                                     </div>
                                   </div>
 
-                                  <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                      <FileText size={16} color="var(--cyan)" />
-                                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certificado Digital</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">N° Certificado</span>
-                                      <span className="spec-value">{e.N_Certificado || '—'}</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Proveedor</span>
-                                      <span className="spec-value">{e.Proveedor_Servicio || '—'}</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Vencimiento</span>
-                                      <span className="spec-value">{e.Fecha_Vencimiento_Certificado ? formatFecha(e.Fecha_Vencimiento_Certificado) : '—'}</span>
-                                    </div>
-                                    <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                                      {e.PDF_Certificado && (
-                                        <a href={e.PDF_Certificado} target="_blank" rel="noreferrer" className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)' }}>
-                                          👁️ Ver PDF
-                                        </a>
+                                  {e.Tipo === 'EQUIPO' && (
+                                    <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                        <FileText size={16} color="var(--cyan)" />
+                                        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certificado Digital</span>
+                                      </div>
+                                      {(e.N_Certificado || e.PDF_Certificado || e.Fecha_Vencimiento_Certificado) ? (
+                                        <>
+                                          <div className="spec-row">
+                                            <span className="spec-label">N° Certificado</span>
+                                            <span className="spec-value">{e.N_Certificado || '—'}</span>
+                                          </div>
+                                          <div className="spec-row">
+                                            <span className="spec-label">Proveedor</span>
+                                            <span className="spec-value">{e.Proveedor_Servicio || '—'}</span>
+                                          </div>
+                                          <div className="spec-row">
+                                            <span className="spec-label">Vencimiento</span>
+                                            <span className="spec-value">{e.Fecha_Vencimiento_Certificado ? formatFecha(e.Fecha_Vencimiento_Certificado) : '—'}</span>
+                                          </div>
+                                          <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            {e.PDF_Certificado && (
+                                              <a href={e.PDF_Certificado} target="_blank" rel="noreferrer" className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)' }}>
+                                                👁️ Ver PDF
+                                              </a>
+                                            )}
+                                            <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
+                                              <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renovar Cert
+                                            </button>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div style={{ textAlign: 'center', padding: '12px 0', color: 'var(--text-dim)' }}>
+                                          <p style={{ fontSize: 12, marginBottom: 12 }}>Este equipo se verifica internamente o no tiene certificado externo cargado.</p>
+                                          <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
+                                            <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> + Cargar Certificado Externo
+                                          </button>
+                                        </div>
                                       )}
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
-                                        <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renovar Cert
-                                      </button>
                                     </div>
-                                  </div>
+                                  )}
+
 
                                   <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
