@@ -34,6 +34,12 @@ interface Equipo {
   Fecha_Ultima_Verificacion: string | null
   Fecha_Proximo_Control: string | null
   Estado: string
+  Detalles_Estado?: string | null
+  Tiene_Solucion?: boolean | null
+  Requiere_Seguimiento?: boolean | null
+  Magnitud?: string | null
+  Accesorios?: string | null
+  Insumos?: string | null
   N_Certificado?: string | null
   Proveedor_Servicio?: string | null
   Fecha_Vencimiento_Certificado?: string | null
@@ -108,7 +114,7 @@ function EquiposContent() {
   }, [searchParams, load])
 
   const handleDeBaja = async (id: string, nombre: string) => {
-    const motivo = prompt(`¿Estás seguro de que deseas poner el equipo "${nombre}" FUERA DE SERVICIO? Por favor, indica el motivo:`)
+    const motivo = prompt(`¿Estás seguro de que deseas dar de baja o marcar como obsoleto el equipo "${nombre}"? Por favor, indica el motivo:`)
     if (motivo === null) return 
     if (!motivo.trim()) return toast.error('Debes indicar un motivo para dar de baja el equipo.')
     
@@ -116,8 +122,11 @@ function EquiposContent() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        estado: 'FUERA_DE_SERVICIO',
-        observaciones: `MOTIVO DE BAJA: ${motivo}`
+        estado: 'DE_BAJA_OBSOLETO',
+        detalles_estado: `Motivo de Baja / Obsoleto: ${motivo}`,
+        tiene_solucion: false,
+        requiere_seguimiento: false,
+        observaciones: `Baja / Obsoleto: ${motivo}`
       })
     }).then(res => {
       if (!res.ok) throw new Error('Error al actualizar el estado')
@@ -139,6 +148,9 @@ function EquiposContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         estado: 'OPERATIVO',
+        detalles_estado: null,
+        tiene_solucion: true,
+        requiere_seguimiento: false,
         observaciones: `EQUIPO RE-HABILITADO: El equipo vuelve a estar disponible para su uso.`
       })
     }).then(res => {
@@ -336,6 +348,37 @@ function EquiposContent() {
                         <tr>
                           <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
                             <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${statusColor}` }}>
+                              {(e.Detalles_Estado || e.Requiere_Seguimiento || e.Tiene_Solucion === false) && (
+                                <div style={{ 
+                                  background: e.Tiene_Solucion !== false ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                                  border: `1px solid ${e.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444'}`, 
+                                  borderRadius: 12, 
+                                  padding: '14px 20px', 
+                                  marginBottom: 20, 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 16, 
+                                  flexWrap: 'wrap',
+                                  animation: 'fadeIn 0.3s' 
+                                }}>
+                                  <div style={{ fontSize: 24 }}>{e.Tiene_Solucion !== false ? '⚠️' : '🚨'}</div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: e.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                      <span>ESTADO: {semaforoLabel(semaforo, e.Estado).toUpperCase()}</span>
+                                      {e.Requiere_Seguimiento && (
+                                        <span style={{ background: '#f59e0b', color: '#000', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SEGUIMIENTO ACTIVO</span>
+                                      )}
+                                      {e.Tiene_Solucion === false && (
+                                        <span style={{ background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SIN SOLUCIÓN TÉCNICA</span>
+                                      )}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-color)', marginTop: 4 }}>
+                                      {e.Detalles_Estado || 'Sin detalles especificados.'}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', animation: 'slideDown 0.3s ease-out' }}>
                                 <div 
                                   className="card" 
@@ -462,7 +505,7 @@ function EquiposContent() {
                                     <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(e) }}>
                                       <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
                                     </button>
-                                    {e.Estado === 'FUERA_DE_SERVICIO' ? (
+                                    {(e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA') ? (
                                       <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(e.ID_Equipo, e.Nombre_Equipo) }}>Re-habilitar</button>
                                     ) : (
                                       <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(e.ID_Equipo, e.Nombre_Equipo) }}>Dar de Baja</button>

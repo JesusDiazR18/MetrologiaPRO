@@ -25,6 +25,9 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
     Fecha_Ultima_Verificacion: new Date().toISOString().split('T')[0],
     Fecha_Proximo_Control: '',
     Estado: 'OPERATIVO',
+    Detalles_Estado: '',
+    Tiene_Solucion: true,
+    Requiere_Seguimiento: false,
     N_Certificado: '',
     Proveedor_Servicio: '',
     Fecha_Vencimiento_Certificado: '',
@@ -227,6 +230,60 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                   />
                 </div>
               </div>
+
+              <div className="grid-2" style={{ marginTop: 16 }}>
+                <div className="form-group">
+                  <label className="form-label">Estado de Funcionamiento *</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.Estado} 
+                    onChange={e => setFormData({...formData, Estado: e.target.value})}
+                  >
+                    <option value="OPERATIVO">Operativo / Apto</option>
+                    <option value="OPERATIVO_CON_DETALLES">Operativo con Detalles</option>
+                    <option value="VENCIDO">Vencido</option>
+                    <option value="MANTENIMIENTO">En Mantenimiento</option>
+                    <option value="FUERA_DE_SERVICIO">Fuera de Servicio (No Apto)</option>
+                    <option value="DE_BAJA_OBSOLETO">De Baja / Obsoleto</option>
+                  </select>
+                </div>
+              </div>
+
+              {formData.Estado !== 'OPERATIVO' && (
+                <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: 8, padding: 16, marginTop: 16 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 12, fontSize: 13 }}>
+                    ⚠️ Detalles y Seguimiento de Estado
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Detalles / Motivo / Observación del Estado</label>
+                    <textarea 
+                      className="form-control"
+                      rows={2}
+                      value={formData.Detalles_Estado}
+                      onChange={e => setFormData({...formData, Detalles_Estado: e.target.value})}
+                      placeholder="Indique el motivo, condición actual o anomalía detectada..."
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 24, marginTop: 12 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-color)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.Tiene_Solucion} 
+                        onChange={e => setFormData({...formData, Tiene_Solucion: e.target.checked})} 
+                      />
+                      <span>¿Tiene Solución / Viabilidad Técnica?</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-color)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.Requiere_Seguimiento} 
+                        onChange={e => setFormData({...formData, Requiere_Seguimiento: e.target.checked})} 
+                      />
+                      <span>Hacer Seguimiento Activo</span>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-section">

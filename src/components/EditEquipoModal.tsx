@@ -23,7 +23,10 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     Periodicidad_Meses: equipo.Periodicidad_Meses || 12,
     Fecha_Ultima_Verificacion: equipo.Fecha_Ultima_Verificacion ? new Date(equipo.Fecha_Ultima_Verificacion).toISOString().split('T')[0] : '',
     Fecha_Proximo_Control: equipo.Fecha_Proximo_Control ? new Date(equipo.Fecha_Proximo_Control).toISOString().split('T')[0] : '',
-    Estado: equipo.Estado || 'OPERATIVO',
+    Estado: (equipo.Estado === 'OBSOLETO' || equipo.Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : (equipo.Estado || 'OPERATIVO'),
+    Detalles_Estado: equipo.Detalles_Estado || '',
+    Tiene_Solucion: equipo.Tiene_Solucion ?? true,
+    Requiere_Seguimiento: equipo.Requiere_Seguimiento ?? false,
     N_Certificado: equipo.N_Certificado || '',
     Proveedor_Servicio: equipo.Proveedor_Servicio || '',
     Fecha_Vencimiento_Certificado: equipo.Fecha_Vencimiento_Certificado ? new Date(equipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
@@ -122,16 +125,53 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                   <input className="form-control" value={formData.Codigo_Interno} onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Estado de Funcionamiento</label>
+                  <label className="form-label">Estado de Funcionamiento *</label>
                   <select className="form-control" value={formData.Estado} onChange={e => setFormData({...formData, Estado: e.target.value})}>
-                    <option value="OPERATIVO">OPERATIVO / APTO</option>
-                    <option value="MANTENIMIENTO">MANTENIMIENTO</option>
-                    <option value="FUERA_DE_SERVICIO">FUERA DE SERVICIO (NO APTO)</option>
-                    <option value="BAJA">DE BAJA</option>
-                    <option value="OBSOLETO">OBSOLETO</option>
+                    <option value="OPERATIVO">Operativo / Apto</option>
+                    <option value="OPERATIVO_CON_DETALLES">Operativo con Detalles</option>
+                    <option value="VENCIDO">Vencido</option>
+                    <option value="MANTENIMIENTO">En Mantenimiento</option>
+                    <option value="FUERA_DE_SERVICIO">Fuera de Servicio (No Apto)</option>
+                    <option value="DE_BAJA_OBSOLETO">De Baja / Obsoleto</option>
                   </select>
                 </div>
               </div>
+
+              {formData.Estado !== 'OPERATIVO' && (
+                <div style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 12, fontSize: 13 }}>
+                    ⚠️ Detalles y Seguimiento de Estado
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Detalles / Motivo / Observación del Estado</label>
+                    <textarea 
+                      className="form-control"
+                      rows={2}
+                      value={formData.Detalles_Estado}
+                      onChange={e => setFormData({...formData, Detalles_Estado: e.target.value})}
+                      placeholder="Indique el motivo, condición actual o anomalía detectada..."
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 24, marginTop: 12 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-color)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.Tiene_Solucion} 
+                        onChange={e => setFormData({...formData, Tiene_Solucion: e.target.checked})} 
+                      />
+                      <span>¿Tiene Solución / Viabilidad Técnica?</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-color)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.Requiere_Seguimiento} 
+                        onChange={e => setFormData({...formData, Requiere_Seguimiento: e.target.checked})} 
+                      />
+                      <span>Hacer Seguimiento Activo</span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Magnitudes Físicas que Mide (Selección Múltiple) *</label>

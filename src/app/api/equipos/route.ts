@@ -68,9 +68,15 @@ export async function POST(request: Request) {
       proximo.setMonth(proximo.getMonth() + meses)
     }
 
+    const targetEstado = (body.Estado === 'OBSOLETO' || body.Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : (body.Estado || 'OPERATIVO');
+
     const equipo = await prisma.instrumentoEquipo.create({ 
       data: {
         ...body,
+        Estado: targetEstado,
+        Detalles_Estado: body.Detalles_Estado ?? null,
+        Tiene_Solucion: body.Tiene_Solucion !== undefined ? Boolean(body.Tiene_Solucion) : true,
+        Requiere_Seguimiento: body.Requiere_Seguimiento !== undefined ? Boolean(body.Requiere_Seguimiento) : false,
         Fecha_Ultima_Verificacion: ultima,
         Fecha_Proximo_Control: proximo,
         Periodicidad_Meses: meses,

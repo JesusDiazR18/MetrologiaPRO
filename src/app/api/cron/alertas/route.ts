@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     // 1. Obtener equipos y patrones activos
     const equipos = await prisma.instrumentoEquipo.findMany({
       where: { 
-        Estado: { notIn: ['FUERA_DE_SERVICIO', 'OBSOLETO'] } 
+        Estado: { notIn: ['FUERA_DE_SERVICIO', 'OBSOLETO', 'DE_BAJA_OBSOLETO', 'BAJA'] } 
       }
     });
 

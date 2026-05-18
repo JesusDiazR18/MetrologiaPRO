@@ -32,7 +32,10 @@ model InstrumentoEquipo {
   Fecha_Ultima_Verificacion DateTime?
   Fecha_Proximo_Control     DateTime?
   Foto_Equipo               String?
-  Estado                    String                    // OPERATIVO | NO_APTO | BAJA
+  Estado String                    // OPERATIVO | OPERATIVO_CON_DETALLES | VENCIDO | MANTENIMIENTO | FUERA_DE_SERVICIO | DE_BAJA_OBSOLETO
+  Detalles_Estado           String?
+  Tiene_Solucion            Boolean?  @default(true)
+  Requiere_Seguimiento      Boolean?  @default(false)
   PDF_Certificado               String?
   Fecha_Vencimiento_Certificado DateTime?
   N_Certificado                 String?

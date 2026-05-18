@@ -13,8 +13,8 @@ export type SemaforoColor = 'VERDE' | 'AMARILLO' | 'ROJO'
  */
 export function calcularSemaforo(fechaProximo: Date | string | null | undefined, estado?: string): SemaforoColor {
   // Prioridad 1: Estados críticos de gestión
-  if (estado === 'OBSOLETO' || estado === 'BAJA' || estado === 'FUERA_DE_SERVICIO') return 'ROJO'
-  if (estado === 'MANTENIMIENTO') return 'AMARILLO'
+  if (estado === 'DE_BAJA_OBSOLETO' || estado === 'OBSOLETO' || estado === 'BAJA' || estado === 'FUERA_DE_SERVICIO' || estado === 'VENCIDO' || estado === 'NO_APTO') return 'ROJO'
+  if (estado === 'MANTENIMIENTO' || estado === 'OPERATIVO_CON_DETALLES') return 'AMARILLO'
   
   if (!fechaProximo) return 'ROJO'
   
@@ -51,9 +51,11 @@ export function semaforoHex(s: SemaforoColor): string {
  * Retorna la etiqueta amigable del estado.
  */
 export function semaforoLabel(s: SemaforoColor, estado?: string): string {
-  if (estado === 'OBSOLETO' || estado === 'BAJA') return 'Baja / Obsoleto'
-  if (estado === 'FUERA_DE_SERVICIO') return 'Fuera de Servicio'
+  if (estado === 'DE_BAJA_OBSOLETO' || estado === 'OBSOLETO' || estado === 'BAJA') return 'Baja / Obsoleto'
+  if (estado === 'FUERA_DE_SERVICIO' || estado === 'NO_APTO') return 'Fuera de Servicio'
   if (estado === 'MANTENIMIENTO') return 'En Mantenimiento'
+  if (estado === 'OPERATIVO_CON_DETALLES') return 'Operativo con Detalles'
+  if (estado === 'VENCIDO') return 'Vencido'
 
   switch (s) {
     case 'VERDE': return 'Operativo / Al día'
@@ -116,15 +118,15 @@ export function diasRestantes(fecha: Date | string | null | undefined): string {
  */
 export function calcularEstadisticas(equipos: any[]) {
   const total = equipos.length
-  const operativos = equipos.filter(e => e.Estado === 'OPERATIVO').length
-  const noAptos = equipos.filter(e => e.Estado === 'NO_APTO').length
-  const fueraDeServicio = equipos.filter(e => e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'BAJA').length
+  const operativos = equipos.filter(e => e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES').length
+  const noAptos = equipos.filter(e => e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'VENCIDO').length
+  const fueraDeServicio = equipos.filter(e => e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'BAJA' || e.Estado === 'OBSOLETO' || e.Estado === 'DE_BAJA_OBSOLETO').length
   
-  const alDia = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'VERDE' && e.Estado !== 'OBSOLETO').length
+  const alDia = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'VERDE' && e.Estado !== 'DE_BAJA_OBSOLETO' && e.Estado !== 'OBSOLETO' && e.Estado !== 'BAJA').length
   const vencidos = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'ROJO').length
   const proximos = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'AMARILLO').length
   
-  const pctApto = total > 0 ? Math.round(((total - (vencidos + noAptos)) / total) * 100) : 0
+  const pctApto = total > 0 ? Math.round((operativos / total) * 100) : 0
 
   return { total, operativos, noAptos, fueraDeServicio, vencidos, proximos, alDia, pctApto }
 }

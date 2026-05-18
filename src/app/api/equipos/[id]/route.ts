@@ -7,21 +7,23 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const text = await request.text()
-    const body = JSON.parse(text)
-    const { estado, observaciones } = body
+    const body = await request.json()
+    const { estado, observaciones, detalles_estado, tiene_solucion, requiere_seguimiento } = body
 
-    const targetEstado = estado === 'OBSOLETO' ? 'FUERA_DE_SERVICIO' : estado
+    const targetEstado = (estado === 'OBSOLETO' || estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : estado
 
     const updated = await prisma.instrumentoEquipo.update({
       where: { ID_Equipo: id },
       data: { 
         Estado: targetEstado,
+        Detalles_Estado: detalles_estado !== undefined ? detalles_estado : null,
+        Tiene_Solucion: tiene_solucion !== undefined ? Boolean(tiene_solucion) : true,
+        Requiere_Seguimiento: requiere_seguimiento !== undefined ? Boolean(requiere_seguimiento) : false,
         // Registramos eventos significativos en el historial
-        historiales: (targetEstado === 'FUERA_DE_SERVICIO' || targetEstado === 'OPERATIVO') ? {
+        historiales: (targetEstado === 'FUERA_DE_SERVICIO' || targetEstado === 'DE_BAJA_OBSOLETO' || targetEstado === 'OPERATIVO') ? {
           create: {
-            Resultado_Status: targetEstado === 'FUERA_DE_SERVICIO' ? 'NO_APTO' : 'APTO',
-            Observaciones: observaciones || (targetEstado === 'FUERA_DE_SERVICIO' ? 'Equipo puesto fuera de servicio' : 'Equipo re-habilitado'),
+            Resultado_Status: targetEstado === 'OPERATIVO' ? 'APTO' : 'NO_APTO',
+            Observaciones: observaciones || (targetEstado === 'OPERATIVO' ? 'Equipo re-habilitado a Operativo' : `Cambio de estado a ${targetEstado}`),
             Tecnico_Ejecutor: 'SISTEMA',
             Fecha_Ejecucion: new Date()
           }
@@ -48,8 +50,11 @@ export async function PUT(
       Resolucion, Tolerancia_Aceptable, Unidad_Tolerancia, Area_Asignada,
       Responsable, Periodicidad_Meses, Fecha_Ultima_Verificacion, Fecha_Proximo_Control,
       Foto_Equipo, Estado, PDF_Certificado, Fecha_Vencimiento_Certificado,
-      N_Certificado, Proveedor_Servicio, Magnitud, Accesorios, Insumos
+      N_Certificado, Proveedor_Servicio, Magnitud, Accesorios, Insumos,
+      Detalles_Estado, Tiene_Solucion, Requiere_Seguimiento
     } = body
+
+    const targetEstado = (Estado === 'OBSOLETO' || Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : Estado;
 
     const updated = await prisma.instrumentoEquipo.update({
       where: { ID_Equipo: id },
@@ -69,7 +74,10 @@ export async function PUT(
         Fecha_Ultima_Verificacion: Fecha_Ultima_Verificacion ? new Date(Fecha_Ultima_Verificacion) : null,
         Fecha_Proximo_Control: Fecha_Proximo_Control ? new Date(Fecha_Proximo_Control) : null,
         Foto_Equipo,
-        Estado,
+        Estado: targetEstado,
+        Detalles_Estado: Detalles_Estado ?? null,
+        Tiene_Solucion: Tiene_Solucion !== undefined ? Boolean(Tiene_Solucion) : true,
+        Requiere_Seguimiento: Requiere_Seguimiento !== undefined ? Boolean(Requiere_Seguimiento) : false,
         PDF_Certificado,
         Fecha_Vencimiento_Certificado: Fecha_Vencimiento_Certificado ? new Date(Fecha_Vencimiento_Certificado) : null,
         N_Certificado,
