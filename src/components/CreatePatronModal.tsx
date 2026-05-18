@@ -15,7 +15,8 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
     Fecha_Vencimiento_Certificado: '',
     N_Certificado: '',
     Proveedor_Laboratorio: '',
-    Estado_Vigencia: 'VIGENTE'
+    Estado_Vigencia: 'VIGENTE',
+    Magnitud: 'TEMPERATURA'
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -28,7 +29,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
           setFormData(prev => ({
             ...prev,
             ID_Patron: d.nextId,
-            Codigo: `QMS-${d.nextId}`
+            Codigo: d.nextId
           }))
         }
       })
@@ -36,8 +37,8 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
-    if (!formData.ID_Patron || !formData.Nombre_Patron || !formData.Codigo) {
-      setError('ID, Nombre y Código son obligatorios')
+    if (!formData.ID_Patron || !formData.Nombre_Patron) {
+      setError('ID / Código y Nombre son obligatorios')
       return
     }
     setSaving(true)
@@ -48,6 +49,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          Codigo: formData.ID_Patron, // Asegurar que Código sea idéntico a ID_Patron
           Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
           Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
         })
@@ -88,12 +90,35 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
               <div className="section-title">1. Identificación del Patrón</div>
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">ID Sistema (Automático) *</label>
-                  <input className="form-control" value={formData.ID_Patron} onChange={e => setFormData({...formData, ID_Patron: e.target.value})} required />
+                  <label className="form-label">Código / ID de Identificación *</label>
+                  <input 
+                    className="form-control" 
+                    value={formData.ID_Patron} 
+                    onChange={e => setFormData({...formData, ID_Patron: e.target.value.toUpperCase(), Codigo: e.target.value.toUpperCase()})} 
+                    placeholder="Ej: PAT-001"
+                    required 
+                  />
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
+                    Se usará como identificador único y para la generación automática del código QR.
+                  </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Código Interno (QR) *</label>
-                  <input className="form-control" value={formData.Codigo} onChange={e => setFormData({...formData, Codigo: e.target.value})} required />
+                  <label className="form-label">Magnitud Física *</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.Magnitud} 
+                    onChange={e => setFormData({...formData, Magnitud: e.target.value})}
+                    required
+                  >
+                    <option value="TEMPERATURA">TEMPERATURA</option>
+                    <option value="MASA">MASA</option>
+                    <option value="LONGITUD">LONGITUD</option>
+                    <option value="PRESION">PRESIÓN</option>
+                    <option value="TIEMPO">TIEMPO</option>
+                    <option value="ELECTRICA">ELÉCTRICA</option>
+                    <option value="VOLUMEN">VOLUMEN</option>
+                    <option value="OTRA">OTRA MAGNITUD</option>
+                  </select>
                 </div>
               </div>
 

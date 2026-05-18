@@ -9,13 +9,14 @@ interface Props {
 
 export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
   const [formData, setFormData] = useState({
-    Codigo: patron.Codigo || '',
+    Codigo: patron.Codigo || patron.ID_Patron || '',
     Nombre_Patron: patron.Nombre_Patron || '',
     Fecha_Calibracion_Externa: patron.Fecha_Calibracion_Externa ? new Date(patron.Fecha_Calibracion_Externa).toISOString().split('T')[0] : '',
     Fecha_Vencimiento_Certificado: patron.Fecha_Vencimiento_Certificado ? new Date(patron.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
     N_Certificado: patron.N_Certificado || '',
     Proveedor_Laboratorio: patron.Proveedor_Laboratorio || '',
-    Estado_Vigencia: patron.Estado_Vigencia || 'VIGENTE'
+    Estado_Vigencia: patron.Estado_Vigencia || 'VIGENTE',
+    Magnitud: patron.Magnitud || 'TEMPERATURA'
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -31,6 +32,7 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
     try {
       const payload = {
         ...formData,
+        Codigo: formData.Codigo, // Mantener idénticos
         Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
         Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
       }
@@ -76,21 +78,39 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
               <div className="section-title">1. Identificación del Patrón</div>
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Código Interno *</label>
-                  <input className="form-control" value={formData.Codigo} onChange={e => setFormData({...formData, Codigo: e.target.value})} required />
+                  <label className="form-label">Código / ID (Fijo)</label>
+                  <input className="form-control" value={formData.Codigo} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Estado de Vigencia</label>
-                  <select className="form-control" value={formData.Estado_Vigencia} onChange={e => setFormData({...formData, Estado_Vigencia: e.target.value})}>
-                    <option value="VIGENTE">VIGENTE / APTO</option>
-                    <option value="SIN CERTIFICADO">SIN CERTIFICADO</option>
-                    <option value="VENCIDO">VENCIDO / FUERA DE NORMA</option>
+                  <label className="form-label">Magnitud Física *</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.Magnitud} 
+                    onChange={e => setFormData({...formData, Magnitud: e.target.value})}
+                    required
+                  >
+                    <option value="TEMPERATURA">TEMPERATURA</option>
+                    <option value="MASA">MASA</option>
+                    <option value="LONGITUD">LONGITUD</option>
+                    <option value="PRESION">PRESIÓN</option>
+                    <option value="TIEMPO">TIEMPO</option>
+                    <option value="ELECTRICA">ELÉCTRICA</option>
+                    <option value="VOLUMEN">VOLUMEN</option>
+                    <option value="OTRA">OTRA MAGNITUD</option>
                   </select>
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Nombre del Patrón *</label>
                 <input className="form-control" value={formData.Nombre_Patron} onChange={e => setFormData({...formData, Nombre_Patron: e.target.value})} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Estado de Vigencia</label>
+                <select className="form-control" value={formData.Estado_Vigencia} onChange={e => setFormData({...formData, Estado_Vigencia: e.target.value})}>
+                  <option value="VIGENTE">VIGENTE / APTO</option>
+                  <option value="SIN CERTIFICADO">SIN CERTIFICADO</option>
+                  <option value="VENCIDO">VENCIDO / FUERA DE NORMA</option>
+                </select>
               </div>
             </div>
 

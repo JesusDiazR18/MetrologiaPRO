@@ -294,6 +294,11 @@ function EquiposContent() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                             <div className="mobile-only semaforo-dot" style={{ background: statusColor, boxShadow: `0 0 15px ${statusColor}66` }} />
                             <div style={{ fontWeight: 700, fontSize: 15 }}>{e.Nombre_Equipo}</div>
+                            {e.Magnitud && (
+                              <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 600 }}>
+                                {e.Magnitud}
+                              </span>
+                            )}
                           </div>
                           <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
                           <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{e.Codigo_Interno} · {e.Area_Asignada ?? 'Sin área'}</div>
@@ -331,152 +336,151 @@ function EquiposContent() {
                         <tr>
                           <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
                             <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${statusColor}` }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 24, marginBottom: 24 }}>
-                                <div className="expanded-details" style={{ animation: 'slideDown 0.3s ease-out', gridColumn: '1 / -1' }}>
-                                  <div 
-                                    className="card" 
-                                    style={{ padding: 24, display: 'flex', gap: 16, background: 'var(--page-bg-soft)', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', cursor: 'pointer', transition: 'all 0.2s' }}
-                                    onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(e) }}
-                                    title="Haz clic para ver e imprimir la etiqueta"
-                                  >
-                                    <div style={{ background: '#fff', padding: 10, borderRadius: 14, display: 'inline-block', boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
-                                      <QRCodeSVG
-                                        value={getScanUrl(e.Codigo_Interno)}
-                                        size={100}
-                                        bgColor="#ffffff"
-                                        fgColor="#0f172a"
-                                        level="H"
-                                        style={{ display: 'block', borderRadius: 4 }}
-                                      />
-                                    </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', marginBottom: 6 }}>CÓDIGO DIGITAL QR</div>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '3px 10px', borderRadius: 999  }}>🖨️ Clic para imprimir etiqueta</div>
-                                        <button 
-                                          className="btn btn-ghost btn-sm" 
-                                          style={{ fontSize: 10, padding: '4px 8px', border: '1px solid var(--accent-dim)', color: 'var(--accent)' }}
-                                          onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(e); }}
-                                        >
-                                          📄 Descargar Ficha PDF
-                                        </button>
-                                      </div>
-                                    </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', animation: 'slideDown 0.3s ease-out' }}>
+                                <div 
+                                  className="card" 
+                                  style={{ padding: 20, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.2s', minHeight: 180 }}
+                                  onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(e) }}
+                                  title="Haz clic para ver e imprimir la etiqueta"
+                                >
+                                  <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
+                                    <QRCodeSVG
+                                      value={getScanUrl(e.Codigo_Interno)}
+                                      size={84}
+                                      bgColor="#ffffff"
+                                      fgColor="#0f172a"
+                                      level="H"
+                                      style={{ display: 'block', borderRadius: 4 }}
+                                    />
+                                  </div>
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', marginBottom: 4 }}>CÓDIGO DIGITAL QR</div>
+                                    <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, marginBottom: 8 }}>🖨️ Clic para imprimir etiqueta</div>
+                                    <button 
+                                      className="btn btn-ghost btn-xs" 
+                                      style={{ fontSize: 10, color: 'var(--accent)', border: '1px solid var(--accent-dim)' }}
+                                      onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(e); }}
+                                    >
+                                      📄 Descargar Ficha PDF
+                                    </button>
                                   </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', gridColumn: '1 / -1' }}>
-                                  <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                      <FileDigit size={16} color="var(--accent)" />
-                                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Modelo / Serie</span>
-                                      <span className="spec-value">{e.Modelo || '—'} / {e.Serie || '—'}</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Tolerancia</span>
-                                      <span className="spec-value">±{e.Tolerancia_Aceptable} {e.Unidad_Tolerancia ?? 'un'}</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Próxima Verif.</span>
-                                      <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(e.Fecha_Proximo_Control)}</span>
-                                    </div>
-                                    <div className="spec-row" style={{ marginTop: -4 }}>
-                                      <span className="spec-label">Intervalo</span>
-                                      <span className="spec-value">{e.Periodicidad_Meses} Meses</span>
-                                    </div>
+                                <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                    <FileDigit size={16} color="var(--accent)" />
+                                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
                                   </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Modelo / Serie</span>
+                                    <span className="spec-value">{e.Modelo || '—'} / {e.Serie || '—'}</span>
+                                  </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Tolerancia</span>
+                                    <span className="spec-value">±{e.Tolerancia_Aceptable} {e.Unidad_Tolerancia ?? 'un'}</span>
+                                  </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Próxima Verif.</span>
+                                    <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(e.Fecha_Proximo_Control)}</span>
+                                  </div>
+                                  <div className="spec-row" style={{ marginTop: -4 }}>
+                                    <span className="spec-label">Intervalo</span>
+                                    <span className="spec-value">{e.Periodicidad_Meses} Meses</span>
+                                  </div>
+                                </div>
 
-                                  {e.Tipo === 'EQUIPO' && (
-                                    <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                        <FileText size={16} color="var(--cyan)" />
-                                        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certificado Digital</span>
-                                      </div>
-                                      {(e.N_Certificado || e.PDF_Certificado || e.Fecha_Vencimiento_Certificado) ? (
-                                        <>
-                                          <div className="spec-row">
-                                            <span className="spec-label">N° Certificado</span>
-                                            <span className="spec-value">{e.N_Certificado || '—'}</span>
-                                          </div>
-                                          <div className="spec-row">
-                                            <span className="spec-label">Proveedor</span>
-                                            <span className="spec-value">{e.Proveedor_Servicio || '—'}</span>
-                                          </div>
-                                          <div className="spec-row">
-                                            <span className="spec-label">Vencimiento</span>
-                                            <span className="spec-value">{e.Fecha_Vencimiento_Certificado ? formatFecha(e.Fecha_Vencimiento_Certificado) : '—'}</span>
-                                          </div>
-                                          <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                                            {e.PDF_Certificado && (
-                                              <a href={e.PDF_Certificado} target="_blank" rel="noreferrer" className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)' }}>
-                                                👁️ Ver PDF
-                                              </a>
-                                            )}
-                                            <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
-                                              <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renovar Cert
-                                            </button>
-                                          </div>
-                                        </>
-                                      ) : (
-                                        <div style={{ textAlign: 'center', padding: '12px 0', color: 'var(--text-dim)' }}>
-                                          <p style={{ fontSize: 12, marginBottom: 12 }}>Este equipo se verifica internamente o no tiene certificado externo cargado.</p>
-                                          <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
-                                            <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> + Cargar Certificado Externo
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                {(e.Tipo === 'EQUIPO' && Boolean(e.N_Certificado || e.PDF_Certificado || e.Fecha_Vencimiento_Certificado)) ? (
+                                <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                <FileText size={16} color="var(--cyan)" />
+                                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certificado Digital</span>
+                                </div>
+                                <div className="spec-row">
+                                <span className="spec-label">N° Certificado</span>
+                                <span className="spec-value">{e.N_Certificado || '—'}</span>
+                                </div>
+                                <div className="spec-row">
+                                <span className="spec-label">Proveedor</span>
+                                <span className="spec-value">{e.Proveedor_Servicio || '—'}</span>
+                                </div>
+                                <div className="spec-row">
+                                <span className="spec-label">Vencimiento</span>
+                                <span className="spec-value">{e.Fecha_Vencimiento_Certificado ? formatFecha(e.Fecha_Vencimiento_Certificado) : '—'}</span>
+                                </div>
+                                <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                {e.PDF_Certificado && (
+                                <a href={e.PDF_Certificado} target="_blank" rel="noreferrer" className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)' }}>
+                                👁️ Ver PDF
+                                </a>
+                                )}
+                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
+                                <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renovar Cert
+                                </button>
+                                </div>
+                                </div>
+                                ) : e.Tipo === 'EQUIPO' ? (
+                                   <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 12, minHeight: 180 }}>
+                                     <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'grid', placeItems: 'center' }}>
+                                       <FileText size={20} color="var(--text-dim)" style={{ opacity: 0.5 }} />
+                                     </div>
+                                     <div>
+                                       <span style={{ fontSize: 12, fontWeight: 700, display: 'block', color: 'var(--text-dim)' }}>Sin Certificado Externo</span>
+                                       <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'block', maxWidth: 160 }}>Este equipo no posee una calibración externa cargada.</span>
+                                     </div>
+                                     <button className="btn btn-cyan btn-xs" style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontSize: 10, fontWeight: 700 }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
+                                       ➕ Cargar Certificado
+                                     </button>
+                                   </div>
+                                 ) : null}
 
-
-                                  <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                      <ShieldCheck size={16} color="var(--success)" />
-                                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad y Control</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Ubicación</span>
-                                      <span className="spec-value">{e.Area_Asignada}</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Responsable</span>
-                                      <span className="spec-value">{e.Responsable}</span>
-                                    </div>
-                                    <div className="spec-row">
-                                      <span className="spec-label">Estado Sist.</span>
-                                      <span className="spec-value" style={{ color: statusColor }}>{e.Estado}</span>
-                                    </div>
-                                    <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(e) }}>
-                                        <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
-                                      </button>
-                                      {e.Estado === 'FUERA_DE_SERVICIO' ? (
-                                        <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(e.ID_Equipo, e.Nombre_Equipo) }}>Re-habilitar</button>
-                                      ) : (
-                                        <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(e.ID_Equipo, e.Nombre_Equipo) }}>Dar de Baja</button>
-                                      )}
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(e.ID_Equipo, e.Nombre_Equipo) }}>
-                                        <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
-                                      </button>
-                                    </div>
+                                <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                    <ShieldCheck size={16} color="var(--success)" />
+                                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad y Control</span>
+                                  </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Ubicación</span>
+                                    <span className="spec-value">{e.Area_Asignada}</span>
+                                  </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Responsable</span>
+                                    <span className="spec-value">{e.Responsable}</span>
+                                  </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Estado Sist.</span>
+                                    <span className="spec-value" style={{ color: statusColor }}>{e.Estado}</span>
+                                  </div>
+                                  <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
+                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(e) }}>
+                                      <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
+                                    </button>
+                                    {e.Estado === 'FUERA_DE_SERVICIO' ? (
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(e.ID_Equipo, e.Nombre_Equipo) }}>Re-habilitar</button>
+                                    ) : (
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(e.ID_Equipo, e.Nombre_Equipo) }}>Dar de Baja</button>
+                                    )}
+                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(e.ID_Equipo, e.Nombre_Equipo) }}>
+                                      <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
+                                    </button>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="card" style={{ overflow: 'hidden' }}>
+                              <div className="card" style={{ overflow: 'hidden', marginTop: 24, background: 'rgba(255,255,255,0.02)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <FileDigit size={16} color="var(--accent)" />
+                                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Historial de Verificaciones</span>
+                                </div>
                                 <table className="data-table">
                                   <thead>
                                     <tr>
-                                    <th>Fecha</th>
-                                    <th>Variación</th>
-                                    <th>Resultado</th>
-                                    <th>Técnico</th>
+                                      <th>Fecha</th>
+                                      <th>Variación</th>
+                                      <th>Resultado</th>
+                                      <th>Técnico</th>
                                       <th>Observaciones</th>
                                       <th style={{ textAlign: 'center' }}>Acción</th>
-                                     </tr>
+                                    </tr>
                                   </thead>
                                   <tbody>
                                     {e.historiales.map(h => (
@@ -484,24 +488,31 @@ function EquiposContent() {
                                         <td>{formatFecha(h.Fecha_Ejecucion)}</td>
                                         <td style={{ fontFamily: 'var(--font-mono)' }}>{h.Variacion_Calculada?.toFixed(4) ?? '—'}</td>
                                         <td>
-                                        <span className={`status-badge`} style={{ color: h.Resultado_Status === 'APTO' ? 'var(--success)' : 'var(--danger)' }}>
-                                        {h.Resultado_Status}
-                                        </span>
+                                          <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' ? 'var(--success)' : 'var(--danger)' }}>
+                                            {h.Resultado_Status}
+                                          </span>
                                         </td>
-                                         <td>{h.Tecnico_Ejecutor}</td>
-                                          <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 200, whiteSpace: 'normal' }}>{h.Observaciones || '—'}</td>
-                                          <td style={{ textAlign: 'center' }}>
-                                            <button 
-                                              className="btn btn-ghost btn-xs" 
-                                              style={{ color: 'var(--danger)', padding: '4px' }}
-                                              onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, e.Nombre_Equipo) }}
-                                              title="Eliminar este registro"
-                                            >
-                                              <Trash2 size={14} />
-                                            </button>
-                                          </td>
+                                        <td>{h.Tecnico_Ejecutor}</td>
+                                        <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 200, whiteSpace: 'normal' }}>{h.Observaciones || '—'}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                          <button 
+                                            className="btn btn-ghost btn-xs" 
+                                            style={{ color: 'var(--danger)', padding: '4px' }}
+                                            onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, e.Nombre_Equipo) }}
+                                            title="Eliminar este registro"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </td>
                                       </tr>
                                     ))}
+                                    {e.historiales.length === 0 && (
+                                      <tr>
+                                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
+                                          No hay verificaciones registradas para este activo.
+                                        </td>
+                                      </tr>
+                                    )}
                                   </tbody>
                                 </table>
                               </div>

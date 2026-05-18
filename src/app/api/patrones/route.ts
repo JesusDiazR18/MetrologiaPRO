@@ -8,14 +8,14 @@ export async function GET(request: Request) {
 
     if (suggest) {
       const count = await prisma.patronReferencia.count()
-      const num = (count + 1).toString().padStart(2, '0')
-      const nextId = `P-${num}`
+      const num = (count + 1).toString().padStart(3, '0')
+      const nextId = `PAT-${num}`
       return NextResponse.json({ nextId })
     }
 
     const patrones = await prisma.patronReferencia.findMany({ 
       include: { historiales: { orderBy: { Fecha_Ejecucion: 'desc' }, take: 10 } },
-      orderBy: { Codigo: 'asc' } 
+      orderBy: { ID_Patron: 'asc' } 
     })
 
     const processed = patrones.map(p => {

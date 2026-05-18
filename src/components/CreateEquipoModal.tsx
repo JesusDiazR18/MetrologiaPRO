@@ -27,7 +27,8 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
     Estado: 'OPERATIVO',
     N_Certificado: '',
     Proveedor_Servicio: '',
-    Fecha_Vencimiento_Certificado: ''
+    Fecha_Vencimiento_Certificado: '',
+    Magnitud: 'TEMPERATURA'
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -106,7 +107,7 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
             
             <div className="form-section">
               <div className="section-title">1. Clasificación e Identificación</div>
-              <div className="grid-2">
+              <div className="grid-3">
                 <div className="form-group">
                   <label className="form-label">Tipo de Activo *</label>
                   <select 
@@ -134,6 +135,24 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                     placeholder="Ej: E-01"
                     required
                   />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Magnitud Física *</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.Magnitud} 
+                    onChange={e => setFormData({...formData, Magnitud: e.target.value})}
+                    required
+                  >
+                    <option value="TEMPERATURA">TEMPERATURA</option>
+                    <option value="MASA">MASA</option>
+                    <option value="LONGITUD">LONGITUD</option>
+                    <option value="PRESION">PRESIÓN</option>
+                    <option value="TIEMPO">TIEMPO</option>
+                    <option value="ELECTRICA">ELÉCTRICA</option>
+                    <option value="VOLUMEN">VOLUMEN</option>
+                    <option value="OTRA">OTRA MAGNITUD</option>
+                  </select>
                 </div>
               </div>
 

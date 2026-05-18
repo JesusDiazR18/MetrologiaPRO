@@ -12,13 +12,15 @@ interface Equipo {
   Nombre_Equipo: string
   Tolerancia_Aceptable: number
   Unidad_Tolerancia: string | null
+  Magnitud?: string | null
 }
 
 interface Patron {
   ID_Patron: string
-  Codigo_Patron: string
+  Codigo: string
   Nombre_Patron: string
   Estado_Vigencia: string
+  Magnitud?: string | null
 }
 
 interface Props {
@@ -80,6 +82,14 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
     }
   }
 
+  // Filtrar patrones por la magnitud del equipo seleccionado de forma dinámica
+  const patronesFiltrados = patrones.filter(p => {
+    if (!selectedEquipo?.Magnitud) return true;
+    return p.Magnitud === selectedEquipo.Magnitud;
+  });
+
+  const patronesAMostrar = patronesFiltrados.length > 0 ? patronesFiltrados : patrones;
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 500, border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
@@ -108,22 +118,43 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
             <div className="form-group-modern">
               <label><User size={14} /> Equipo a verificar</label>
-              <select value={selectedId} onChange={e => setSelectedId(e.target.value)} required>
+              <select value={selectedId} onChange={e => {
+                setSelectedId(e.target.value);
+                setSelectedPatronId(''); // Resetear el patrón seleccionado al cambiar de equipo
+              }} required>
                 <option value="">Seleccionar equipo…</option>
                 {equipos.map(e => (
-                  <option key={e.ID_Equipo} value={e.ID_Equipo}>{e.Codigo_Interno} — {e.Nombre_Equipo}</option>
+                  <option key={e.ID_Equipo} value={e.ID_Equipo}>
+                    {e.Codigo_Interno} — {e.Nombre_Equipo} {e.Magnitud ? `(${e.Magnitud})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group-modern">
-              <label><CheckCircle2 size={14} /> Patrón utilizado</label>
+              <label style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <CheckCircle2 size={14} /> Patrón utilizado
+                </span>
+                {selectedEquipo?.Magnitud && (
+                  <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 800 }}>
+                    MAGNITUD: {selectedEquipo.Magnitud}
+                  </span>
+                )}
+              </label>
               <select value={selectedPatronId} onChange={e => setSelectedPatronId(e.target.value)} required>
                 <option value="">Seleccionar patrón…</option>
-                {patrones.map(p => (
-                  <option key={p.ID_Patron} value={p.ID_Patron}>{p.Codigo_Patron} — {p.Nombre_Patron}</option>
+                {patronesAMostrar.map(p => (
+                  <option key={p.ID_Patron} value={p.ID_Patron}>
+                    {p.Codigo || p.ID_Patron} — {p.Nombre_Patron} ({p.Magnitud || 'General'})
+                  </option>
                 ))}
               </select>
+              {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
+                <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
+                  ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
+                </div>
+              )}
             </div>
 
             <div className="metrology-grid">

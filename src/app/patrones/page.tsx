@@ -20,6 +20,7 @@ interface Patron {
   Proveedor_Laboratorio: string | null
   PDF_Certificado: string | null
   Estado_Vigencia: string
+  Magnitud: string | null
 }
 
 export default function PatronesPage() {
@@ -46,6 +47,7 @@ export default function PatronesPage() {
         p.ID_Patron.toLowerCase().includes(term) ||
         p.Codigo.toLowerCase().includes(term) ||
         p.Nombre_Patron.toLowerCase().includes(term) ||
+        (p.Magnitud && p.Magnitud.toLowerCase().includes(term)) ||
         (p.Proveedor_Laboratorio && p.Proveedor_Laboratorio.toLowerCase().includes(term))
       ))
     }
@@ -162,8 +164,12 @@ export default function PatronesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                         <div className="mobile-only semaforo-dot" style={{ background: p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)', boxShadow: `0 0 15px ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}66` }} />
                         <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Nombre_Patron}</div>
+                        {p.Magnitud && (
+                          <span style={{ fontSize: 11, background: 'rgba(0, 229, 255, 0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--cyan)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 600 }}>
+                            {p.Magnitud}
+                          </span>
+                        )}
                       </div>
-                      <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>ID: {p.ID_Patron}</div>
                       <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Proveedor_Laboratorio || 'Sin proveedor'}</div>
                     </td>
                     <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.Proveedor_Laboratorio || ''}>
@@ -281,8 +287,8 @@ export default function PatronesPage() {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                               <div className="spec-item">
-                                <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>ID Sistema</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{p.ID_Patron}</div>
+                                <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Magnitud Física</label>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cyan)' }}>{p.Magnitud || 'General'}</div>
                               </div>
                               <div className="spec-item">
                                 <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Laboratorio</label>

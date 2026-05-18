@@ -27,6 +27,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     N_Certificado: equipo.N_Certificado || '',
     Proveedor_Servicio: equipo.Proveedor_Servicio || '',
     Fecha_Vencimiento_Certificado: equipo.Fecha_Vencimiento_Certificado ? new Date(equipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
+    Magnitud: equipo.Magnitud || 'TEMPERATURA'
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -94,7 +95,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                   <input className="form-control" value={formData.Nombre_Equipo} onChange={e => setFormData({...formData, Nombre_Equipo: e.target.value})} required />
                 </div>
               </div>
-              <div className="grid-2">
+              <div className="grid-3">
                 <div className="form-group">
                   <label className="form-label">Código Interno (QR) *</label>
                   <input className="form-control" value={formData.Codigo_Interno} onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})} required />
@@ -107,6 +108,24 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                     <option value="FUERA_DE_SERVICIO">FUERA DE SERVICIO (NO APTO)</option>
                     <option value="BAJA">DE BAJA</option>
                     <option value="OBSOLETO">OBSOLETO</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Magnitud Física *</label>
+                  <select 
+                    className="form-control" 
+                    value={formData.Magnitud} 
+                    onChange={e => setFormData({...formData, Magnitud: e.target.value})}
+                    required
+                  >
+                    <option value="TEMPERATURA">TEMPERATURA</option>
+                    <option value="MASA">MASA</option>
+                    <option value="LONGITUD">LONGITUD</option>
+                    <option value="PRESION">PRESIÓN</option>
+                    <option value="TIEMPO">TIEMPO</option>
+                    <option value="ELECTRICA">ELÉCTRICA</option>
+                    <option value="VOLUMEN">VOLUMEN</option>
+                    <option value="OTRA">OTRA MAGNITUD</option>
                   </select>
                 </div>
               </div>

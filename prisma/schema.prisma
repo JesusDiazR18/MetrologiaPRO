@@ -37,6 +37,7 @@ model InstrumentoEquipo {
   Fecha_Vencimiento_Certificado DateTime?
   N_Certificado                 String?
   Proveedor_Servicio            String?
+  Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA
 
   historiales               HistorialVerificacion[]
 
@@ -56,7 +57,8 @@ model PatronReferencia {
   N_Certificado                 String?
   Proveedor_Laboratorio         String?
   PDF_Certificado               String?
-  Estado_Vigencia               String                // VIGENTE | VENCIDO
+  Estado_Vigencia               String                // VIGENTE | VENCIDO | SIN CERTIFICADO
+  Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA
 
   historiales                   HistorialVerificacion[]
 
