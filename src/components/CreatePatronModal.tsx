@@ -131,6 +131,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
                 <label className="form-label">Estado de Vigencia</label>
                 <select className="form-control" value={formData.Estado_Vigencia} onChange={e => setFormData({...formData, Estado_Vigencia: e.target.value})}>
                   <option value="VIGENTE">VIGENTE / APTO</option>
+                  <option value="SIN CERTIFICADO">SIN CERTIFICADO</option>
                   <option value="VENCIDO">VENCIDO / FUERA DE NORMA</option>
                 </select>
               </div>

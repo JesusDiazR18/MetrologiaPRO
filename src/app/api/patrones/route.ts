@@ -17,7 +17,21 @@ export async function GET(request: Request) {
       include: { historiales: { orderBy: { Fecha_Ejecucion: 'desc' }, take: 10 } },
       orderBy: { Codigo: 'asc' } 
     })
-    return NextResponse.json(patrones)
+
+    const processed = patrones.map(p => {
+      let estado = p.Estado_Vigencia
+      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '') {
+        estado = 'SIN CERTIFICADO'
+      } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+        estado = 'VENCIDO'
+      }
+      return {
+        ...p,
+        Estado_Vigencia: estado
+      }
+    })
+
+    return NextResponse.json(processed)
   } catch (error: any) {
     console.error('[API Patrones GET Error]:', error)
     return NextResponse.json([], { status: 500 })

@@ -13,6 +13,13 @@ export async function PUT(
       N_Certificado, Proveedor_Laboratorio, PDF_Certificado, Estado_Vigencia
     } = body
 
+    let finalEstado = Estado_Vigencia
+    if (!PDF_Certificado || PDF_Certificado.trim() === '') {
+      finalEstado = 'SIN CERTIFICADO'
+    } else if (Fecha_Vencimiento_Certificado && new Date(Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+      finalEstado = 'VENCIDO'
+    }
+
     const updated = await prisma.patronReferencia.update({
       where: { ID_Patron: id },
       data: {
@@ -23,7 +30,7 @@ export async function PUT(
         N_Certificado,
         Proveedor_Laboratorio,
         PDF_Certificado,
-        Estado_Vigencia
+        Estado_Vigencia: finalEstado
       }
     })
 

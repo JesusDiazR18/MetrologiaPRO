@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { FlaskConical, Plus, CheckCircle, XCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit } from 'lucide-react'
+import { FlaskConical, Plus, CheckCircle, XCircle, AlertCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit } from 'lucide-react'
 import { formatFecha, getScanUrl } from '@/lib/metrologia'
 import { generatePatronSheetPDF } from '@/lib/reports'
 import { QRCodeSVG } from 'qrcode.react'
@@ -128,16 +128,16 @@ export default function PatronesPage() {
           </div>
         ) : (
           <div className="card-body" style={{ padding: 0 }}>
-            <table className="data-table">
+            <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
               <thead>
                 <tr>
-                  <th>Código</th>
-                  <th>Nombre del Patrón</th>
-                  <th className="desktop-only">Laboratorio / Proveedor</th>
-                  <th className="desktop-only">Certificado N°</th>
-                  <th className="desktop-only">Vencimiento</th>
-                  <th>Estado Vigencia</th>
-                  <th style={{ textAlign: 'right' }}>Certificado Digital</th>
+                  <th style={{ width: '14%' }}>Código</th>
+                  <th style={{ width: '26%' }}>Nombre del Patrón</th>
+                  <th className="desktop-only" style={{ width: '20%' }}>Laboratorio / Proveedor</th>
+                  <th className="desktop-only" style={{ width: '15%' }}>Certificado N°</th>
+                  <th className="desktop-only" style={{ width: '15%' }}>Vencimiento</th>
+                  <th style={{ width: '15%' }}>Estado Vigencia</th>
+                  <th style={{ textAlign: 'right', width: '15%' }}>Certificado Digital</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,7 +148,7 @@ export default function PatronesPage() {
                     style={{ cursor: 'pointer' }}
                     className="mobile-card-row"
                   >
-                    <td className="mobile-hide">
+                    <td className="mobile-hide" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <span style={{ 
                         fontFamily: 'var(--font-mono)', 
                         fontWeight: 700, 
@@ -158,23 +158,39 @@ export default function PatronesPage() {
                         borderRadius: '4px'
                       }}>{p.Codigo}</span>
                     </td>
-                    <td style={{ fontWeight: 600 }} className="mobile-card-title">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="mobile-only semaforo-dot" style={{ background: p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : 'var(--danger)', boxShadow: `0 0 15px ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : 'var(--danger)'}66` }} />
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{p.Nombre_Patron}</div>
+                    <td style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} className="mobile-card-title" title={p.Nombre_Patron}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                        <div className="mobile-only semaforo-dot" style={{ background: p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)', boxShadow: `0 0 15px ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}66` }} />
+                        <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Nombre_Patron}</div>
                       </div>
                       <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>ID: {p.ID_Patron}</div>
-                      <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2 }}>{p.Proveedor_Laboratorio || 'Sin proveedor'}</div>
+                      <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Proveedor_Laboratorio || 'Sin proveedor'}</div>
                     </td>
-                    <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)' }}>{p.Proveedor_Laboratorio ?? '—'}</td>
-                    <td className="desktop-only" style={{ fontSize: 13 }}>{p.N_Certificado ?? '—'}</td>
-                    <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)' }}>{formatFecha(p.Fecha_Vencimiento_Certificado)}</td>
-                    <td className="mobile-card-info">
-                      {p.Estado_Vigencia === 'VIGENTE'
-                        ? <span className="status-badge" style={{ color: 'var(--success)' }}><CheckCircle size={11} style={{ display: 'inline', marginRight: 4 }} /> VIGENTE</span>
-                        : <span className="status-badge" style={{ color: 'var(--danger)' }}><XCircle size={11} style={{ display: 'inline', marginRight: 4 }} /> VENCIDO</span>}
+                    <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.Proveedor_Laboratorio || ''}>
+                      {p.Proveedor_Laboratorio || '—'}
                     </td>
-                    <td style={{ textAlign: 'right' }} className="mobile-card-actions">
+                    <td className="desktop-only" style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.N_Certificado || ''}>
+                      {p.N_Certificado || '—'}
+                    </td>
+                    <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap' }}>
+                      {formatFecha(p.Fecha_Vencimiento_Certificado)}
+                    </td>
+                    <td className="mobile-card-info" style={{ whiteSpace: 'nowrap' }}>
+                      {p.Estado_Vigencia === 'VIGENTE' ? (
+                        <span className="status-badge" style={{ color: 'var(--success)', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                          <CheckCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VIGENTE
+                        </span>
+                      ) : p.Estado_Vigencia === 'SIN CERTIFICADO' ? (
+                        <span className="status-badge" style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                          <AlertCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> SIN CERTIFICADO
+                        </span>
+                      ) : (
+                        <span className="status-badge" style={{ color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                          <XCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VENCIDO
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} className="mobile-card-actions">
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                         {p.PDF_Certificado && (
                           <button 
@@ -199,7 +215,7 @@ export default function PatronesPage() {
                   {expandedId === p.ID_Patron && (
                     <tr>
                       <td colSpan={7} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
-                        <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
+                        <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
                           <div 
                             className="card" 
                             style={{ 
@@ -221,8 +237,8 @@ export default function PatronesPage() {
                               code: p.Codigo,
                               name: p.Nombre_Patron,
                               status: p.Estado_Vigencia,
-                              statusLabel: p.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : 'VENCIDO',
-                              statusColor: p.Estado_Vigencia === 'VIGENTE' ? '#10b981' : '#ef4444'
+                              statusLabel: p.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? 'SIN CERT' : 'VENCIDO',
+                              statusColor: p.Estado_Vigencia === 'VIGENTE' ? '#10b981' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : '#ef4444'
                             })}}
                             title="Haz clic para ver e imprimir la etiqueta"
                           >
@@ -278,7 +294,7 @@ export default function PatronesPage() {
                               </div>
                               <div className="spec-item">
                                 <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Vencimiento Certificado</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: p.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : 'var(--text-main)' }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: p.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--text-main)' }}>
                                   {formatFecha(p.Fecha_Vencimiento_Certificado)}
                                 </div>
                               </div>

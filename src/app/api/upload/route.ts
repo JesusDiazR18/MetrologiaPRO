@@ -41,11 +41,17 @@ export async function POST(request: Request) {
         data: updateData
       })
     } else {
-      const updateData: any = { PDF_Certificado: publicPath }
+      const updateData: any = { PDF_Certificado: publicPath, Estado_Vigencia: 'VIGENTE' }
       if (nCert) updateData.N_Certificado = nCert
       if (prov) updateData.Proveedor_Laboratorio = prov
       if (fechaCal) updateData.Fecha_Calibracion_Externa = new Date(fechaCal)
-      if (fechaVenc) updateData.Fecha_Vencimiento_Certificado = new Date(fechaVenc)
+      if (fechaVenc) {
+        const vDate = new Date(fechaVenc)
+        updateData.Fecha_Vencimiento_Certificado = vDate
+        if (vDate.getTime() < Date.now()) {
+          updateData.Estado_Vigencia = 'VENCIDO'
+        }
+      }
 
       updated = await prisma.patronReferencia.update({
         where: { ID_Patron: assetId },
