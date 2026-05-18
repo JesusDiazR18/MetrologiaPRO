@@ -2,19 +2,18 @@
 
 ## Fase 1: Corrección de Hardware (QR Scanner)
 - [ ] Solucionar error NotReadableError en Cámara V13
-  - [x] Investigar conflictos en layout y modales (Descartado: No hay conflictos externos)
+  - [x] Investigar conflictos en layout y modales
   - [ ] Implementar limpieza de tracks a bajo nivel (MediaDevices API)
   - [ ] Añadir selector de cámara manual y detección de dispositivos
-  - [ ] Integrar guía de solución de problemas ("Troubleshooter") en la UI
-  - [ ] Implementar re-intento automático con backoff exponencial
 
-## Fase 2: Optimización de UX (Hecho)
+## Fase 2 & 3: Optimización de UX y Estética (Completado)
 - [x] Rediseñar Header a Ultra-Premium
-- [x] Implementar búsqueda as-you-type
-- [x] Sincronización de URL para búsqueda
-- [x] Integración de Ficha Técnica en Calendario
+- [x] Implementar búsqueda as-you-type y sincronización URL
+- [x] Sidebar Dinámico V3 y Modal de Registro de Verificación Pro
 
-## Fase 3: Estética y Componentes (Hecho)
-- [x] Sidebar Dinámico V3
-- [x] Modal de Registro de Verificación Pro
-- [x] Galería de QR con carga diferida
+## Fase 4: Correcciones Visuales de Alta Precisión (Completado)
+- [x] Solución de Bug de 3 Filas Apiladas en Tabla de Patrones en Escritorio
+  - [x] Eliminación de regla `display: block` de `.desktop-only` en modo escritorio
+- [x] Rediseño Premium de Modales y Controles de Formulario
+  - [x] Definición en `:root` de variables faltantes (`--oxford-blue`, `--cyan`, `--snow-1`, `--snow-2`, `--snow-3`, `--radius`)
+  - [x] Estilización de `.form-control` y `.btn` con bordes suaves, sombras multicapa y animaciones premium
