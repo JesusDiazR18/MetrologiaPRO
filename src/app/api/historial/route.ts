@@ -32,6 +32,23 @@ export async function POST(request: Request) {
     })
     if (!equipo) return NextResponse.json({ error: 'Equipo no encontrado' }, { status: 404 })
 
+    // Manejo especial si es un registro de historial anterior / carga histórica manual
+    if (body.isHistoricalLog) {
+      const log = await prisma.historialVerificacion.create({
+        data: {
+          FK_ID_Equipo: body.FK_ID_Equipo,
+          Fecha_Ejecucion: body.Fecha_Ejecucion ? new Date(body.Fecha_Ejecucion) : new Date(),
+          Variacion_Calculada: body.Variacion_Calculada !== undefined ? parseFloat(body.Variacion_Calculada) : null,
+          Resultado_Status: body.Resultado_Status || 'APTO',
+          Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
+          Observaciones: body.Observaciones || 'Registro Histórico / Anterior',
+          Tipo_Verificacion: body.Tipo_Verificacion || 'CALIBRACION',
+          Estado_Seguimiento: 'N/A'
+        }
+      })
+      return NextResponse.json(log, { status: 201 })
+    }
+
     const tipoVerif = body.Tipo_Verificacion || 'CALIBRACION'
     let variacion: number | null = null
     let status = 'APTO'

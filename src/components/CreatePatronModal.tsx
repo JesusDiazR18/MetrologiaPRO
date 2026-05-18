@@ -20,6 +20,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [customMag, setCustomMag] = useState('')
 
   useEffect(() => {
     fetch('/api/patrones?suggestId=true')
@@ -44,11 +45,14 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
     setSaving(true)
     setError('')
     try {
+      const finalMag = formData.Magnitud === 'OTRA' ? (customMag.trim() || 'OTRA') : formData.Magnitud
+
       const r = await fetch('/api/patrones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          Magnitud: finalMag,
           Codigo: formData.ID_Patron, // Asegurar que Código sea idéntico a ID_Patron
           Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
           Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
@@ -119,6 +123,17 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
                     <option value="VOLUMEN">VOLUMEN</option>
                     <option value="OTRA">OTRA MAGNITUD</option>
                   </select>
+                  {formData.Magnitud === 'OTRA' && (
+                    <div style={{ marginTop: 12 }}>
+                      <input 
+                        className="form-control" 
+                        placeholder="Especifique el nombre (Ej: DENSIDAD, VISCOSIDAD...)"
+                        value={customMag}
+                        onChange={e => setCustomMag(e.target.value.toUpperCase())}
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

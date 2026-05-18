@@ -8,6 +8,11 @@ interface Props {
 }
 
 export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
+  const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN']
+  const isCustomMag = patron.Magnitud && !standardMags.includes(patron.Magnitud) && patron.Magnitud !== 'OTRA'
+  const initialMagValue = isCustomMag ? 'OTRA' : (patron.Magnitud || 'TEMPERATURA')
+  const initialCustomMagValue = isCustomMag ? patron.Magnitud : ''
+
   const [formData, setFormData] = useState({
     Codigo: patron.Codigo || patron.ID_Patron || '',
     Nombre_Patron: patron.Nombre_Patron || '',
@@ -16,8 +21,9 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
     N_Certificado: patron.N_Certificado || '',
     Proveedor_Laboratorio: patron.Proveedor_Laboratorio || '',
     Estado_Vigencia: patron.Estado_Vigencia || 'VIGENTE',
-    Magnitud: patron.Magnitud || 'TEMPERATURA'
+    Magnitud: initialMagValue
   })
+  const [customMag, setCustomMag] = useState(initialCustomMagValue)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -30,8 +36,11 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
     setSaving(true)
     setError('')
     try {
+      const finalMag = formData.Magnitud === 'OTRA' ? (customMag.trim() || 'OTRA') : formData.Magnitud
+
       const payload = {
         ...formData,
+        Magnitud: finalMag,
         Codigo: formData.Codigo, // Mantener idénticos
         Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
         Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
@@ -98,6 +107,17 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
                     <option value="VOLUMEN">VOLUMEN</option>
                     <option value="OTRA">OTRA MAGNITUD</option>
                   </select>
+                  {formData.Magnitud === 'OTRA' && (
+                    <div style={{ marginTop: 12 }}>
+                      <input 
+                        className="form-control" 
+                        placeholder="Especifique el nombre (Ej: DENSIDAD, VISCOSIDAD...)"
+                        value={customMag}
+                        onChange={e => setCustomMag(e.target.value.toUpperCase())}
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="form-group">

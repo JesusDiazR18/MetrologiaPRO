@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         Requiere_Seguimiento: body.Requiere_Seguimiento !== undefined ? Boolean(body.Requiere_Seguimiento) : false,
         Fecha_Ultima_Verificacion: ultima,
         Fecha_Proximo_Control: proximo,
+        Fecha_Ingreso: body.Fecha_Ingreso ? new Date(body.Fecha_Ingreso) : new Date(),
         Periodicidad_Meses: meses,
         Tolerancia_Aceptable: parseFloat(body.Tolerancia_Aceptable) || 0
       } 

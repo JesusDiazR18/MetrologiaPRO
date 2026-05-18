@@ -51,7 +51,7 @@ export async function PUT(
       Responsable, Periodicidad_Meses, Fecha_Ultima_Verificacion, Fecha_Proximo_Control,
       Foto_Equipo, Estado, PDF_Certificado, Fecha_Vencimiento_Certificado,
       N_Certificado, Proveedor_Servicio, Magnitud, Accesorios, Insumos,
-      Detalles_Estado, Tiene_Solucion, Requiere_Seguimiento
+      Detalles_Estado, Tiene_Solucion, Requiere_Seguimiento, Fecha_Ingreso
     } = body
 
     const targetEstado = (Estado === 'OBSOLETO' || Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : Estado;
@@ -73,6 +73,7 @@ export async function PUT(
         Periodicidad_Meses: parseInt(Periodicidad_Meses) || 12,
         Fecha_Ultima_Verificacion: Fecha_Ultima_Verificacion ? new Date(Fecha_Ultima_Verificacion) : null,
         Fecha_Proximo_Control: Fecha_Proximo_Control ? new Date(Fecha_Proximo_Control) : null,
+        Fecha_Ingreso: Fecha_Ingreso ? new Date(Fecha_Ingreso) : null,
         Foto_Equipo,
         Estado: targetEstado,
         Detalles_Estado: Detalles_Estado ?? null,

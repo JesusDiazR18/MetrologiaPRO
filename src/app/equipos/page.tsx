@@ -14,6 +14,7 @@ import CreateEquipoModal from '@/components/CreateEquipoModal'
 import EditEquipoModal from '@/components/EditEquipoModal'
 import RenewCertModal from '@/components/RenewCertModal'
 import QRLabelModal from '@/components/QRLabelModal'
+import HistoricalVerificationModal from '@/components/HistoricalVerificationModal'
 import { toast } from 'react-hot-toast'
 
 interface Equipo {
@@ -33,6 +34,7 @@ interface Equipo {
   Periodicidad_Meses: number
   Fecha_Ultima_Verificacion: string | null
   Fecha_Proximo_Control: string | null
+  Fecha_Ingreso?: string | null
   Estado: string
   Detalles_Estado?: string | null
   Tiene_Solucion?: boolean | null
@@ -73,6 +75,7 @@ function EquiposContent() {
   const [editEquipo, setEditEquipo] = useState<Equipo | null>(null)
   const [renewEquipo, setRenewEquipo] = useState<Equipo | null>(null)
   const [qrLabelEquipo, setQrLabelEquipo] = useState<Equipo | null>(null)
+  const [modalHistorical, setModalHistorical] = useState<Equipo | null>(null)
   const searchParams = useSearchParams()
 
   const load = useCallback(async (query = '', tipoF = '') => {
@@ -423,6 +426,10 @@ function EquiposContent() {
                                     <span className="spec-value">±{e.Tolerancia_Aceptable} {e.Unidad_Tolerancia ?? 'un'}</span>
                                   </div>
                                   <div className="spec-row">
+                                    <span className="spec-label">Fecha Ingreso</span>
+                                    <span className="spec-value">{e.Fecha_Ingreso ? formatFecha(e.Fecha_Ingreso) : '—'}</span>
+                                  </div>
+                                  <div className="spec-row">
                                     <span className="spec-label">Próxima Verif.</span>
                                     <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(e.Fecha_Proximo_Control)}</span>
                                   </div>
@@ -439,50 +446,6 @@ function EquiposContent() {
                                     <span className="spec-value" style={{ fontSize: 10, maxWidth: 140, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={e.Insumos || '—'}>{e.Insumos || '—'}</span>
                                   </div>
                                 </div>
-
-                                {(e.Tipo === 'EQUIPO' && Boolean(e.N_Certificado || e.PDF_Certificado || e.Fecha_Vencimiento_Certificado)) ? (
-                                <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                <FileText size={16} color="var(--cyan)" />
-                                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certificado Digital</span>
-                                </div>
-                                <div className="spec-row">
-                                <span className="spec-label">N° Certificado</span>
-                                <span className="spec-value">{e.N_Certificado || '—'}</span>
-                                </div>
-                                <div className="spec-row">
-                                <span className="spec-label">Proveedor</span>
-                                <span className="spec-value">{e.Proveedor_Servicio || '—'}</span>
-                                </div>
-                                <div className="spec-row">
-                                <span className="spec-label">Vencimiento</span>
-                                <span className="spec-value">{e.Fecha_Vencimiento_Certificado ? formatFecha(e.Fecha_Vencimiento_Certificado) : '—'}</span>
-                                </div>
-                                <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                                {e.PDF_Certificado && (
-                                <a href={e.PDF_Certificado} target="_blank" rel="noreferrer" className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)' }}>
-                                👁️ Ver PDF
-                                </a>
-                                )}
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)', border: '1px solid var(--success)' }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
-                                <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> Renovar Cert
-                                </button>
-                                </div>
-                                </div>
-                                ) : e.Tipo === 'EQUIPO' ? (
-                                   <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 12, minHeight: 180 }}>
-                                     <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'grid', placeItems: 'center' }}>
-                                       <FileText size={20} color="var(--text-dim)" style={{ opacity: 0.5 }} />
-                                     </div>
-                                     <div>
-                                       <span style={{ fontSize: 12, fontWeight: 700, display: 'block', color: 'var(--text-dim)' }}>Sin Certificado Externo</span>
-                                       <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'block', maxWidth: 160 }}>Este equipo no posee una calibración externa cargada.</span>
-                                     </div>
-                                     <button className="btn btn-cyan btn-xs" style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontSize: 10, fontWeight: 700 }} onClick={(ev) => { ev.stopPropagation(); setRenewEquipo(e) }}>
-                                       ➕ Cargar Certificado
-                                     </button>
-                                   </div>
-                                 ) : null}
 
                                 <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -518,9 +481,18 @@ function EquiposContent() {
                               </div>
 
                               <div className="card" style={{ overflow: 'hidden', marginTop: 24, background: 'rgba(255,255,255,0.02)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <FileDigit size={16} color="var(--accent)" />
-                                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Historial de Verificaciones</span>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', gap: 12 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <FileDigit size={16} color="var(--accent)" />
+                                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Historial de Verificaciones</span>
+                                  </div>
+                                  <button 
+                                    className="btn btn-cyan btn-xs" 
+                                    style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}
+                                    onClick={(ev) => { ev.stopPropagation(); setModalHistorical(e) }}
+                                  >
+                                    ➕ Agregar Verificación Anterior
+                                  </button>
                                 </div>
                                 <table className="data-table">
                                   <thead>
@@ -668,6 +640,17 @@ function EquiposContent() {
           }}
           onClose={() => setRenewEquipo(null)}
           onSaved={() => { setRenewEquipo(null); load(q, tipo) }}
+        />
+      )}
+      {modalHistorical && (
+        <HistoricalVerificationModal
+          equipo={{
+            ID_Equipo: modalHistorical.ID_Equipo,
+            Nombre_Equipo: modalHistorical.Nombre_Equipo,
+            Codigo_Interno: modalHistorical.Codigo_Interno
+          }}
+          onClose={() => setModalHistorical(null)}
+          onSaved={() => { setModalHistorical(null); load(q, tipo) }}
         />
       )}
       {qrLabelEquipo && (

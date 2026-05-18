@@ -8,6 +8,12 @@ interface Props {
 }
 
 export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
+  const initialMags = equipo.Magnitud ? equipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : ['TEMPERATURA']
+  const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN']
+  const customItems = initialMags.filter(m => !standardMags.includes(m) && m !== 'OTRA')
+  const initialCustomMag = customItems.join(', ')
+  const initialFormDataMags = initialMags.map(m => (!standardMags.includes(m) && m !== 'OTRA') ? 'OTRA' : m)
+
   const [formData, setFormData] = useState({
     Nombre_Equipo: equipo.Nombre_Equipo || '',
     Codigo_Interno: equipo.Codigo_Interno || '',
@@ -23,6 +29,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     Periodicidad_Meses: equipo.Periodicidad_Meses || 12,
     Fecha_Ultima_Verificacion: equipo.Fecha_Ultima_Verificacion ? new Date(equipo.Fecha_Ultima_Verificacion).toISOString().split('T')[0] : '',
     Fecha_Proximo_Control: equipo.Fecha_Proximo_Control ? new Date(equipo.Fecha_Proximo_Control).toISOString().split('T')[0] : '',
+    Fecha_Ingreso: equipo.Fecha_Ingreso ? new Date(equipo.Fecha_Ingreso).toISOString().split('T')[0] : '',
     Estado: (equipo.Estado === 'OBSOLETO' || equipo.Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : (equipo.Estado || 'OPERATIVO'),
     Detalles_Estado: equipo.Detalles_Estado || '',
     Tiene_Solucion: equipo.Tiene_Solucion ?? true,
@@ -30,10 +37,11 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     N_Certificado: equipo.N_Certificado || '',
     Proveedor_Servicio: equipo.Proveedor_Servicio || '',
     Fecha_Vencimiento_Certificado: equipo.Fecha_Vencimiento_Certificado ? new Date(equipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
-    Magnitud: equipo.Magnitud || 'TEMPERATURA',
+    Magnitud: initialFormDataMags.join(', '),
     Accesorios: equipo.Accesorios || '',
     Insumos: equipo.Insumos || ''
   })
+  const [customMag, setCustomMag] = useState(initialCustomMag)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -63,12 +71,19 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     setSaving(true)
     setError('')
     try {
+      let finalMagnitud = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+      if (finalMagnitud.includes('OTRA')) {
+        finalMagnitud = finalMagnitud.map(m => m === 'OTRA' ? (customMag.trim() || 'OTRA') : m)
+      }
+
       const payload = {
         ...formData,
+        Magnitud: finalMagnitud.join(', '),
         Tolerancia_Aceptable: parseFloat(String(formData.Tolerancia_Aceptable)) || 0,
         Periodicidad_Meses: parseInt(String(formData.Periodicidad_Meses)) || 12,
         Fecha_Ultima_Verificacion: formData.Fecha_Ultima_Verificacion ? new Date(formData.Fecha_Ultima_Verificacion).toISOString() : null,
         Fecha_Proximo_Control: formData.Fecha_Proximo_Control ? new Date(formData.Fecha_Proximo_Control).toISOString() : null,
+        Fecha_Ingreso: formData.Fecha_Ingreso ? new Date(formData.Fecha_Ingreso).toISOString() : null,
         Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
       }
 
@@ -125,6 +140,12 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                   <input className="form-control" value={formData.Codigo_Interno} onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})} required />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Área Asignada</label>
+                  <input className="form-control" value={formData.Area_Asignada} onChange={e => setFormData({...formData, Area_Asignada: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid-2" style={{ marginTop: 16 }}>
+                <div className="form-group">
                   <label className="form-label">Estado de Funcionamiento *</label>
                   <select className="form-control" value={formData.Estado} onChange={e => setFormData({...formData, Estado: e.target.value})}>
                     <option value="OPERATIVO">Operativo / Apto</option>
@@ -134,6 +155,15 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                     <option value="FUERA_DE_SERVICIO">Fuera de Servicio (No Apto)</option>
                     <option value="DE_BAJA_OBSOLETO">De Baja / Obsoleto</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Fecha de Ingreso</label>
+                  <input 
+                    className="form-control" 
+                    type="date"
+                    value={formData.Fecha_Ingreso} 
+                    onChange={e => setFormData({...formData, Fecha_Ingreso: e.target.value})}
+                  />
                 </div>
               </div>
 
@@ -201,6 +231,17 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                     )
                   })}
                 </div>
+                {selectedMags.includes('OTRA') && (
+                  <div style={{ marginTop: 12 }}>
+                    <input 
+                      className="form-control" 
+                      placeholder="Especifique el nombre de la magnitud (Ej: CAUDAL, VISCOSIDAD...)"
+                      value={customMag}
+                      onChange={e => setCustomMag(e.target.value.toUpperCase())}
+                      required
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -238,10 +279,6 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
 
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Área Asignada</label>
-                  <input className="form-control" value={formData.Area_Asignada} onChange={e => setFormData({...formData, Area_Asignada: e.target.value})} />
-                </div>
-                <div className="form-group">
                   <label className="form-label">Responsable Asignado</label>
                   <input className="form-control" value={formData.Responsable} onChange={e => setFormData({...formData, Responsable: e.target.value})} />
                 </div>
@@ -258,26 +295,6 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                 </div>
               </div>
             </div>
-
-            {equipo.Tipo === 'EQUIPO' && (
-              <div className="form-section">
-                <div className="section-title">3. Certificado y Vencimiento</div>
-                <div className="grid-3">
-                  <div className="form-group">
-                    <label className="form-label">N° Certificado</label>
-                    <input className="form-control" value={formData.N_Certificado} onChange={e => setFormData({...formData, N_Certificado: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Proveedor Servicio</label>
-                    <input className="form-control" value={formData.Proveedor_Servicio} onChange={e => setFormData({...formData, Proveedor_Servicio: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Vencimiento</label>
-                    <input className="form-control" type="date" value={formData.Fecha_Vencimiento_Certificado} onChange={e => setFormData({...formData, Fecha_Vencimiento_Certificado: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           <div className="modal-footer" style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '20px 28px', display: 'flex', justifyContent: 'flex-end', gap: 12, background: 'var(--snow-1)' }}>
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>

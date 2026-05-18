@@ -24,6 +24,7 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
     Periodicidad_Meses: '12',
     Fecha_Ultima_Verificacion: new Date().toISOString().split('T')[0],
     Fecha_Proximo_Control: '',
+    Fecha_Ingreso: new Date().toISOString().split('T')[0],
     Estado: 'OPERATIVO',
     Detalles_Estado: '',
     Tiene_Solucion: true,
@@ -35,6 +36,7 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
     Accesorios: '',
     Insumos: ''
   })
+  const [customMag, setCustomMag] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -81,12 +83,19 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
     setSaving(true)
     setError('')
     try {
+      let finalMagnitud = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+      if (finalMagnitud.includes('OTRA')) {
+        finalMagnitud = finalMagnitud.map(m => m === 'OTRA' ? (customMag.trim() || 'OTRA') : m)
+      }
+
       const payload = {
         ...formData,
+        Magnitud: finalMagnitud.join(', '),
         Tolerancia_Aceptable: parseFloat(formData.Tolerancia_Aceptable) || 0,
         Periodicidad_Meses: parseInt(formData.Periodicidad_Meses) || 12,
         Fecha_Ultima_Verificacion: formData.Fecha_Ultima_Verificacion ? new Date(formData.Fecha_Ultima_Verificacion).toISOString() : null,
         Fecha_Proximo_Control: formData.Fecha_Proximo_Control ? new Date(formData.Fecha_Proximo_Control).toISOString() : null,
+        Fecha_Ingreso: formData.Fecha_Ingreso ? new Date(formData.Fecha_Ingreso).toISOString() : null,
         Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
       }
 
@@ -190,6 +199,17 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                     )
                   })}
                 </div>
+                {selectedMags.includes('OTRA') && (
+                  <div style={{ marginTop: 12 }}>
+                    <input 
+                      className="form-control" 
+                      placeholder="Especifique el nombre de la magnitud (Ej: CAUDAL, VISCOSIDAD...)"
+                      value={customMag}
+                      onChange={e => setCustomMag(e.target.value.toUpperCase())}
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid-2">
@@ -246,6 +266,15 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                     <option value="FUERA_DE_SERVICIO">Fuera de Servicio (No Apto)</option>
                     <option value="DE_BAJA_OBSOLETO">De Baja / Obsoleto</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Fecha de Ingreso</label>
+                  <input 
+                    className="form-control" 
+                    type="date"
+                    value={formData.Fecha_Ingreso} 
+                    onChange={e => setFormData({...formData, Fecha_Ingreso: e.target.value})}
+                  />
                 </div>
               </div>
 
@@ -340,26 +369,6 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                 </div>
               </div>
             </div>
-
-            {formData.Tipo === 'EQUIPO' && (
-              <div className="form-section">
-                <div className="section-title">3. Certificado de Calibración / Servicio</div>
-                <div className="grid-3">
-                  <div className="form-group">
-                    <label className="form-label">N° Certificado</label>
-                    <input className="form-control" value={formData.N_Certificado} onChange={e => setFormData({...formData, N_Certificado: e.target.value})} placeholder="Ej: CERT-2026-09" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Proveedor / Laboratorio</label>
-                    <input className="form-control" value={formData.Proveedor_Servicio} onChange={e => setFormData({...formData, Proveedor_Servicio: e.target.value})} placeholder="Ej: Metrología Externa S.A." />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Vencimiento Certificado</label>
-                    <input className="form-control" type="date" value={formData.Fecha_Vencimiento_Certificado} onChange={e => setFormData({...formData, Fecha_Vencimiento_Certificado: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           <div className="modal-footer" style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '20px 28px', display: 'flex', justifyContent: 'flex-end', gap: 12, background: 'var(--snow-1)' }}>
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
