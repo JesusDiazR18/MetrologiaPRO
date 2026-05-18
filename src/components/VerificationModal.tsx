@@ -1,10 +1,161 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
 import { 
   CheckCircle2, XCircle, User, FileText, 
   Calculator, AlertTriangle, Settings2, Activity, ClipboardList
 } from 'lucide-react'
+
+// Componente de Selección Búsqueda Rápida (Combobox)
+function SearchableSelect({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder = "Buscar y seleccionar...",
+  icon = <User size={14} />
+}: { 
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  icon?: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find(o => o.value === value);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearch('');
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          border: `2px solid ${isOpen ? '#0ea5e9' : '#f1f5f9'}`,
+          background: isOpen ? '#fff' : '#f8fafc',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          boxShadow: isOpen ? '0 0 0 4px rgba(14, 165, 233, 0.1)' : 'none'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
+          <span style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>{icon}</span>
+          {isOpen ? (
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+                  if (filtered.length > 0) {
+                    onChange(filtered[0].value);
+                    setIsOpen(false);
+                  }
+                } else if (e.key === 'Escape') {
+                  setIsOpen(false);
+                }
+              }}
+              placeholder="Escribir código o nombre..."
+              style={{
+                border: 'none',
+                background: 'transparent',
+                outline: 'none',
+                width: '100%',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#1e293b',
+                padding: 0
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: '15px', fontWeight: 600, color: selectedOption ? '#1e293b' : '#94a3b8', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              {selectedOption ? selectedOption.label : placeholder}
+            </span>
+          )}
+        </div>
+        <span style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94a3b8', fontSize: '12px', marginLeft: 8 }}>
+          ▼
+        </span>
+      </div>
+
+      {isOpen && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            left: 0,
+            right: 0,
+            background: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)',
+            border: '1px solid #cbd5e1',
+            maxHeight: '240px',
+            overflowY: 'auto',
+            zIndex: 3000,
+            padding: '8px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          {options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+            <div style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
+              No se encontraron coincidencias
+            </div>
+          ) : (
+            options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())).map((opt) => (
+              <div
+                key={opt.value}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: opt.value === value ? 700 : 500,
+                  color: opt.value === value ? '#2563eb' : '#1e293b',
+                  background: opt.value === value ? '#eff6ff' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.15s',
+                  marginBottom: '2px'
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = opt.value === value ? '#eff6ff' : '#f1f5f9')}
+                onMouseLeave={e => (e.currentTarget.style.background = opt.value === value ? '#eff6ff' : 'transparent')}
+              >
+                <span>{opt.label}</span>
+                {opt.value === value && <CheckCircle2 size={16} color="#2563eb" />}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Equipo {
   ID_Equipo: string
@@ -192,17 +343,19 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
             <div className="form-group-modern">
               <label><User size={14} /> Equipo / Instrumento a verificar *</label>
-              <select value={selectedId} onChange={e => {
-                setSelectedId(e.target.value);
-                setSelectedPatronId('');
-              }} required>
-                <option value="">Seleccionar equipo…</option>
-                {equipos.map(e => (
-                  <option key={e.ID_Equipo} value={e.ID_Equipo}>
-                    {e.Codigo_Interno} — {e.Nombre_Equipo} {e.Magnitud ? `(${e.Magnitud})` : ''}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect 
+                options={equipos.map(e => ({
+                  value: e.ID_Equipo,
+                  label: `${e.Codigo_Interno} — ${e.Nombre_Equipo} ${e.Magnitud ? `(${e.Magnitud})` : ''}`
+                }))}
+                value={selectedId}
+                onChange={val => {
+                  setSelectedId(val);
+                  setSelectedPatronId('');
+                }}
+                placeholder="Buscar por código o nombre del equipo…"
+                icon={<User size={14} />}
+              />
             </div>
 
             {/* SECCIÓN OPERATIVIDAD */}
@@ -254,14 +407,16 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                       </span>
                     )}
                   </label>
-                  <select value={selectedPatronId} onChange={e => setSelectedPatronId(e.target.value)} required>
-                    <option value="">Seleccionar patrón metrológico…</option>
-                    {patronesAMostrar.map(p => (
-                      <option key={p.ID_Patron} value={p.ID_Patron}>
-                        {p.Codigo || p.ID_Patron} — {p.Nombre_Patron} ({p.Magnitud || 'General'})
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect 
+                    options={patronesAMostrar.map(p => ({
+                      value: p.ID_Patron,
+                      label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
+                    }))}
+                    value={selectedPatronId}
+                    onChange={val => setSelectedPatronId(val)}
+                    placeholder="Buscar por código o nombre del patrón…"
+                    icon={<CheckCircle2 size={14} />}
+                  />
                   {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
                     <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
                       ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
