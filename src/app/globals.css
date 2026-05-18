@@ -858,3 +858,14 @@ tr:hover { transform: translateX(4px); }
 }
 .empty-state svg { width: 48px; height: 48px; opacity: 0.3; }
 .empty-state p { font-size: 14px; }
+
+/* ─── STYLING FOR SELECTS AND OPTIONS ────────────────────────── */
+select {
+  color: var(--text-main, #0f172a);
+  background-color: var(--card-bg, #ffffff);
+}
+select option {
+  background-color: var(--card-bg, #ffffff);
+  color: var(--text-main, #0f172a);
+  padding: 8px 12px;
+}

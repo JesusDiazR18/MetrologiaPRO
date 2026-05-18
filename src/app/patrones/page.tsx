@@ -110,7 +110,7 @@ export default function PatronesPage() {
               placeholder="Buscar patrón por ID, nombre, código o laboratorio..." 
               value={q} 
               onChange={e => setQ(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#fff', width: '100%', outline: 'none', fontSize: 14 }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', width: '100%', outline: 'none', fontSize: 14 }}
             />
           </div>
         </div>

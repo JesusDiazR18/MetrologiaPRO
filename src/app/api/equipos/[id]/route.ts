@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { calcularProximoControl } from '@/lib/metrologia'
 
 export async function PATCH(
   request: Request,
@@ -48,13 +49,27 @@ export async function PUT(
     const {
       Nombre_Equipo, Codigo_Interno, Marca, Modelo, Serie, Rango_Medida,
       Resolucion, Tolerancia_Aceptable, Unidad_Tolerancia, Area_Asignada,
-      Responsable, Periodicidad_Meses, Fecha_Ultima_Verificacion, Fecha_Proximo_Control,
-      Foto_Equipo, Estado, PDF_Certificado, Fecha_Vencimiento_Certificado,
-      N_Certificado, Proveedor_Servicio, Magnitud, Accesorios, Insumos,
-      Detalles_Estado, Tiene_Solucion, Requiere_Seguimiento, Fecha_Ingreso
+      Responsable, Periodicidad_Meses, Foto_Equipo, Estado, PDF_Certificado, 
+      Fecha_Vencimiento_Certificado, N_Certificado, Proveedor_Servicio, 
+      Magnitud, Accesorios, Insumos, Detalles_Estado, Tiene_Solucion, 
+      Requiere_Seguimiento, Fecha_Ingreso
     } = body
 
     const targetEstado = (Estado === 'OBSOLETO' || Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : Estado;
+    const meses = parseInt(Periodicidad_Meses) || 12;
+    const targetIngreso = Fecha_Ingreso ? new Date(Fecha_Ingreso) : null;
+
+    const lastLog = await prisma.historialVerificacion.findFirst({
+      where: { FK_ID_Equipo: id },
+      orderBy: { Fecha_Ejecucion: 'desc' }
+    });
+
+    let ultima = lastLog ? lastLog.Fecha_Ejecucion : targetIngreso;
+    if (!ultima) {
+      const eq = await prisma.instrumentoEquipo.findUnique({ where: { ID_Equipo: id }, select: { Fecha_Ingreso: true, createdAt: true } });
+      ultima = eq?.Fecha_Ingreso || eq?.createdAt || new Date();
+    }
+    const proximo = calcularProximoControl(ultima, meses);
 
     const updated = await prisma.instrumentoEquipo.update({
       where: { ID_Equipo: id },
@@ -70,10 +85,10 @@ export async function PUT(
         Unidad_Tolerancia,
         Area_Asignada,
         Responsable,
-        Periodicidad_Meses: parseInt(Periodicidad_Meses) || 12,
-        Fecha_Ultima_Verificacion: Fecha_Ultima_Verificacion ? new Date(Fecha_Ultima_Verificacion) : null,
-        Fecha_Proximo_Control: Fecha_Proximo_Control ? new Date(Fecha_Proximo_Control) : null,
-        Fecha_Ingreso: Fecha_Ingreso ? new Date(Fecha_Ingreso) : null,
+        Periodicidad_Meses: meses,
+        Fecha_Ultima_Verificacion: ultima,
+        Fecha_Proximo_Control: proximo,
+        Fecha_Ingreso: targetIngreso,
         Foto_Equipo,
         Estado: targetEstado,
         Detalles_Estado: Detalles_Estado ?? null,

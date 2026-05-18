@@ -42,12 +42,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (lastLog) {
       newUltimaFecha = lastLog.Fecha_Ejecucion
       newProximaFecha = calcularProximoControl(lastLog.Fecha_Ejecucion, periodicidad)
-      newStatus = lastLog.Resultado_Status === 'APTO' ? 'OPERATIVO' : 'NO_APTO'
+      newStatus = (lastLog.Resultado_Status === 'APTO' || lastLog.Resultado_Status === 'OPERATIVO' || lastLog.Resultado_Status === 'ACCION_PENDIENTE') ? 'OPERATIVO' : 'NO_APTO'
     } else {
-      // Si ya no quedan registros
-      newUltimaFecha = null
-      newProximaFecha = null
-      newStatus = 'NO_APTO' // Al no tener mantenimientos, cae en no apto o estado default
+      // Si ya no quedan registros, usamos Fecha_Ingreso o fecha actual
+      newUltimaFecha = deleteLog.equipo.Fecha_Ingreso || new Date()
+      newProximaFecha = calcularProximoControl(newUltimaFecha, periodicidad)
+      newStatus = 'OPERATIVO'
     }
 
     // 5. Actualizar el Equipo

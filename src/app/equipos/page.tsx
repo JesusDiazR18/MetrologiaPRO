@@ -230,14 +230,13 @@ function EquiposContent() {
                 placeholder="Buscar por ID, nombre o código QR..." 
                 value={q} 
                 onChange={e => { setQ(e.target.value); load(e.target.value, tipo) }}
-                style={{ background: 'transparent', border: 'none', color: '#fff', width: '100%', outline: 'none', fontSize: 14 }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', width: '100%', outline: 'none', fontSize: 14 }}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Filtro:</span>
               <select 
-                className="btn-scan" 
-                style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid var(--glass-border)', boxShadow: 'none' }}
+                style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                 value={tipo} 
                 onChange={e => { setTipo(e.target.value); load(q, e.target.value) }}
               >
@@ -417,18 +416,24 @@ function EquiposContent() {
                                     <FileDigit size={16} color="var(--accent)" />
                                     <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
                                   </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Modelo / Serie</span>
-                                    <span className="spec-value">{e.Modelo || '—'} / {e.Serie || '—'}</span>
-                                  </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Tolerancia</span>
-                                    <span className="spec-value">±{e.Tolerancia_Aceptable} {e.Unidad_Tolerancia ?? 'un'}</span>
-                                  </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Fecha Ingreso</span>
-                                    <span className="spec-value">{e.Fecha_Ingreso ? formatFecha(e.Fecha_Ingreso) : '—'}</span>
-                                  </div>
+                                  {(e.Modelo || e.Serie) && (e.Modelo !== '—' || e.Serie !== '—') && (
+                                    <div className="spec-row">
+                                      <span className="spec-label">Modelo / Serie</span>
+                                      <span className="spec-value">{e.Modelo || '—'} / {e.Serie || '—'}</span>
+                                    </div>
+                                  )}
+                                  {e.Tolerancia_Aceptable != null && (
+                                    <div className="spec-row">
+                                      <span className="spec-label">Tolerancia</span>
+                                      <span className="spec-value">±{e.Tolerancia_Aceptable} {e.Unidad_Tolerancia ?? 'un'}</span>
+                                    </div>
+                                  )}
+                                  {e.Fecha_Ingreso && (
+                                    <div className="spec-row">
+                                      <span className="spec-label">Fecha Ingreso</span>
+                                      <span className="spec-value">{formatFecha(e.Fecha_Ingreso)}</span>
+                                    </div>
+                                  )}
                                   <div className="spec-row">
                                     <span className="spec-label">Próxima Verif.</span>
                                     <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(e.Fecha_Proximo_Control)}</span>
@@ -437,14 +442,18 @@ function EquiposContent() {
                                     <span className="spec-label">Intervalo</span>
                                     <span className="spec-value">{e.Periodicidad_Meses} Meses</span>
                                   </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Accesorios</span>
-                                    <span className="spec-value" style={{ fontSize: 10, maxWidth: 140, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={e.Accesorios || '—'}>{e.Accesorios || '—'}</span>
-                                  </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Insumos</span>
-                                    <span className="spec-value" style={{ fontSize: 10, maxWidth: 140, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={e.Insumos || '—'}>{e.Insumos || '—'}</span>
-                                  </div>
+                                  {e.Accesorios && e.Accesorios.trim() !== '' && e.Accesorios.trim() !== '—' && (
+                                    <div className="spec-row" style={{ alignItems: 'flex-start' }}>
+                                      <span className="spec-label" style={{ marginTop: 2 }}>Accesorios</span>
+                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{e.Accesorios}</span>
+                                    </div>
+                                  )}
+                                  {e.Insumos && e.Insumos.trim() !== '' && e.Insumos.trim() !== '—' && (
+                                    <div className="spec-row" style={{ alignItems: 'flex-start' }}>
+                                      <span className="spec-label" style={{ marginTop: 2 }}>Insumos</span>
+                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{e.Insumos}</span>
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
