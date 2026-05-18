@@ -387,6 +387,14 @@ function EquiposContent() {
                                     <span className="spec-label">Intervalo</span>
                                     <span className="spec-value">{e.Periodicidad_Meses} Meses</span>
                                   </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Accesorios</span>
+                                    <span className="spec-value" style={{ fontSize: 10, maxWidth: 140, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={e.Accesorios || '—'}>{e.Accesorios || '—'}</span>
+                                  </div>
+                                  <div className="spec-row">
+                                    <span className="spec-label">Insumos</span>
+                                    <span className="spec-value" style={{ fontSize: 10, maxWidth: 140, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={e.Insumos || '—'}>{e.Insumos || '—'}</span>
+                                  </div>
                                 </div>
 
                                 {(e.Tipo === 'EQUIPO' && Boolean(e.N_Certificado || e.PDF_Certificado || e.Fecha_Vencimiento_Certificado)) ? (

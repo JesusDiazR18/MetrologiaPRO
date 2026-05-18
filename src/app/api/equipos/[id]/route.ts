@@ -48,7 +48,7 @@ export async function PUT(
       Resolucion, Tolerancia_Aceptable, Unidad_Tolerancia, Area_Asignada,
       Responsable, Periodicidad_Meses, Fecha_Ultima_Verificacion, Fecha_Proximo_Control,
       Foto_Equipo, Estado, PDF_Certificado, Fecha_Vencimiento_Certificado,
-      N_Certificado, Proveedor_Servicio
+      N_Certificado, Proveedor_Servicio, Magnitud, Accesorios, Insumos
     } = body
 
     const updated = await prisma.instrumentoEquipo.update({
@@ -73,7 +73,10 @@ export async function PUT(
         PDF_Certificado,
         Fecha_Vencimiento_Certificado: Fecha_Vencimiento_Certificado ? new Date(Fecha_Vencimiento_Certificado) : null,
         N_Certificado,
-        Proveedor_Servicio
+        Proveedor_Servicio,
+        Magnitud,
+        Accesorios,
+        Insumos
       }
     })
 

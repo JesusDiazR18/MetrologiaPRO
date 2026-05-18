@@ -27,10 +27,29 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     N_Certificado: equipo.N_Certificado || '',
     Proveedor_Servicio: equipo.Proveedor_Servicio || '',
     Fecha_Vencimiento_Certificado: equipo.Fecha_Vencimiento_Certificado ? new Date(equipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
-    Magnitud: equipo.Magnitud || 'TEMPERATURA'
+    Magnitud: equipo.Magnitud || 'TEMPERATURA',
+    Accesorios: equipo.Accesorios || '',
+    Insumos: equipo.Insumos || ''
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const magnitudesDisponibles = [
+    'TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION',
+    'TIEMPO', 'ELECTRICA', 'VOLUMEN', 'OTRA'
+  ]
+
+  function toggleMagnitud(mag: string) {
+    const current = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+    let updated: string[]
+    if (current.includes(mag)) {
+      if (current.length === 1) return // Mantener al menos 1
+      updated = current.filter(m => m !== mag)
+    } else {
+      updated = [...current, mag]
+    }
+    setFormData(prev => ({ ...prev, Magnitud: updated.join(', ') }))
+  }
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
@@ -68,9 +87,11 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     }
   }
 
+  const selectedMags = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()) : []
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 680 }}>
+      <div className="modal" style={{ maxWidth: 720, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div className="modal-header">
           <div style={{ width: 38, height: 38, background: 'var(--accent)', borderRadius: 12, display: 'grid', placeItems: 'center', boxShadow: '0 4px 12px var(--accent-dim)' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5">
@@ -81,10 +102,10 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
             <span className="modal-title" style={{ fontSize: 18, fontWeight: 700 }}>Editar Activo ({equipo.ID_Equipo})</span>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Modificación de parámetros técnicos y control</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 24, marginLeft: 'auto' }}>×</button>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 24, marginLeft: 'auto' }}>×</button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+          <div className="modal-body" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', flex: 1 }}>
             {error && <div style={{ background: 'var(--danger-dim)', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
             
             <div className="form-section">
@@ -95,7 +116,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                   <input className="form-control" value={formData.Nombre_Equipo} onChange={e => setFormData({...formData, Nombre_Equipo: e.target.value})} required />
                 </div>
               </div>
-              <div className="grid-3">
+              <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Código Interno (QR) *</label>
                   <input className="form-control" value={formData.Codigo_Interno} onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})} required />
@@ -110,23 +131,35 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                     <option value="OBSOLETO">OBSOLETO</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Magnitud Física *</label>
-                  <select 
-                    className="form-control" 
-                    value={formData.Magnitud} 
-                    onChange={e => setFormData({...formData, Magnitud: e.target.value})}
-                    required
-                  >
-                    <option value="TEMPERATURA">TEMPERATURA</option>
-                    <option value="MASA">MASA</option>
-                    <option value="LONGITUD">LONGITUD</option>
-                    <option value="PRESION">PRESIÓN</option>
-                    <option value="TIEMPO">TIEMPO</option>
-                    <option value="ELECTRICA">ELÉCTRICA</option>
-                    <option value="VOLUMEN">VOLUMEN</option>
-                    <option value="OTRA">OTRA MAGNITUD</option>
-                  </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Magnitudes Físicas que Mide (Selección Múltiple) *</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {magnitudesDisponibles.map(mag => {
+                    const isSelected = selectedMags.includes(mag)
+                    return (
+                      <button
+                        type="button"
+                        key={mag}
+                        onClick={() => toggleMagnitud(mag)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          border: isSelected ? '1px solid var(--cyan)' : '1px solid var(--snow-3)',
+                          background: isSelected ? 'var(--cyan)' : 'var(--snow-1)',
+                          color: isSelected ? '#000000' : 'var(--text-main)',
+                          boxShadow: isSelected ? '0 2px 8px rgba(0, 229, 255, 0.3)' : 'none'
+                        }}
+                      >
+                        {isSelected ? '✓ ' : ''}{mag}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
@@ -171,6 +204,17 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                 <div className="form-group">
                   <label className="form-label">Responsable Asignado</label>
                   <input className="form-control" value={formData.Responsable} onChange={e => setFormData({...formData, Responsable: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Accesorios del Equipo</label>
+                  <input className="form-control" value={formData.Accesorios} onChange={e => setFormData({...formData, Accesorios: e.target.value})} placeholder="Ej: Cables, pinzas, sondas..." />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Insumos que Consume</label>
+                  <input className="form-control" value={formData.Insumos} onChange={e => setFormData({...formData, Insumos: e.target.value})} placeholder="Ej: Baterías 9V, papel térmico..." />
                 </div>
               </div>
             </div>

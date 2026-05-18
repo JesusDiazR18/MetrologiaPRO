@@ -32,11 +32,26 @@ export async function POST(request: Request) {
     })
     if (!equipo) return NextResponse.json({ error: 'Equipo no encontrado' }, { status: 404 })
 
-    const variacion = calcularVariacion(
-      parseFloat(body.Medida_Instrumento),
-      parseFloat(body.Medida_Patron)
-    )
-    const status = calcularStatus(variacion, equipo.Tolerancia_Aceptable)
+    const tipoVerif = body.Tipo_Verificacion || 'CALIBRACION'
+    let variacion: number | null = null
+    let status = 'APTO'
+    let numInstr: number | null = null
+    let numPatr: number | null = null
+    let accionesPendientes = body.Acciones_Pendientes || null
+    let estadoSeguimiento = 'N/A'
+
+    if (tipoVerif === 'CALIBRACION') {
+      numInstr = parseFloat(body.Medida_Instrumento)
+      numPatr = parseFloat(body.Medida_Patron)
+      variacion = calcularVariacion(numInstr, numPatr)
+      status = calcularStatus(variacion, equipo.Tolerancia_Aceptable)
+    } else {
+      status = body.Resultado_Status || 'OPERATIVO'
+      if (accionesPendientes && accionesPendientes.trim().length > 0) {
+        estadoSeguimiento = 'PENDIENTE'
+        if (status === 'OPERATIVO') status = 'ACCION_PENDIENTE'
+      }
+    }
 
     const proximoControl = calcularProximoControl(new Date(), equipo.Periodicidad_Meses)
 
@@ -44,23 +59,27 @@ export async function POST(request: Request) {
       data: {
         FK_ID_Equipo: body.FK_ID_Equipo,
         FK_ID_Patron_Usado: body.FK_ID_Patron_Usado || null,
-        Medida_Instrumento: parseFloat(body.Medida_Instrumento),
-        Medida_Patron: parseFloat(body.Medida_Patron),
+        Medida_Instrumento: numInstr,
+        Medida_Patron: numPatr,
         Variacion_Calculada: variacion,
         Resultado_Status: status,
-        Tecnico_Ejecutor: body.Tecnico_Ejecutor,
+        Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
         Observaciones: body.Observaciones ?? null,
         Firma_Digital: body.Firma_Digital ?? null,
+        Tipo_Verificacion: tipoVerif,
+        Acciones_Pendientes: accionesPendientes,
+        Estado_Seguimiento: estadoSeguimiento
       }
     })
 
-    // Update equipo's dates
+    // Update equipo's dates and status
+    const newEstado = (status === 'APTO' || status === 'OPERATIVO' || status === 'ACCION_PENDIENTE') ? 'OPERATIVO' : 'NO_APTO'
     await prisma.instrumentoEquipo.update({
       where: { ID_Equipo: body.FK_ID_Equipo },
       data: {
         Fecha_Ultima_Verificacion: new Date(),
         Fecha_Proximo_Control: proximoControl,
-        Estado: status === 'APTO' ? 'OPERATIVO' : 'NO_APTO',
+        Estado: newEstado,
       }
     })
 

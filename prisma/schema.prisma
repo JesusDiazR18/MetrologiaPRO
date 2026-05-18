@@ -37,7 +37,9 @@ model InstrumentoEquipo {
   Fecha_Vencimiento_Certificado DateTime?
   N_Certificado                 String?
   Proveedor_Servicio            String?
-  Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA
+  Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA (permite múltiples separadas por coma)
+  Accesorios                    String?
+  Insumos                       String?
 
   historiales               HistorialVerificacion[]
 
@@ -76,11 +78,14 @@ model HistorialVerificacion {
   Medida_Instrumento      Float?
   Medida_Patron           Float?
   Variacion_Calculada     Float?
-  Resultado_Status        String                        // APTO | NO_APTO
+  Resultado_Status        String                        // APTO | NO_APTO | OPERATIVO | ACCION_PENDIENTE
   Tecnico_Ejecutor        String
   Firma_Digital           String?
   Observaciones           String?
   PDF_Certificado_interno String?
+  Tipo_Verificacion       String?   @default("CALIBRACION") // OPERATIVIDAD | CALIBRACION
+  Acciones_Pendientes     String?
+  Estado_Seguimiento      String?                       // PENDIENTE | COMPLETADO | N/A
 
   equipo   InstrumentoEquipo  @relation(fields: [FK_ID_Equipo], references: [ID_Equipo])
   patron   PatronReferencia?  @relation(fields: [FK_ID_Patron_Usado], references: [ID_Patron])

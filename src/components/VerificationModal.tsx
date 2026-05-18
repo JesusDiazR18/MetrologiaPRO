@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
 import { 
   CheckCircle2, XCircle, User, FileText, 
-  ChevronRight, Calculator, AlertTriangle, Settings2 
+  Calculator, AlertTriangle, Settings2, Activity, ClipboardList
 } from 'lucide-react'
 
 interface Equipo {
@@ -31,11 +31,14 @@ interface Props {
 }
 
 export default function VerificationModal({ equipo, equipos, onClose, onSaved }: Props) {
+  const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
   const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo ?? '')
   const [medidaPatron, setMedidaPatron] = useState('')
   const [medidaInstrumento, setMedidaInstrumento] = useState('')
   const [tecnico, setTecnico] = useState('')
   const [obs, setObs] = useState('')
+  const [accionesPendientes, setAccionesPendientes] = useState('')
+  const [resultadoStatusOperatividad, setResultadoStatusOperatividad] = useState('OPERATIVO')
   const [patrones, setPatrones] = useState<Patron[]>([])
   const [selectedPatronId, setSelectedPatronId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -48,7 +51,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   }, [])
 
   const selectedEquipo = equipos.find(e => e.ID_Equipo === selectedId) ?? equipo
-  const varNum = medidaPatron && medidaInstrumento
+  const varNum = (tipoVerif === 'CALIBRACION' && medidaPatron && medidaInstrumento)
     ? calcularVariacion(parseFloat(medidaInstrumento), parseFloat(medidaPatron))
     : null
   const statusCalc = varNum != null && selectedEquipo
@@ -58,58 +61,129 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
     if (!selectedId) { setError('Selecciona un equipo'); return }
-    if (!selectedPatronId) { setError('Selecciona el patrón utilizado'); return }
-    if (!medidaPatron || !medidaInstrumento || !tecnico) { setError('Completa todos los campos requeridos'); return }
+    if (!tecnico) { setError('El nombre del técnico es requerido'); return }
+
+    if (tipoVerif === 'CALIBRACION') {
+      if (!selectedPatronId) { setError('Selecciona el patrón utilizado'); return }
+      if (!medidaPatron || !medidaInstrumento) { setError('Completa las medidas del patrón e instrumento'); return }
+    }
     
     setSaving(true); setError('')
-    const r = await fetch('/api/historial', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        FK_ID_Equipo: selectedId,
-        FK_ID_Patron: selectedPatronId,
-        Medida_Patron: parseFloat(medidaPatron),
-        Medida_Instrumento: parseFloat(medidaInstrumento),
-        Tecnico_Ejecutor: tecnico,
-        Observaciones: obs || null,
+    const payload = {
+      FK_ID_Equipo: selectedId,
+      FK_ID_Patron_Usado: tipoVerif === 'CALIBRACION' ? selectedPatronId : null,
+      Medida_Patron: tipoVerif === 'CALIBRACION' ? parseFloat(medidaPatron) : null,
+      Medida_Instrumento: tipoVerif === 'CALIBRACION' ? parseFloat(medidaInstrumento) : null,
+      Tecnico_Ejecutor: tecnico,
+      Observaciones: obs || null,
+      Tipo_Verificacion: tipoVerif,
+      Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
+      Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : (statusCalc || 'APTO')
+    }
+
+    try {
+      const r = await fetch('/api/historial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       })
-    })
-    if (r.ok) { onSaved() }
-    else { 
-      const d = await r.json()
-      setError(d.error ?? 'Error al guardar')
-      setSaving(false) 
+      if (r.ok) { onSaved() }
+      else { 
+        const d = await r.json()
+        setError(d.error ?? 'Error al guardar la verificación')
+        setSaving(false) 
+      }
+    } catch (err) {
+      setError('Error de conexión')
+      setSaving(false)
     }
   }
 
-  // Filtrar patrones por la magnitud del equipo seleccionado de forma dinámica
+  // Filtrar patrones si el equipo tiene magnitud
+  const equipoMags = selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()) : []
   const patronesFiltrados = patrones.filter(p => {
-    if (!selectedEquipo?.Magnitud) return true;
-    return p.Magnitud === selectedEquipo.Magnitud;
-  });
+    if (equipoMags.length === 0) return true
+    if (!p.Magnitud) return true
+    return equipoMags.some(mag => p.Magnitud?.includes(mag))
+  })
 
-  const patronesAMostrar = patronesFiltrados.length > 0 ? patronesFiltrados : patrones;
+  const patronesAMostrar = patronesFiltrados.length > 0 ? patronesFiltrados : patrones
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 500, border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+      <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
         <div className="modal-header" style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 42, height: 42, background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', borderRadius: 12, display: 'grid', placeItems: 'center', boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)' }}>
               <Settings2 size={20} color="#fff" />
             </div>
             <div>
-              <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>Registro de Verificación</h2>
-              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Cálculo metrológico en tiempo real</p>
+              <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>Control y Verificación de Activo</h2>
+              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Registro de inspección operativa o calibración</p>
             </div>
           </div>
-          <button onClick={onClose} className="btn-close-large">
+          <button type="button" onClick={onClose} className="btn-close-large">
             <XCircle size={24} color="#94a3b8" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ padding: '24px' }}>
+        {/* Tabs de Selección de Modalidad */}
+        <div style={{ padding: '20px 24px 0 24px', background: '#fff' }}>
+          <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, display: 'block' }}>
+            ¿Qué tipo de control se realiza? *
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, background: '#f1f5f9', padding: 6, borderRadius: 16 }}>
+            <button
+              type="button"
+              onClick={() => setTipoVerif('OPERATIVIDAD')}
+              style={{
+                padding: '12px',
+                borderRadius: 12,
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.2s',
+                background: tipoVerif === 'OPERATIVIDAD' ? '#fff' : 'transparent',
+                color: tipoVerif === 'OPERATIVIDAD' ? '#0f172a' : '#64748b',
+                boxShadow: tipoVerif === 'OPERATIVIDAD' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <Activity size={16} color={tipoVerif === 'OPERATIVIDAD' ? '#2563eb' : '#64748b'} />
+              1. Operatividad
+            </button>
+            <button
+              type="button"
+              onClick={() => setTipoVerif('CALIBRACION')}
+              style={{
+                padding: '12px',
+                borderRadius: 12,
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.2s',
+                background: tipoVerif === 'CALIBRACION' ? '#fff' : 'transparent',
+                color: tipoVerif === 'CALIBRACION' ? '#0f172a' : '#64748b',
+                boxShadow: tipoVerif === 'CALIBRACION' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <Calculator size={16} color={tipoVerif === 'CALIBRACION' ? '#0ea5e9' : '#64748b'} />
+              2. Calibración
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
             {error && (
               <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: 12, fontSize: 13, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <AlertTriangle size={18} /> {error}
@@ -117,10 +191,10 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             )}
 
             <div className="form-group-modern">
-              <label><User size={14} /> Equipo a verificar</label>
+              <label><User size={14} /> Equipo / Instrumento a verificar *</label>
               <select value={selectedId} onChange={e => {
                 setSelectedId(e.target.value);
-                setSelectedPatronId(''); // Resetear el patrón seleccionado al cambiar de equipo
+                setSelectedPatronId('');
               }} required>
                 <option value="">Seleccionar equipo…</option>
                 {equipos.map(e => (
@@ -131,86 +205,126 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
               </select>
             </div>
 
-            <div className="form-group-modern">
-              <label style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <CheckCircle2 size={14} /> Patrón utilizado
-                </span>
-                {selectedEquipo?.Magnitud && (
-                  <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 800 }}>
-                    MAGNITUD: {selectedEquipo.Magnitud}
-                  </span>
-                )}
-              </label>
-              <select value={selectedPatronId} onChange={e => setSelectedPatronId(e.target.value)} required>
-                <option value="">Seleccionar patrón…</option>
-                {patronesAMostrar.map(p => (
-                  <option key={p.ID_Patron} value={p.ID_Patron}>
-                    {p.Codigo || p.ID_Patron} — {p.Nombre_Patron} ({p.Magnitud || 'General'})
-                  </option>
-                ))}
-              </select>
-              {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
-                <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
-                  ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
+            {/* SECCIÓN OPERATIVIDAD */}
+            {tipoVerif === 'OPERATIVIDAD' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeIn 0.3s' }}>
+                <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                  <label><Activity size={14} /> Estado Resultante *</label>
+                  <select 
+                    value={resultadoStatusOperatividad} 
+                    onChange={e => setResultadoStatusOperatividad(e.target.value)}
+                    style={{ fontWeight: 700, color: resultadoStatusOperatividad === 'OPERATIVO' ? '#10b981' : '#f59e0b' }}
+                  >
+                    <option value="OPERATIVO">OPERATIVO / APTO PARA USO</option>
+                    <option value="ACCION_PENDIENTE">REQUIERE ACCIÓN PENDIENTE / SEGUIMIENTO</option>
+                  </select>
                 </div>
-              )}
-            </div>
 
-            <div className="metrology-grid">
-              <div className="form-group-modern">
-                <label><Calculator size={14} /> Medida Patrón</label>
-                <input type="number" step="any" value={medidaPatron} onChange={e => setMedidaPatron(e.target.value)} placeholder="0.00" required />
-              </div>
-              <div className="form-group-modern">
-                <label><Calculator size={14} /> Medida Instrumento</label>
-                <input type="number" step="any" value={medidaInstrumento} onChange={e => setMedidaInstrumento(e.target.value)} placeholder="0.00" required />
-              </div>
-            </div>
-
-            {varNum != null && selectedEquipo && (
-              <div className={`status-card ${statusCalc === 'APTO' ? 'is-apto' : 'is-no-apto'}`} style={{ borderLeft: `6px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}` }}>
-                <div style={{ flex: 1 }}>
-                  <span className="status-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Calculator size={10} /> Variación Detectada
+                <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                  <label><ClipboardList size={14} /> Acciones Pendientes por Realizar (Seguimiento)</label>
+                  <textarea 
+                    value={accionesPendientes} 
+                    onChange={e => {
+                      setAccionesPendientes(e.target.value);
+                      if (e.target.value.trim().length > 0 && resultadoStatusOperatividad === 'OPERATIVO') {
+                        setResultadoStatusOperatividad('ACCION_PENDIENTE');
+                      }
+                    }} 
+                    placeholder="Ej: Reemplazar sonda térmica la próxima semana, ajustar conector..." 
+                    rows={2} 
+                  />
+                  <span style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                    💡 Ingresar acciones pendientes cambiará automáticamente el estado a seguimiento.
                   </span>
-                  <div className="status-val" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    {varNum > 0 ? '+' : ''}{varNum.toFixed(4)} 
-                    <span style={{ fontSize: 14, opacity: 0.6 }}>{selectedEquipo.Unidad_Tolerancia ?? ''}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ 
-                        width: `${Math.min(100, (Math.abs(varNum) / selectedEquipo.Tolerancia_Aceptable) * 100)}%`, 
-                        height: '100%', 
-                        background: statusCalc === 'APTO' ? '#10b981' : '#ef4444',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{selectedEquipo.Tolerancia_Aceptable}</span>
-                  </div>
-                </div>
-                <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>
-                  {statusCalc === 'APTO' ? <><CheckCircle2 size={18} /> APTO</> : <><XCircle size={18} /> NO APTO</>}
                 </div>
               </div>
             )}
 
-            <div className="form-group-modern">
-              <label><User size={14} /> Técnico responsable</label>
-              <input value={tecnico} onChange={e => setTecnico(e.target.value)} placeholder="Ingrese su nombre" required />
+            {/* SECCIÓN CALIBRACIÓN METROLÓGICA */}
+            {tipoVerif === 'CALIBRACION' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeIn 0.3s' }}>
+                <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircle2 size={14} /> Patrón utilizado *
+                    </span>
+                    {selectedEquipo?.Magnitud && (
+                      <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 800 }}>
+                        MAGNITUD: {selectedEquipo.Magnitud}
+                      </span>
+                    )}
+                  </label>
+                  <select value={selectedPatronId} onChange={e => setSelectedPatronId(e.target.value)} required>
+                    <option value="">Seleccionar patrón metrológico…</option>
+                    {patronesAMostrar.map(p => (
+                      <option key={p.ID_Patron} value={p.ID_Patron}>
+                        {p.Codigo || p.ID_Patron} — {p.Nombre_Patron} ({p.Magnitud || 'General'})
+                      </option>
+                    ))}
+                  </select>
+                  {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
+                    <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
+                      ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
+                    </div>
+                  )}
+                </div>
+
+                <div className="metrology-grid">
+                  <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                    <label><Calculator size={14} /> Medida Patrón *</label>
+                    <input type="number" step="any" value={medidaPatron} onChange={e => setMedidaPatron(e.target.value)} placeholder="0.00" required />
+                  </div>
+                  <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                    <label><Calculator size={14} /> Medida Instrumento *</label>
+                    <input type="number" step="any" value={medidaInstrumento} onChange={e => setMedidaInstrumento(e.target.value)} placeholder="0.00" required />
+                  </div>
+                </div>
+
+                {varNum != null && selectedEquipo && (
+                  <div className={`status-card ${statusCalc === 'APTO' ? 'is-apto' : 'is-no-apto'}`} style={{ borderLeft: `6px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, margin: 0 }}>
+                    <div style={{ flex: 1 }}>
+                      <span className="status-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Calculator size={10} /> Variación Detectada
+                      </span>
+                      <div className="status-val" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                        {varNum > 0 ? '+' : ''}{varNum.toFixed(4)} 
+                        <span style={{ fontSize: 14, opacity: 0.6 }}>{selectedEquipo.Unidad_Tolerancia ?? ''}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ 
+                            width: `${Math.min(100, (Math.abs(varNum) / selectedEquipo.Tolerancia_Aceptable) * 100)}%`, 
+                            height: '100%', 
+                            background: statusCalc === 'APTO' ? '#10b981' : '#ef4444',
+                            transition: 'width 0.3s ease'
+                          }} />
+                        </div>
+                        <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{selectedEquipo.Tolerancia_Aceptable}</span>
+                      </div>
+                    </div>
+                    <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>
+                      {statusCalc === 'APTO' ? <><CheckCircle2 size={18} /> APTO</> : <><XCircle size={18} /> NO APTO</>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="form-group-modern" style={{ marginTop: 20 }}>
+              <label><User size={14} /> Técnico responsable / Inspector *</label>
+              <input value={tecnico} onChange={e => setTecnico(e.target.value)} placeholder="Ingrese su nombre o apellido" required />
             </div>
 
-            <div className="form-group-modern">
-              <label><FileText size={14} /> Observaciones adicionales</label>
-              <textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Algún detalle relevante…" rows={2} />
+            <div className="form-group-modern" style={{ marginBottom: 0 }}>
+              <label><FileText size={14} /> Comentarios / Observaciones</label>
+              <textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Anotaciones generales del estado del equipo o condiciones ambientales..." rows={2} />
             </div>
           </div>
 
-          <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc' }}>
+          <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-save-premium" disabled={saving}>
-              {saving ? 'Guardando...' : <><CheckCircle2 size={18} /> Finalizar Registro</>}
+              {saving ? 'Guardando...' : <><CheckCircle2 size={18} /> Guardar Verificación</>}
             </button>
           </div>
         </form>
@@ -288,7 +402,6 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         .status-card {
           padding: 16px 20px;
           border-radius: 16px;
-          margin-bottom: 20px;
           display: flex;
           align-items: center;
           transition: all 0.3s;
@@ -359,7 +472,6 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
           }
           .modal-body { flex: 1; overflow-y: auto; }
           .metrology-grid { grid-template-columns: 1fr; }
-          .modal-footer { padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }
         }
       `}</style>
     </div>
