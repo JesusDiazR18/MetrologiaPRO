@@ -118,14 +118,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="sidebar-footer">
           <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>v1.0.0</div>
-          <div>Sistema Metrológico PRO</div>
+          <div>CONTROL METROLÓGICO PRO</div>
         </div>
       </aside>
 
       {/* Main */}
       <div className="main-content">
         {/* Topbar Ultra-Premium */}
-        <header className={`topbar ${scrolled ? 'scrolled' : ''}`}>
+        <header className={`topbar ${scrolled ? 'scrolled' : ''} ${pathname === '/' ? 'hide-on-dashboard' : ''}`}>
           <button
             style={{ 
               display: 'flex', 
@@ -152,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               letterSpacing: '-0.02em',
               transition: 'all 0.3s'
             }}>{currentPage}</div>
-            <div className="desktop-only" style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Metrología Inteligente</div>
+            <div className="desktop-only" style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONTROL METROLÓGICO PRO</div>
           </div>
 
           <div className="topbar-search-container" style={{ 
@@ -224,7 +224,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 
 
-        <main className="page" style={{ 
+        <main className={`page ${pathname === '/' ? 'dashboard-page-view' : ''}`} style={{ 
           width: '100%', 
           maxWidth: '100%',
           minHeight: 'calc(100vh - 60px)',
@@ -325,6 +325,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         @media (min-width: 769px) {
           .bottom-nav { display: none; }
+          .topbar.hide-on-dashboard {
+            display: none !important;
+          }
+          .dashboard-page-view {
+            padding: 24px var(--page-px) !important;
+            min-height: 100vh !important;
+          }
         }
       `}</style>
     </div>
