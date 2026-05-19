@@ -68,7 +68,7 @@ async function getBase64FromUrl(url: string): Promise<{ data: string, format: st
 function hasValue(val: any): boolean {
   if (val === null || val === undefined) return false;
   const str = String(val).trim();
-  return str !== '' && str !== '—' && str !== 'No definida' && str !== 'No asignado' && str !== 'N/A' && str !== 'No definido' && str !== 'Sin fecha' && str !== 'OTRA';
+  return str !== '' && str !== '—' && str !== 'No definida' && str !== 'No asignado' && str !== 'N/A' && str !== 'No definido' && str !== 'Sin fecha';
 }
 
 /**
