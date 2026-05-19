@@ -99,6 +99,11 @@ export async function POST(request: Request) {
     return NextResponse.json(equipo, { status: 201 })
   } catch (error: any) {
     console.error('[API Equipos POST Error]:', error)
+    if (error.code === 'P2002' || error.message?.includes('Unique constraint') || error.message?.includes('ID_Equipo')) {
+      return NextResponse.json({ 
+        error: `El ID de equipo "${body.ID_Equipo}" ya está registrado en el sistema. Por favor, asigne un identificador único.` 
+      }, { status: 400 })
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

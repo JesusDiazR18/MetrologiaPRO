@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   async function loadStats() {
     try {
@@ -66,7 +67,10 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => { loadStats() }, [])
+  useEffect(() => { 
+    loadStats() 
+    setMounted(true)
+  }, [])
 
   if (loading) {
     return (
@@ -157,20 +161,22 @@ export default function DashboardPage() {
                 </div>
                 <div className="card-body" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
                   <div style={{ flex: '1 1 200px', height: 280, minWidth: 200 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={[
-                          { name: 'Al día', value: stats.alDia },
-                          { name: 'Advertencia', value: stats.proximos },
-                          { name: 'Crítico', value: stats.vencidos + stats.noAptos },
-                        ]} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value">
-                          <Cell fill="var(--success)" stroke="white" strokeWidth={2} />
-                          <Cell fill="var(--warning)" stroke="white" strokeWidth={2} />
-                          <Cell fill="var(--danger)" stroke="white" strokeWidth={2} />
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {mounted && (
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <PieChart>
+                          <Pie data={[
+                            { name: 'Al día', value: stats.alDia },
+                            { name: 'Advertencia', value: stats.proximos },
+                            { name: 'Crítico', value: stats.vencidos + stats.noAptos },
+                          ]} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value">
+                            <Cell fill="var(--success)" stroke="white" strokeWidth={2} />
+                            <Cell fill="var(--warning)" stroke="white" strokeWidth={2} />
+                            <Cell fill="var(--danger)" stroke="white" strokeWidth={2} />
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                   <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {[
