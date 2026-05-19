@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
 
 export async function POST(request: Request) {
   try {
@@ -21,16 +19,9 @@ export async function POST(request: Request) {
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-
-    const folderName = uploadType === 'FOTO' ? 'fotos' : 'certificados'
-    const uploadDir = join(process.cwd(), 'public', 'uploads', folderName)
-    await mkdir(uploadDir, { recursive: true })
-
-    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-    const path = join(uploadDir, fileName)
-
-    await writeFile(path, buffer)
-    const publicPath = `/uploads/${folderName}/${fileName}`
+    const base64 = buffer.toString('base64')
+    const fileType = file.type || (uploadType === 'FOTO' ? 'image/png' : 'application/pdf')
+    const publicPath = `data:${fileType};base64,${base64}`
 
     let updated
 

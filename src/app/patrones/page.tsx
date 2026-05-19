@@ -85,7 +85,26 @@ export default function PatronesPage() {
   }
 
   const openPdf = (url: string) => {
-    window.open(url, '_blank')
+    if (url.startsWith('data:')) {
+      try {
+        const parts = url.split(',')
+        const base64 = parts[1]
+        const mime = parts[0].split(':')[1].split(';')[0]
+        const binary = atob(base64)
+        const array = []
+        for (let i = 0; i < binary.length; i++) {
+          array.push(binary.charCodeAt(i))
+        }
+        const blob = new Blob([new Uint8Array(array)], { type: mime })
+        const blobUrl = URL.createObjectURL(blob)
+        window.open(blobUrl, '_blank')
+      } catch (err) {
+        console.error('Error opening base64 PDF:', err)
+        window.open(url, '_blank')
+      }
+    } else {
+      window.open(url, '_blank')
+    }
   }
 
   return (

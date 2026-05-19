@@ -137,7 +137,20 @@ export function calcularEstadisticas(equipos: any[]) {
 export function generateSystemReport(equipos: any[], patrones: any[]) {
   const stats = calcularEstadisticas(equipos)
   const totalPatrones = patrones.length
-  const patronesVigentes = patrones.filter(p => p.Estado_Vigencia === 'VIGENTE').length
+  
+  // Normalizar vigencia internamente para garantizar seguridad matemática
+  const patronesVigentes = patrones.filter(p => {
+    let estado = p.Estado_Vigencia
+    if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '') {
+      estado = 'SIN CERTIFICADO'
+    } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+      estado = 'VENCIDO'
+    } else {
+      estado = 'VIGENTE'
+    }
+    return estado === 'VIGENTE'
+  }).length
+
   const patronesVencidos = totalPatrones - patronesVigentes
   
   const complianceGlobal = Math.round(((stats.alDia + patronesVigentes) / (equipos.length + totalPatrones || 1)) * 100)

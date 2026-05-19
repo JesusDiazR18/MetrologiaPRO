@@ -69,6 +69,10 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
       setError('Nombre es obligatorio')
       return
     }
+    if (photoFile && photoFile.size > 4.5 * 1024 * 1024) {
+      setError('La imagen seleccionada supera el límite de 4.5 MB. Por favor, reduzca el tamaño de la imagen o seleccione otra.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -77,8 +81,12 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
         finalMagnitud = finalMagnitud.map((m: string) => m === 'OTRA' ? (customMag.trim() || 'OTRA') : m)
       }
 
+      const isOperativo = formData.Estado === 'OPERATIVO'
       const payload = {
         ...formData,
+        Detalles_Estado: isOperativo ? null : formData.Detalles_Estado,
+        Tiene_Solucion: isOperativo ? true : formData.Tiene_Solucion,
+        Requiere_Seguimiento: isOperativo ? false : formData.Requiere_Seguimiento,
         Codigo_Interno: equipo.ID_Equipo,
         Magnitud: finalMagnitud.join(', '),
         Tolerancia_Aceptable: parseFloat(String(formData.Tolerancia_Aceptable)) || 0,
@@ -340,7 +348,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                     <div style={{ fontWeight: 600, color: 'var(--oxford-blue)', fontSize: 13 }}>
                       Haz clic para subir o arrastra la nueva foto del equipo aquí
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 4.5 MB)</div>
                     <input 
                       type="file" 
                       accept="image/*" 

@@ -54,6 +54,10 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [tipoFilter, setTipoFilter] = useState<string | null>(null)
+  const [magnitudFilter, setMagnitudFilter] = useState<string | null>(null)
+  const [responsableFilter, setResponsableFilter] = useState<string | null>(null)
+  const [fechaDesdeFilter, setFechaDesdeFilter] = useState('')
+  const [fechaHastaFilter, setFechaHastaFilter] = useState('')
 
   // Modales de detalle
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null)
@@ -430,7 +434,7 @@ export default function DashboardPage() {
 
             <div className="chart-wrapper">
               {mounted && pieData.length > 0 && (
-                <div style={{ width: '100%', height: 140, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ width: '100%', height: 140, position: 'relative' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -441,7 +445,7 @@ export default function DashboardPage() {
                         outerRadius={55}
                         paddingAngle={3}
                         dataKey="value"
-                        onClick={(data) => {
+                        onClick={(data: any) => {
                           if (data && data.status) {
                             setStatusFilter(data.status)
                           }
@@ -1307,6 +1311,9 @@ export default function DashboardPage() {
 
         .donut-center-info {
           position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
           display: flex;
           flex-direction: column;
           align-items: center;

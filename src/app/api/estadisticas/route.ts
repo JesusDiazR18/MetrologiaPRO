@@ -36,8 +36,22 @@ export async function GET() {
       })
     ])
 
+    // Normalizar estado de vigencia para patrones
+    const processedPatrones = patrones.map(p => {
+      let estado = p.Estado_Vigencia
+      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '') {
+        estado = 'SIN CERTIFICADO'
+      } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+        estado = 'VENCIDO'
+      }
+      return {
+        ...p,
+        Estado_Vigencia: estado
+      }
+    })
+
     // Generar reporte integral usando el motor de reglas centralizado
-    const report = generateSystemReport(equipos, patrones)
+    const report = generateSystemReport(equipos, processedPatrones)
 
     // Identificar Alertas Críticas (Activos que requieren acción inmediata)
     const alertasCriticas = equipos
@@ -58,20 +72,6 @@ export async function GET() {
       { name: 'Equipos', value: equipos.filter(e => e.Tipo === 'EQUIPO').length },
       { name: 'Instrumentos', value: equipos.filter(e => e.Tipo === 'INSTRUMENTO').length },
     ]
-
-    // Normalizar estado de vigencia para patrones
-    const processedPatrones = patrones.map(p => {
-      let estado = p.Estado_Vigencia
-      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '') {
-        estado = 'SIN CERTIFICADO'
-      } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
-        estado = 'VENCIDO'
-      }
-      return {
-        ...p,
-        Estado_Vigencia: estado
-      }
-    })
 
     return NextResponse.json({
       ...report,

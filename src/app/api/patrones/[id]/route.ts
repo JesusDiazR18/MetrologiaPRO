@@ -13,11 +13,24 @@ export async function PUT(
       N_Certificado, Proveedor_Laboratorio, PDF_Certificado, Estado_Vigencia
     } = body
 
-    let finalEstado = Estado_Vigencia
-    if (!PDF_Certificado || PDF_Certificado.trim() === '') {
+    const existing = await prisma.patronReferencia.findUnique({
+      where: { ID_Patron: id }
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Patrón de referencia no encontrado' }, { status: 404 })
+    }
+
+    const resolvedPdf = PDF_Certificado !== undefined ? PDF_Certificado : existing.PDF_Certificado
+    const resolvedVenc = Fecha_Vencimiento_Certificado !== undefined ? Fecha_Vencimiento_Certificado : existing.Fecha_Vencimiento_Certificado
+
+    let finalEstado = Estado_Vigencia || existing.Estado_Vigencia
+    if (!resolvedPdf || resolvedPdf.trim() === '') {
       finalEstado = 'SIN CERTIFICADO'
-    } else if (Fecha_Vencimiento_Certificado && new Date(Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+    } else if (resolvedVenc && new Date(resolvedVenc).getTime() < Date.now()) {
       finalEstado = 'VENCIDO'
+    } else {
+      finalEstado = 'VIGENTE'
     }
 
     const updated = await prisma.patronReferencia.update({
@@ -25,11 +38,11 @@ export async function PUT(
       data: {
         Codigo,
         Nombre_Patron,
-        Fecha_Calibracion_Externa: Fecha_Calibracion_Externa ? new Date(Fecha_Calibracion_Externa) : null,
-        Fecha_Vencimiento_Certificado: Fecha_Vencimiento_Certificado ? new Date(Fecha_Vencimiento_Certificado) : null,
-        N_Certificado,
-        Proveedor_Laboratorio,
-        PDF_Certificado,
+        Fecha_Calibracion_Externa: Fecha_Calibracion_Externa !== undefined ? (Fecha_Calibracion_Externa ? new Date(Fecha_Calibracion_Externa) : null) : existing.Fecha_Calibracion_Externa,
+        Fecha_Vencimiento_Certificado: Fecha_Vencimiento_Certificado !== undefined ? (Fecha_Vencimiento_Certificado ? new Date(Fecha_Vencimiento_Certificado) : null) : existing.Fecha_Vencimiento_Certificado,
+        N_Certificado: N_Certificado !== undefined ? N_Certificado : existing.N_Certificado,
+        Proveedor_Laboratorio: Proveedor_Laboratorio !== undefined ? Proveedor_Laboratorio : existing.Proveedor_Laboratorio,
+        PDF_Certificado: resolvedPdf,
         Estado_Vigencia: finalEstado
       }
     })

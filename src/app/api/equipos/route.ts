@@ -65,8 +65,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let body: any = null
   try {
-    const body = await request.json()
+    body = await request.json()
     console.log('[API Equipos] POST body:', body)
     
     // Si no tiene fecha de última verificación, le asignamos hoy
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
     console.error('[API Equipos POST Error]:', error)
     if (error.code === 'P2002' || error.message?.includes('Unique constraint') || error.message?.includes('ID_Equipo')) {
       return NextResponse.json({ 
-        error: `El ID de equipo "${body.ID_Equipo}" ya está registrado en el sistema. Por favor, asigne un identificador único.` 
+        error: `El ID de equipo "${body?.ID_Equipo || ''}" ya está registrado en el sistema. Por favor, asigne un identificador único.` 
       }, { status: 400 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })

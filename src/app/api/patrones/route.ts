@@ -50,15 +50,33 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let body: any = null
   try {
-    const body = await request.json()
-    const patron = await prisma.patronReferencia.create({ data: body })
+    body = await request.json()
+    
+    let finalEstado = body.Estado_Vigencia || 'SIN CERTIFICADO'
+    if (!body.PDF_Certificado || body.PDF_Certificado.trim() === '') {
+      finalEstado = 'SIN CERTIFICADO'
+    } else if (body.Fecha_Vencimiento_Certificado && new Date(body.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+      finalEstado = 'VENCIDO'
+    } else {
+      finalEstado = 'VIGENTE'
+    }
+
+    const dataToCreate = {
+      ...body,
+      Estado_Vigencia: finalEstado,
+      Fecha_Calibracion_Externa: body.Fecha_Calibracion_Externa ? new Date(body.Fecha_Calibracion_Externa) : null,
+      Fecha_Vencimiento_Certificado: body.Fecha_Vencimiento_Certificado ? new Date(body.Fecha_Vencimiento_Certificado) : null
+    }
+
+    const patron = await prisma.patronReferencia.create({ data: dataToCreate })
     return NextResponse.json(patron, { status: 201 })
   } catch (error: any) {
     console.error('[API Patrones POST Error]:', error)
     if (error.code === 'P2002' || error.message?.includes('Unique constraint') || error.message?.includes('ID_Patron') || error.message?.includes('Codigo')) {
       return NextResponse.json({ 
-        error: `El ID de patrón "${body.ID_Patron}" ya está registrado en el sistema. Por favor, asigne un identificador único.` 
+        error: `El ID o Código de patrón "${body?.ID_Patron || ''}" ya está registrado en el sistema. Por favor, asigne un identificador único.` 
       }, { status: 400 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })

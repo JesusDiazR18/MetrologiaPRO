@@ -21,7 +21,8 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
     N_Certificado: patron.N_Certificado || '',
     Proveedor_Laboratorio: patron.Proveedor_Laboratorio || '',
     Estado_Vigencia: patron.Estado_Vigencia || 'VIGENTE',
-    Magnitud: initialMagValue
+    Magnitud: initialMagValue,
+    PDF_Certificado: patron.PDF_Certificado || ''
   })
   const [customMag, setCustomMag] = useState(initialCustomMagValue)
   const [saving, setSaving] = useState(false)
@@ -32,6 +33,10 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
     ev.preventDefault()
     if (!formData.Nombre_Patron || !formData.Codigo) {
       setError('Nombre y Código son obligatorios')
+      return
+    }
+    if (photoFile && photoFile.size > 4.5 * 1024 * 1024) {
+      setError('La imagen seleccionada supera el límite de 4.5 MB. Por favor, reduzca el tamaño de la imagen o seleccione otra.')
       return
     }
     setSaving(true)
@@ -206,7 +211,7 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
                     <div style={{ fontWeight: 600, color: 'var(--oxford-blue)', fontSize: 13 }}>
                       Haz clic para subir o arrastra la nueva foto del patrón aquí
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 4.5 MB)</div>
                     <input 
                       type="file" 
                       accept="image/*" 

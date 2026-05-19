@@ -31,6 +31,10 @@ export default function RenewCertModal({ asset, onClose, onSaved }: Props) {
       setError('Debes seleccionar un archivo PDF para el certificado')
       return
     }
+    if (file.size > 4.5 * 1024 * 1024) {
+      setError('El archivo seleccionado supera el límite de 4.5 MB permitido. Por favor, comprima el PDF o seleccione otro más liviano.')
+      return
+    }
     setUploading(true)
     setError('')
 
@@ -100,7 +104,7 @@ export default function RenewCertModal({ asset, onClose, onSaved }: Props) {
                 <div style={{ fontWeight: 600, color: 'var(--oxford-blue)' }}>
                   {file ? file.name : 'Haz clic para seleccionar o arrastra el PDF aquí'}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formato PDF aceptado (Máx 10 MB)</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formato PDF aceptado (Máx 4.5 MB)</div>
                 <input 
                   type="file" 
                   accept=".pdf" 

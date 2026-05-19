@@ -15,7 +15,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
     Fecha_Vencimiento_Certificado: '',
     N_Certificado: '',
     Proveedor_Laboratorio: '',
-    Estado_Vigencia: 'VIGENTE',
+    Estado_Vigencia: 'SIN CERTIFICADO',
     Magnitud: 'TEMPERATURA'
   })
   const [saving, setSaving] = useState(false)
@@ -41,6 +41,10 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
     ev.preventDefault()
     if (!formData.ID_Patron || !formData.Nombre_Patron) {
       setError('ID / Código y Nombre son obligatorios')
+      return
+    }
+    if (photoFile && photoFile.size > 4.5 * 1024 * 1024) {
+      setError('La imagen seleccionada supera el límite de 4.5 MB. Por favor, reduzca el tamaño de la imagen o seleccione otra.')
       return
     }
     setSaving(true)
@@ -216,7 +220,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
                     <div style={{ fontWeight: 600, color: 'var(--oxford-blue)', fontSize: 13 }}>
                       Haz clic para subir o arrastra la foto del patrón aquí
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 4.5 MB)</div>
                     <input 
                       type="file" 
                       accept="image/*" 
