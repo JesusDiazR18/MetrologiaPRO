@@ -155,11 +155,10 @@ export default function PatronesPage() {
               <thead>
                 <tr>
                   <th style={{ width: '10%' }}>Código</th>
-                  <th style={{ width: '25%' }}>Nombre del Patrón</th>
-                  <th className="desktop-only" style={{ width: '20%' }}>Laboratorio / Proveedor</th>
-                  <th className="desktop-only" style={{ width: '12%' }}>Certificado N°</th>
-                  <th className="desktop-only" style={{ width: '11%' }}>Vencimiento</th>
-                  <th style={{ width: '12%', minWidth: '135px' }}>Estado Vigencia</th>
+                  <th style={{ width: '35%' }}>Nombre del Patrón</th>
+                  <th className="desktop-only" style={{ width: '15%' }}>Certificado N°</th>
+                  <th className="desktop-only" style={{ width: '15%' }}>Vencimiento</th>
+                  <th style={{ width: '15%', minWidth: '135px' }}>Estado Vigencia</th>
                   <th style={{ textAlign: 'right', width: '10%', minWidth: '180px' }}>Certificado Digital</th>
                 </tr>
               </thead>
@@ -192,9 +191,6 @@ export default function PatronesPage() {
                         )}
                       </div>
                       <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Proveedor_Laboratorio || 'Sin proveedor'}</div>
-                    </td>
-                    <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.Proveedor_Laboratorio || ''}>
-                      {p.Proveedor_Laboratorio || '—'}
                     </td>
                     <td className="desktop-only" style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.N_Certificado || ''}>
                       {p.N_Certificado || '—'}
@@ -241,7 +237,7 @@ export default function PatronesPage() {
                   </tr>
                   {expandedId === p.ID_Patron && (
                     <tr>
-                      <td colSpan={7} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
+                      <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
                         <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
                           <div 
                             className="card" 
