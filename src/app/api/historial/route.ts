@@ -43,7 +43,8 @@ export async function POST(request: Request) {
           Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
           Observaciones: body.Observaciones || 'Registro Histórico / Anterior',
           Tipo_Verificacion: body.Tipo_Verificacion || 'CALIBRACION',
-          Estado_Seguimiento: 'N/A'
+          Estado_Seguimiento: 'N/A',
+          Evidencia_Foto: body.Evidencia_Foto ?? null
         }
       })
     } else {
@@ -81,7 +82,8 @@ export async function POST(request: Request) {
           Firma_Digital: body.Firma_Digital ?? null,
           Tipo_Verificacion: tipoVerif,
           Acciones_Pendientes: accionesPendientes,
-          Estado_Seguimiento: estadoSeguimiento
+          Estado_Seguimiento: estadoSeguimiento,
+          Evidencia_Foto: body.Evidencia_Foto ?? null
         }
       })
     }

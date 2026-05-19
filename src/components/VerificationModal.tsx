@@ -196,6 +196,15 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const [error, setError] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
 
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
+  }
+
   useEffect(() => {
     fetch('/api/patrones')
       .then(r => r.json())
@@ -221,34 +230,31 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
     }
     
     setSaving(true); setError('')
-    const payload = {
-      FK_ID_Equipo: selectedId,
-      FK_ID_Patron_Usado: tipoVerif === 'CALIBRACION' ? selectedPatronId : null,
-      Medida_Patron: tipoVerif === 'CALIBRACION' ? parseFloat(medidaPatron) : null,
-      Medida_Instrumento: tipoVerif === 'CALIBRACION' ? parseFloat(medidaInstrumento) : null,
-      Tecnico_Ejecutor: tecnico,
-      Observaciones: obs || null,
-      Tipo_Verificacion: tipoVerif,
-      Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
-      Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : (statusCalc || 'APTO')
-    }
-
     try {
+      let photoBase64 = ''
+      if (photoFile) {
+        photoBase64 = await fileToBase64(photoFile)
+      }
+
+      const payload = {
+        FK_ID_Equipo: selectedId,
+        FK_ID_Patron_Usado: tipoVerif === 'CALIBRACION' ? selectedPatronId : null,
+        Medida_Patron: tipoVerif === 'CALIBRACION' ? parseFloat(medidaPatron) : null,
+        Medida_Instrumento: tipoVerif === 'CALIBRACION' ? parseFloat(medidaInstrumento) : null,
+        Tecnico_Ejecutor: tecnico,
+        Observaciones: obs || null,
+        Tipo_Verificacion: tipoVerif,
+        Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
+        Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : (statusCalc || 'APTO'),
+        Evidencia_Foto: photoBase64 || null
+      }
+
       const r = await fetch('/api/historial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
       if (r.ok) { 
-        const d = await r.json()
-        if (photoFile && d.ID_Log) {
-          const formDataObj = new FormData()
-          formDataObj.append('file', photoFile)
-          formDataObj.append('assetId', d.ID_Log)
-          formDataObj.append('assetType', 'HISTORIAL')
-          formDataObj.append('uploadType', 'FOTO')
-          await fetch('/api/upload', { method: 'POST', body: formDataObj }).catch(err => console.error('Error subiendo foto:', err))
-        }
         onSaved() 
       }
       else { 

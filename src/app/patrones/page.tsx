@@ -151,16 +151,16 @@ export default function PatronesPage() {
           </div>
         ) : (
           <div className="card-body" style={{ padding: 0 }}>
-            <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+            <table className="data-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ width: '14%' }}>Código</th>
-                  <th style={{ width: '26%' }}>Nombre del Patrón</th>
+                  <th style={{ width: '10%' }}>Código</th>
+                  <th style={{ width: '25%' }}>Nombre del Patrón</th>
                   <th className="desktop-only" style={{ width: '20%' }}>Laboratorio / Proveedor</th>
-                  <th className="desktop-only" style={{ width: '15%' }}>Certificado N°</th>
-                  <th className="desktop-only" style={{ width: '15%' }}>Vencimiento</th>
-                  <th style={{ width: '15%' }}>Estado Vigencia</th>
-                  <th style={{ textAlign: 'right', width: '15%' }}>Certificado Digital</th>
+                  <th className="desktop-only" style={{ width: '12%' }}>Certificado N°</th>
+                  <th className="desktop-only" style={{ width: '11%' }}>Vencimiento</th>
+                  <th style={{ width: '12%', minWidth: '135px' }}>Estado Vigencia</th>
+                  <th style={{ textAlign: 'right', width: '10%', minWidth: '180px' }}>Certificado Digital</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,22 +202,22 @@ export default function PatronesPage() {
                     <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap' }}>
                       {formatFecha(p.Fecha_Vencimiento_Certificado)}
                     </td>
-                    <td className="mobile-card-info" style={{ whiteSpace: 'nowrap' }}>
+                    <td className="mobile-card-info" style={{ whiteSpace: 'nowrap', minWidth: '135px' }}>
                       {p.Estado_Vigencia === 'VIGENTE' ? (
-                        <span className="status-badge" style={{ color: 'var(--success)', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                        <span className="status-badge status-badge-vigente">
                           <CheckCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VIGENTE
                         </span>
                       ) : p.Estado_Vigencia === 'SIN CERTIFICADO' ? (
-                        <span className="status-badge" style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        <span className="status-badge status-badge-sincert">
                           <AlertCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> SIN CERTIFICADO
                         </span>
                       ) : (
-                        <span className="status-badge" style={{ color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <span className="status-badge status-badge-vencido">
                           <XCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VENCIDO
                         </span>
                       )}
                     </td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} className="mobile-card-actions">
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap', minWidth: '180px' }} className="mobile-card-actions">
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                         {p.PDF_Certificado && (
                           <button 

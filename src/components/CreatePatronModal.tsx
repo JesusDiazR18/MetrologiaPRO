@@ -22,6 +22,16 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
   const [error, setError] = useState('')
   const [customMag, setCustomMag] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
+  }
 
   useEffect(() => {
     fetch('/api/patrones?suggestId=true')
@@ -47,10 +57,23 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
       setError('La imagen seleccionada supera el límite de 4.5 MB. Por favor, reduzca el tamaño de la imagen o seleccione otra.')
       return
     }
+    if (pdfFile && pdfFile.size > 4.5 * 1024 * 1024) {
+      setError('El archivo PDF seleccionado supera el límite de 4.5 MB.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
       const finalMag = formData.Magnitud === 'OTRA' ? (customMag.trim() || 'OTRA') : formData.Magnitud
+
+      let photoBase64 = ''
+      if (photoFile) {
+        photoBase64 = await fileToBase64(photoFile)
+      }
+      let pdfBase64 = ''
+      if (pdfFile) {
+        pdfBase64 = await fileToBase64(pdfFile)
+      }
 
       const r = await fetch('/api/patrones', {
         method: 'POST',
@@ -60,19 +83,12 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
           Magnitud: finalMag,
           Codigo: formData.ID_Patron, // Asegurar que Código sea idéntico a ID_Patron
           Fecha_Calibracion_Externa: formData.Fecha_Calibracion_Externa ? new Date(formData.Fecha_Calibracion_Externa).toISOString() : null,
-          Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
+          Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null,
+          Foto_Patron: photoBase64 || null,
+          PDF_Certificado: pdfBase64 || null
         })
       })
       if (r.ok) {
-        const d = await r.json()
-        if (photoFile && d.ID_Patron) {
-          const formDataObj = new FormData()
-          formDataObj.append('file', photoFile)
-          formDataObj.append('assetId', d.ID_Patron)
-          formDataObj.append('assetType', 'PATRON')
-          formDataObj.append('uploadType', 'FOTO')
-          await fetch('/api/upload', { method: 'POST', body: formDataObj }).catch(err => console.error('Error subiendo foto:', err))
-        }
         onSaved()
       } else {
         const d = await r.json()
@@ -188,6 +204,47 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
                   <option value="SIN CERTIFICADO">SIN CERTIFICADO</option>
                   <option value="VENCIDO">VENCIDO / FUERA DE NORMA</option>
                 </select>
+              </div>
+
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Certificado de Calibración PDF (Opcional)</label>
+                {pdfFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--snow-1)', border: '1px solid var(--cyan)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📄</div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{pdfFile.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setPdfFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar PDF</button>
+                  </div>
+                ) : (
+                  <label 
+                    style={{ 
+                      border: '2px dashed #cbd5e1', 
+                      borderRadius: 14, 
+                      padding: '24px 20px', 
+                      textAlign: 'center', 
+                      background: '#f8fafc', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: 8,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <span style={{ fontSize: 28 }}>📄</span>
+                    <div style={{ fontWeight: 600, color: 'var(--oxford-blue)', fontSize: 13 }}>
+                      Haz clic para subir o arrastra el certificado PDF aquí
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formato PDF (Máx 4.5 MB)</div>
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      style={{ display: 'none' }} 
+                      onChange={e => e.target.files?.[0] && setPdfFile(e.target.files[0])} 
+                    />
+                  </label>
+                )}
               </div>
 
               <div className="form-group" style={{ marginTop: 16 }}>

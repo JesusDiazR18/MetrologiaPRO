@@ -270,15 +270,15 @@ function EquiposContent() {
           </div>
         ) : (
           <div className="card-body" style={{ padding: 0 }}>
-            <table className="data-table">
+            <table className="data-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ width: 60 }}></th>
-                  <th className="desktop-only">Identificación</th>
-                  <th>Nombre del Equipo</th>
-                  <th className="desktop-only">Responsable / Estado</th>
-                  <th>Próxima Verif.</th>
-                  <th style={{ textAlign: 'right' }}>Acciones</th>
+                  <th style={{ width: '5%' }}></th>
+                  <th className="desktop-only" style={{ width: '15%' }}>Identificación</th>
+                  <th style={{ width: '30%' }}>Nombre del Equipo</th>
+                  <th className="desktop-only" style={{ width: '20%' }}>Responsable / Estado</th>
+                  <th style={{ width: '15%' }}>Próxima Verif.</th>
+                  <th style={{ textAlign: 'right', width: '15%', minWidth: '150px' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,11 +339,11 @@ function EquiposContent() {
                           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}>{formatFecha(e.Fecha_Proximo_Control)}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{diasRestantes(e.Fecha_Proximo_Control)}</div>
                         </td>
-                        <td style={{ textAlign: 'right' }} className="mobile-card-actions">
+                        <td style={{ textAlign: 'right', minWidth: '150px' }} className="mobile-card-actions">
                           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button 
                             className="btn-scan" 
-                            style={{ padding: '6px 14px', fontSize: 11, background: 'var(--accent)', color: '#000', fontWeight: 800, borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0, 229, 255, 0.3)' }}
+                            style={{ padding: '6px 14px', fontSize: 11, background: 'var(--accent)', color: 'var(--oxford-blue-dark)', fontWeight: 800, borderRadius: 8, border: 'none', boxShadow: '0 4px 12px var(--accent-glow)' }}
                             onClick={(ev) => { ev.stopPropagation(); setModalEquipo(e); }}
                             >Verificar</button>
                             <div style={{ color: 'var(--text-dim)', padding: '0 4px' }}>

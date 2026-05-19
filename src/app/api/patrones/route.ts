@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
     const processed = patrones.map(p => {
       let estado = p.Estado_Vigencia
-      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '') {
+      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '' || p.PDF_Certificado === 'null' || p.PDF_Certificado === 'undefined') {
         estado = 'SIN CERTIFICADO'
       } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
         estado = 'VENCIDO'
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     body = await request.json()
     
     let finalEstado = body.Estado_Vigencia || 'SIN CERTIFICADO'
-    if (!body.PDF_Certificado || body.PDF_Certificado.trim() === '') {
+    if (!body.PDF_Certificado || body.PDF_Certificado.trim() === '' || body.PDF_Certificado === 'null' || body.PDF_Certificado === 'undefined') {
       finalEstado = 'SIN CERTIFICADO'
     } else if (body.Fecha_Vencimiento_Certificado && new Date(body.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
       finalEstado = 'VENCIDO'

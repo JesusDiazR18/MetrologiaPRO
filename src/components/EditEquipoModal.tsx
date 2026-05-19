@@ -39,12 +39,23 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     Fecha_Vencimiento_Certificado: equipo.Fecha_Vencimiento_Certificado ? new Date(equipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
     Magnitud: initialFormDataMags.join(', '),
     Accesorios: equipo.Accesorios || '',
-    Insumos: equipo.Insumos || ''
+    Insumos: equipo.Insumos || '',
+    PDF_Certificado: equipo.PDF_Certificado || ''
   })
   const [customMag, setCustomMag] = useState(initialCustomMag)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
+  }
 
   const magnitudesDisponibles = [
     'TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION',
@@ -73,12 +84,25 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
       setError('La imagen seleccionada supera el límite de 4.5 MB. Por favor, reduzca el tamaño de la imagen o seleccione otra.')
       return
     }
+    if (pdfFile && pdfFile.size > 4.5 * 1024 * 1024) {
+      setError('El archivo PDF seleccionado supera el límite de 4.5 MB.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
       let finalMagnitud = formData.Magnitud ? formData.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
       if (finalMagnitud.includes('OTRA')) {
         finalMagnitud = finalMagnitud.map((m: string) => m === 'OTRA' ? (customMag.trim() || 'OTRA') : m)
+      }
+
+      let photoBase64 = equipo.Foto_Equipo
+      if (photoFile) {
+        photoBase64 = await fileToBase64(photoFile)
+      }
+      let pdfBase64 = formData.PDF_Certificado
+      if (pdfFile) {
+        pdfBase64 = await fileToBase64(pdfFile)
       }
 
       const isOperativo = formData.Estado === 'OPERATIVO'
@@ -94,7 +118,9 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
         Fecha_Ultima_Verificacion: formData.Fecha_Ultima_Verificacion ? new Date(formData.Fecha_Ultima_Verificacion).toISOString() : null,
         Fecha_Proximo_Control: formData.Fecha_Proximo_Control ? new Date(formData.Fecha_Proximo_Control).toISOString() : null,
         Fecha_Ingreso: formData.Fecha_Ingreso ? new Date(formData.Fecha_Ingreso).toISOString() : null,
-        Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null
+        Fecha_Vencimiento_Certificado: formData.Fecha_Vencimiento_Certificado ? new Date(formData.Fecha_Vencimiento_Certificado).toISOString() : null,
+        Foto_Equipo: photoBase64 || null,
+        PDF_Certificado: pdfBase64 || null
       }
 
       const r = await fetch(`/api/equipos/${equipo.ID_Equipo}`, {
@@ -103,14 +129,6 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
         body: JSON.stringify(payload)
       })
       if (r.ok) {
-        if (photoFile) {
-          const formDataObj = new FormData()
-          formDataObj.append('file', photoFile)
-          formDataObj.append('assetId', equipo.ID_Equipo)
-          formDataObj.append('assetType', equipo.Tipo)
-          formDataObj.append('uploadType', 'FOTO')
-          await fetch('/api/upload', { method: 'POST', body: formDataObj }).catch(err => console.error('Error subiendo foto:', err))
-        }
         onSaved()
       } else {
         const d = await r.json()
@@ -161,7 +179,24 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
               <div className="grid-2" style={{ marginTop: 16 }}>
                 <div className="form-group">
                   <label className="form-label">Estado de Funcionamiento *</label>
-                  <select className="form-control" value={formData.Estado} onChange={e => setFormData({...formData, Estado: e.target.value})}>
+                  <select 
+                    className="form-control" 
+                    value={formData.Estado} 
+                    onChange={e => {
+                      const newStatus = e.target.value
+                      if (newStatus === 'OPERATIVO') {
+                        setFormData({
+                          ...formData,
+                          Estado: newStatus,
+                          Detalles_Estado: '',
+                          Tiene_Solucion: true,
+                          Requiere_Seguimiento: false
+                        })
+                      } else {
+                        setFormData({...formData, Estado: newStatus})
+                      }
+                    }}
+                  >
                     <option value="OPERATIVO">Operativo / Apto</option>
                     <option value="OPERATIVO_CON_DETALLES">Operativo con Detalles</option>
                     <option value="VENCIDO">Vencido</option>
@@ -307,6 +342,56 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                   <label className="form-label">Insumos que Consume</label>
                   <input className="form-control" value={formData.Insumos} onChange={e => setFormData({...formData, Insumos: e.target.value})} placeholder="Ej: Baterías 9V, papel térmico..." />
                 </div>
+              </div>
+
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Certificado de Calibración PDF (Opcional)</label>
+                {formData.PDF_Certificado && !pdfFile && (
+                  <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--snow-1)', borderRadius: 10, border: '1px solid var(--snow-3)' }}>
+                    <div style={{ fontSize: 24 }}>📄</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>Certificado PDF actual cargado</div>
+                      <a href={formData.PDF_Certificado} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, textDecoration: 'underline' }}>Ver PDF actual</a>
+                    </div>
+                  </div>
+                )}
+                {pdfFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--snow-1)', border: '1px solid var(--cyan)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📄</div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{pdfFile.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setPdfFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar PDF</button>
+                  </div>
+                ) : (
+                  <label 
+                    style={{ 
+                      border: '2px dashed #cbd5e1', 
+                      borderRadius: 14, 
+                      padding: '24px 20px', 
+                      textAlign: 'center', 
+                      background: '#f8fafc', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: 8,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <span style={{ fontSize: 28 }}>📄</span>
+                    <div style={{ fontWeight: 600, color: 'var(--oxford-blue)', fontSize: 13 }}>
+                      Haz clic para subir o arrastra el nuevo certificado PDF aquí
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formato PDF (Máx 4.5 MB)</div>
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      style={{ display: 'none' }} 
+                      onChange={e => e.target.files?.[0] && setPdfFile(e.target.files[0])} 
+                    />
+                  </label>
+                )}
               </div>
 
               <div className="form-group" style={{ marginTop: 16 }}>

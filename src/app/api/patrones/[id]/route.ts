@@ -10,7 +10,7 @@ export async function PUT(
     const body = await request.json()
     const {
       Codigo, Nombre_Patron, Fecha_Calibracion_Externa, Fecha_Vencimiento_Certificado,
-      N_Certificado, Proveedor_Laboratorio, PDF_Certificado, Estado_Vigencia
+      N_Certificado, Proveedor_Laboratorio, PDF_Certificado, Estado_Vigencia, Foto_Patron
     } = body
 
     const existing = await prisma.patronReferencia.findUnique({
@@ -25,7 +25,7 @@ export async function PUT(
     const resolvedVenc = Fecha_Vencimiento_Certificado !== undefined ? Fecha_Vencimiento_Certificado : existing.Fecha_Vencimiento_Certificado
 
     let finalEstado = Estado_Vigencia || existing.Estado_Vigencia
-    if (!resolvedPdf || resolvedPdf.trim() === '') {
+    if (!resolvedPdf || resolvedPdf.trim() === '' || resolvedPdf === 'null' || resolvedPdf === 'undefined') {
       finalEstado = 'SIN CERTIFICADO'
     } else if (resolvedVenc && new Date(resolvedVenc).getTime() < Date.now()) {
       finalEstado = 'VENCIDO'
@@ -43,7 +43,8 @@ export async function PUT(
         N_Certificado: N_Certificado !== undefined ? N_Certificado : existing.N_Certificado,
         Proveedor_Laboratorio: Proveedor_Laboratorio !== undefined ? Proveedor_Laboratorio : existing.Proveedor_Laboratorio,
         PDF_Certificado: resolvedPdf,
-        Estado_Vigencia: finalEstado
+        Estado_Vigencia: finalEstado,
+        Foto_Patron: Foto_Patron !== undefined ? Foto_Patron : existing.Foto_Patron
       }
     })
 

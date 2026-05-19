@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ClipboardList, CalendarDays,
   FlaskConical, ScanLine, Settings, ChevronRight,
-  Microscope, X, Menu, QrCode, Search
+  Microscope, X, Menu, QrCode, Search, Sun, Moon
 } from 'lucide-react'
 
 
@@ -25,6 +25,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [scrolled, setScrolled] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark'
+    if (savedTheme) {
+      setTheme(savedTheme)
+      document.documentElement.setAttribute('data-theme', savedTheme)
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light')
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(nextTheme)
+    localStorage.setItem('theme', nextTheme)
+    document.documentElement.setAttribute('data-theme', nextTheme)
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -129,8 +147,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button
             style={{ 
               display: 'flex', 
-              background: '#f1f5f9', 
-              border: 'none', 
+              background: 'var(--page-bg-soft)', 
+              border: '1.5px solid var(--glass-border)', 
               cursor: 'pointer', 
               padding: 10, 
               borderRadius: 12, 
@@ -140,19 +158,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="mobile-toggle"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu size={20} color="#1e293b" />
+            <Menu size={20} color="var(--text-main)" />
           </button>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="topbar-title" style={{ 
               fontSize: scrolled ? 15 : 17, 
               fontWeight: 900, 
-              color: '#0f172a', 
+              color: 'var(--text-main)', 
               lineHeight: 1.1,
               letterSpacing: '-0.02em',
               transition: 'all 0.3s'
             }}>{currentPage}</div>
-            <div className="desktop-only" style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONTROL METROLÓGICO PRO</div>
+            <div className="desktop-only" style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-dim)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONTROL METROLÓGICO PRO</div>
           </div>
 
           <div className="topbar-search-container" style={{ 
@@ -162,18 +180,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             marginLeft: 'auto'
           }}>
             <div style={{ 
-              background: '#fff', 
+              background: 'var(--card-bg)', 
               borderRadius: 16, 
               padding: '2px 20px',
               display: 'flex',
               alignItems: 'center',
               gap: 14,
-              border: searchQuery ? '2px solid var(--accent)' : '2px solid #f1f5f9',
-              boxShadow: searchQuery ? '0 8px 20px rgba(0, 229, 255, 0.15)' : 'inset 0 2px 4px rgba(0,0,0,0.02)',
+              border: searchQuery ? '2px solid var(--accent)' : '2px solid var(--glass-border)',
+              boxShadow: searchQuery ? '0 8px 20px var(--accent-glow)' : 'inset 0 2px 4px rgba(0,0,0,0.02)',
               transition: 'all 0.3s ease',
               transform: searchQuery ? 'translateY(-1px)' : 'none'
             }}>
-              <Search size={20} color={searchQuery ? 'var(--accent)' : '#94a3b8'} style={{ transition: 'all 0.3s' }} />
+              <Search size={20} color={searchQuery ? 'var(--accent)' : 'var(--text-soft)'} style={{ transition: 'all 0.3s' }} />
               <input 
                 placeholder="Buscar activo, código o responsable..." 
                 value={searchQuery}
@@ -186,24 +204,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   fontWeight: 500,
                   width: '100%',
                   outline: 'none',
-                  color: '#1e293b'
+                  color: 'var(--text-main)'
                 }}
               />
               {searchQuery && (
                 <button 
                   onClick={() => handleSearchChange('')}
-                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: 4, cursor: 'pointer', display: 'flex' }}
+                  style={{ background: 'var(--page-bg-soft)', border: 'none', borderRadius: '50%', padding: 4, cursor: 'pointer', display: 'flex' }}
                 >
-                  <X size={12} color="#64748b" />
+                  <X size={12} color="var(--text-dim)" />
                 </button>
               )}
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div style={{ width: 1, height: 32, background: '#e2e8f0' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button
+              onClick={toggleTheme}
+              style={{
+                background: 'var(--page-bg-soft)',
+                border: '1.5px solid var(--glass-border)',
+                borderRadius: '12px',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--text-main)',
+                transition: 'all 0.2s',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+              title={theme === 'light' ? 'Cambiar a Tema Oscuro Stitch 2.0' : 'Cambiar a Tema Claro Original'}
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+            <div style={{ width: 1, height: 32, background: 'var(--glass-border)' }} />
             <Link href="/escaneo" className="btn-scan" style={{
-              background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
+              background: 'linear-gradient(135deg, var(--oxford-blue-dark) 0%, var(--oxford-blue-light) 100%)',
               color: '#fff',
               fontWeight: 700,
               padding: '12px 24px',
@@ -211,7 +249,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              boxShadow: '0 10px 20px -5px rgba(15, 23, 42, 0.3)',
+              boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.2)',
               textDecoration: 'none',
               fontSize: 14,
               transition: 'all 0.3s'

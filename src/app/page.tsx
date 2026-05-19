@@ -507,10 +507,7 @@ export default function DashboardPage() {
                 return (
                   <div key={log.ID_Log} className="timeline-row-compact" onClick={() => setSelectedLog(log)}>
                     <div className="timeline-left-icon">
-                      <div className="icon-pill" style={{ 
-                        background: log.Resultado_Status === 'APTO' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                        color: statusColor
-                      }}>
+                      <div className={`icon-pill ${log.Resultado_Status === 'APTO' ? 'status-badge-vigente' : 'status-badge-vencido'}`} style={{ border: 'none', padding: 0 }}>
                         {log.Resultado_Status === 'APTO' ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       </div>
                       <div className="timeline-connector" />
@@ -762,7 +759,7 @@ export default function DashboardPage() {
           border-radius: 10px;
         }
         .kpi-bar-item.clickable:hover {
-          background: rgba(15, 23, 42, 0.03);
+          background: var(--alpha-02);
           transform: translateY(-1px);
         }
 
@@ -819,7 +816,7 @@ export default function DashboardPage() {
         .kpi-bar-divider {
           width: 1px;
           height: 28px;
-          background: rgba(15, 23, 42, 0.06);
+          background: var(--glass-border);
           flex-shrink: 0;
         }
 
@@ -852,12 +849,12 @@ export default function DashboardPage() {
 
         /* Panel Card */
         .panel-card {
-          background: rgba(255, 255, 255, 0.7);
+          background: var(--glass-bg);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(15, 23, 42, 0.06);
+          border: 1px solid var(--glass-border);
           border-radius: 18px;
-          box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+          box-shadow: var(--shadow-sm);
           padding: 20px;
           display: flex;
           flex-direction: column;
@@ -865,7 +862,7 @@ export default function DashboardPage() {
         }
 
         .panel-card:hover {
-          box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+          box-shadow: var(--shadow-md);
         }
 
         .panel-card.compact {
@@ -876,7 +873,7 @@ export default function DashboardPage() {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+          border-bottom: 1px solid var(--glass-border);
           padding-bottom: 12px;
           margin-bottom: 14px;
         }
@@ -907,7 +904,7 @@ export default function DashboardPage() {
         }
 
         .panel-badge-count {
-          background: rgba(15, 23, 42, 0.04);
+          background: var(--alpha-04);
           font-size: 10px;
           font-weight: 850;
           color: var(--text-main);
@@ -919,8 +916,8 @@ export default function DashboardPage() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-          color: #fff;
+          background: linear-gradient(135deg, var(--oxford-blue) 0%, var(--oxford-blue-light) 100%);
+          color: var(--card-bg);
           font-size: 11px;
           font-weight: 700;
           padding: 6px 14px;
@@ -928,12 +925,12 @@ export default function DashboardPage() {
           border: none;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+          box-shadow: var(--shadow-sm);
         }
         .btn-compact-pdf:hover {
-          background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+          background: linear-gradient(135deg, var(--oxford-blue-light) 0%, var(--snow-3) 100%);
           transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
+          box-shadow: var(--shadow-md);
         }
 
         /* Seccion Filtros */
@@ -959,8 +956,8 @@ export default function DashboardPage() {
 
         .search-bar-wrapper input {
           width: 100%;
-          background: rgba(15, 23, 42, 0.03);
-          border: 1px solid rgba(15, 23, 42, 0.05);
+          background: var(--alpha-02);
+          border: 1px solid var(--glass-border);
           border-radius: 12px;
           padding: 9px 12px 9px 34px;
           font-size: 13px;
@@ -970,7 +967,7 @@ export default function DashboardPage() {
         }
 
         .search-bar-wrapper input:focus {
-          background: #fff;
+          background: var(--card-bg);
           border-color: var(--accent);
           box-shadow: 0 0 0 3px var(--accent-glow);
         }
@@ -980,8 +977,8 @@ export default function DashboardPage() {
         }
 
         .filter-dropdown {
-          background: rgba(15, 23, 42, 0.03);
-          border: 1px solid rgba(15, 23, 42, 0.05);
+          background: var(--alpha-02);
+          border: 1px solid var(--glass-border);
           border-radius: 12px;
           padding: 8.5px 12px;
           font-size: 12.5px;
@@ -992,7 +989,7 @@ export default function DashboardPage() {
           transition: all 0.2s;
         }
         .filter-dropdown:focus {
-          background: #fff;
+          background: var(--card-bg);
           border-color: var(--accent);
           box-shadow: 0 0 0 3px var(--accent-glow);
         }
@@ -1004,12 +1001,12 @@ export default function DashboardPage() {
           gap: 8px;
           flex-wrap: wrap;
           margin-bottom: 14px;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+          border-bottom: 1px solid var(--glass-border);
           padding-bottom: 12px;
         }
 
         .status-pill {
-          background: rgba(15, 23, 42, 0.04);
+          background: var(--alpha-04);
           border: none;
           color: var(--text-dim);
           font-size: 11px;
@@ -1024,12 +1021,12 @@ export default function DashboardPage() {
         }
 
         .status-pill:hover {
-          background: rgba(15, 23, 42, 0.07);
+          background: var(--alpha-08);
         }
 
         .status-pill.active {
-          background: #0f172a;
-          color: #fff;
+          background: var(--oxford-blue);
+          color: var(--card-bg);
         }
 
         .status-pill .dot {
@@ -1042,12 +1039,12 @@ export default function DashboardPage() {
         .pill-yellow .dot { background: var(--warning); }
         .pill-red .dot { background: var(--danger); }
 
-        .pill-green.active { background: var(--success); color: #fff; }
-        .pill-yellow.active { background: var(--warning); color: #fff; }
-        .pill-red.active { background: var(--danger); color: #fff; }
+        .pill-green.active { background: var(--success); color: var(--card-bg); }
+        .pill-yellow.active { background: var(--warning); color: var(--card-bg); }
+        .pill-red.active { background: var(--danger); color: var(--card-bg); }
 
         .btn-clear-filters {
-          background: rgba(15, 23, 42, 0.03);
+          background: var(--alpha-02);
           border: none;
           color: var(--text-dim);
           font-size: 10px;
@@ -1062,7 +1059,7 @@ export default function DashboardPage() {
         }
 
         .btn-clear-filters:hover {
-          background: rgba(15, 23, 42, 0.06);
+          background: var(--alpha-08);
           color: var(--text-main);
         }
 
@@ -1080,11 +1077,11 @@ export default function DashboardPage() {
           background: transparent;
         }
         .assets-scroll-container::-webkit-scrollbar-thumb {
-          background: rgba(15, 23, 42, 0.1);
+          background: var(--alpha-12);
           border-radius: 10px;
         }
         .assets-scroll-container::-webkit-scrollbar-thumb:hover {
-          background: rgba(15, 23, 42, 0.2);
+          background: var(--glass-border);
         }
 
         .empty-assets-state {
@@ -1110,9 +1107,9 @@ export default function DashboardPage() {
           align-items: center;
           padding: 10px 14px;
           border-radius: 12px;
-          border: 1px solid rgba(15, 23, 42, 0.04);
+          border: 1px solid var(--glass-border);
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          background: rgba(255, 255, 255, 0.85);
+          background: var(--card-bg);
           position: relative;
           overflow: hidden;
         }
@@ -1139,10 +1136,10 @@ export default function DashboardPage() {
         }
 
         .asset-list-row:hover {
-          border-color: rgba(15, 23, 42, 0.08);
-          background: #fff;
+          border-color: var(--accent);
+          background: var(--page-bg-soft);
           transform: translateY(-1px);
-          box-shadow: 0 6px 16px -4px rgba(15, 23, 42, 0.05);
+          box-shadow: var(--shadow-md);
         }
 
         .asset-row-main {
@@ -1186,7 +1183,7 @@ export default function DashboardPage() {
         .asset-type-badge {
           font-size: 8.5px;
           font-weight: 800;
-          background: rgba(15, 23, 42, 0.04);
+          background: var(--alpha-04);
           color: var(--text-muted);
           padding: 0px 5px;
           border-radius: 4px;
@@ -1239,8 +1236,8 @@ export default function DashboardPage() {
           width: 26px;
           height: 26px;
           border-radius: 8px;
-          border: 1px solid rgba(15, 23, 42, 0.06);
-          background: #fff;
+          border: 1px solid var(--glass-border);
+          background: var(--card-bg);
           color: var(--text-dim);
           cursor: pointer;
           display: grid;
@@ -1249,7 +1246,7 @@ export default function DashboardPage() {
         }
 
         .btn-action-icon:hover {
-          background: rgba(15, 23, 42, 0.02);
+          background: var(--alpha-02);
           color: var(--accent);
           border-color: var(--accent);
         }
@@ -1289,11 +1286,11 @@ export default function DashboardPage() {
         }
 
         .legend-item:hover {
-          background: rgba(15, 23, 42, 0.04);
+          background: var(--alpha-04);
         }
 
         .legend-item-active {
-          background: rgba(15, 23, 42, 0.04);
+          background: var(--alpha-04);
           font-weight: 800;
         }
 
@@ -1343,14 +1340,14 @@ export default function DashboardPage() {
           font-weight: 700;
           padding: 3px 6px;
           border-radius: 6px;
-          background: rgba(15, 23, 42, 0.04);
+          background: var(--alpha-04);
           border: none;
           color: var(--text-dim);
           cursor: pointer;
           transition: all 0.2s;
         }
         .reset-chart-btn:hover {
-          background: rgba(15, 23, 42, 0.08);
+          background: var(--alpha-08);
         }
 
         /* Timeline de Actividad */
@@ -1573,7 +1570,7 @@ export default function DashboardPage() {
           padding: 6.5px 10px;
           font-size: 11.5px;
           border-bottom: 1px solid var(--snow-2);
-          background: #fff;
+          background: var(--card-bg);
           align-items: center;
         }
 
@@ -1642,22 +1639,22 @@ export default function DashboardPage() {
         }
 
         .modal-btn-primary {
-          background: #0f172a;
-          color: #fff;
+          background: var(--oxford-blue);
+          color: var(--card-bg);
         }
 
         .modal-btn-primary:hover {
-          background: #1e293b;
+          background: var(--oxford-blue-light);
         }
 
         .modal-btn-secondary {
-          background: #fff;
-          border: 1px solid var(--snow-3);
+          background: var(--card-bg);
+          border: 1px solid var(--glass-border);
           color: var(--text-main);
         }
 
         .modal-btn-secondary:hover {
-          background: var(--snow-2);
+          background: var(--alpha-04);
         }
 
         /* Responsive */
