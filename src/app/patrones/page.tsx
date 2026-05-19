@@ -154,12 +154,11 @@ export default function PatronesPage() {
             <table className="data-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ width: '10%' }}>Código</th>
-                  <th style={{ width: '35%' }}>Nombre del Patrón</th>
+                  <th style={{ width: '40%' }}>Patrón / Referencia</th>
                   <th className="desktop-only" style={{ width: '15%' }}>Certificado N°</th>
                   <th className="desktop-only" style={{ width: '15%' }}>Vencimiento</th>
                   <th style={{ width: '15%', minWidth: '135px' }}>Estado Vigencia</th>
-                  <th style={{ textAlign: 'right', width: '10%', minWidth: '180px' }}>Certificado Digital</th>
+                  <th style={{ textAlign: 'right', width: '15%', minWidth: '180px' }}>Certificado Digital</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,20 +169,25 @@ export default function PatronesPage() {
                     style={{ cursor: 'pointer' }}
                     className="mobile-card-row"
                   >
-                    <td className="mobile-hide" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <span style={{ 
-                        fontFamily: 'var(--font-mono)', 
-                        fontWeight: 700, 
-                        color: 'var(--cyan)',
-                        background: 'rgba(0, 229, 255, 0.05)',
-                        padding: '4px 8px',
-                        borderRadius: '4px'
-                      }}>{p.Codigo}</span>
-                    </td>
-                    <td style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} className="mobile-card-title" title={p.Nombre_Patron}>
+                    <td style={{ fontWeight: 600, padding: '12px 16px' }} className="mobile-card-title" title={p.Nombre_Patron}>
+                      {/* Código encima del nombre */}
+                      <div style={{ marginBottom: 6 }}>
+                        <span style={{ 
+                          fontFamily: 'var(--font-mono)', 
+                          fontWeight: 700, 
+                          color: 'var(--cyan)',
+                          background: 'rgba(0, 229, 255, 0.05)',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          letterSpacing: '0.5px'
+                        }}>{p.Codigo}</span>
+                      </div>
+                      
+                      {/* Nombre y Magnitud */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                         <div className="mobile-only semaforo-dot" style={{ background: p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)', boxShadow: `0 0 15px ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}66` }} />
-                        <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Nombre_Patron}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-main)' }}>{p.Nombre_Patron}</div>
                         {p.Magnitud && (
                           <span style={{ fontSize: 11, background: 'rgba(0, 229, 255, 0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--cyan)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 600 }}>
                             {p.Magnitud}
@@ -237,7 +241,7 @@ export default function PatronesPage() {
                   </tr>
                   {expandedId === p.ID_Patron && (
                     <tr>
-                      <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
+                      <td colSpan={5} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
                         <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
                           <div 
                             className="card" 
