@@ -64,12 +64,12 @@ export async function PUT(
       orderBy: { Fecha_Ejecucion: 'desc' }
     });
 
-    let ultima = lastLog ? lastLog.Fecha_Ejecucion : targetIngreso;
+    let ultima: Date | null = lastLog ? lastLog.Fecha_Ejecucion : targetIngreso;
     if (!ultima) {
-      const eq = await prisma.instrumentoEquipo.findUnique({ where: { ID_Equipo: id }, select: { Fecha_Ingreso: true, createdAt: true } });
-      ultima = eq?.Fecha_Ingreso || eq?.createdAt || new Date();
+      const eq = await prisma.instrumentoEquipo.findUnique({ where: { ID_Equipo: id }, select: { Fecha_Ingreso: true } });
+      ultima = eq?.Fecha_Ingreso || new Date();
     }
-    const proximo = calcularProximoControl(ultima, meses);
+    const proximo = calcularProximoControl(ultima || new Date(), meses);
 
     const updated = await prisma.instrumentoEquipo.update({
       where: { ID_Equipo: id },

@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       orderBy: { Fecha_Ejecucion: 'desc' }
     })
 
-    const ultimaFecha = lastLog ? lastLog.Fecha_Ejecucion : (equipo.Fecha_Ingreso || equipo.createdAt || new Date())
+    const ultimaFecha = lastLog ? lastLog.Fecha_Ejecucion : (equipo.Fecha_Ingreso || new Date())
     const proximoControl = calcularProximoControl(ultimaFecha, equipo.Periodicidad_Meses)
     let newEstado = equipo.Estado
     if (lastLog && !body.isHistoricalLog) {

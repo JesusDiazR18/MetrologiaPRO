@@ -8,11 +8,11 @@ interface Props {
 }
 
 export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
-  const initialMags = equipo.Magnitud ? equipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : ['TEMPERATURA']
+  const initialMags = equipo.Magnitud ? equipo.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : ['TEMPERATURA']
   const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN']
-  const customItems = initialMags.filter(m => !standardMags.includes(m) && m !== 'OTRA')
+  const customItems = initialMags.filter((m: string) => !standardMags.includes(m) && m !== 'OTRA')
   const initialCustomMag = customItems.join(', ')
-  const initialFormDataMags = initialMags.map(m => (!standardMags.includes(m) && m !== 'OTRA') ? 'OTRA' : m)
+  const initialFormDataMags = initialMags.map((m: string) => (!standardMags.includes(m) && m !== 'OTRA') ? 'OTRA' : m)
 
   const [formData, setFormData] = useState({
     Nombre_Equipo: equipo.Nombre_Equipo || '',
@@ -52,11 +52,11 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
   ]
 
   function toggleMagnitud(mag: string) {
-    const current = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+    const current = formData.Magnitud ? formData.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
     let updated: string[]
     if (current.includes(mag)) {
       if (current.length === 1) return // Mantener al menos 1
-      updated = current.filter(m => m !== mag)
+      updated = current.filter((m: string) => m !== mag)
     } else {
       updated = [...current, mag]
     }
@@ -72,9 +72,9 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     setSaving(true)
     setError('')
     try {
-      let finalMagnitud = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+      let finalMagnitud = formData.Magnitud ? formData.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
       if (finalMagnitud.includes('OTRA')) {
-        finalMagnitud = finalMagnitud.map(m => m === 'OTRA' ? (customMag.trim() || 'OTRA') : m)
+        finalMagnitud = finalMagnitud.map((m: string) => m === 'OTRA' ? (customMag.trim() || 'OTRA') : m)
       }
 
       const payload = {
@@ -114,7 +114,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     }
   }
 
-  const selectedMags = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()) : []
+  const selectedMags = formData.Magnitud ? formData.Magnitud.split(',').map((m: string) => m.trim()) : []
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>

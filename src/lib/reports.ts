@@ -3,13 +3,23 @@ import QRCode from 'qrcode'
 import { formatFecha, semaforoLabel, calcularSemaforo, getScanUrl } from './metrologia'
 
 /**
- * Convierte una URL de imagen (relativa, absoluta o blob) a base64 para uso seguro en jsPDF.
+ * Convierte una URL de imagen (relativa, absoluta o blob) a base64 para uso seguro en jsPDF,
+ * retornando también las dimensiones naturales de la imagen para respetar su relación de aspecto.
  */
-async function getBase64FromUrl(url: string): Promise<{ data: string, format: string } | null> {
+async function getBase64FromUrl(url: string): Promise<{ data: string, format: string, width: number, height: number } | null> {
   if (!url) return null;
   if (url.startsWith('data:image/')) {
     const format = url.split(';')[0].split('/')[1]?.toUpperCase() || 'PNG';
-    return { data: url, format: format === 'SVG+XML' ? 'PNG' : format };
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ data: url, format: format === 'SVG+XML' ? 'PNG' : format, width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+      };
+      img.onerror = () => {
+        resolve({ data: url, format: format === 'SVG+XML' ? 'PNG' : format, width: 1, height: 1 });
+      };
+      img.src = url;
+    });
   }
   try {
     const fullUrl = url.startsWith('/') && typeof window !== 'undefined' 
@@ -24,7 +34,24 @@ async function getBase64FromUrl(url: string): Promise<{ data: string, format: st
       reader.onloadend = () => {
         const result = reader.result as string;
         const format = result.split(';')[0].split('/')[1]?.toUpperCase() || 'PNG';
-        resolve({ data: result, format: format === 'SVG+XML' ? 'PNG' : format });
+        const img = new Image();
+        img.onload = () => {
+          resolve({ 
+            data: result, 
+            format: format === 'SVG+XML' ? 'PNG' : format, 
+            width: img.naturalWidth || 1, 
+            height: img.naturalHeight || 1 
+          });
+        };
+        img.onerror = () => {
+          resolve({ 
+            data: result, 
+            format: format === 'SVG+XML' ? 'PNG' : format, 
+            width: 1, 
+            height: 1 
+          });
+        };
+        img.src = result;
       };
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(blob);
@@ -33,6 +60,15 @@ async function getBase64FromUrl(url: string): Promise<{ data: string, format: st
     console.error("Error converting image to base64:", err);
     return null;
   }
+}
+
+/**
+ * Filtra si un campo tiene un valor válido (no vacío ni nulo).
+ */
+function hasValue(val: any): boolean {
+  if (val === null || val === undefined) return false;
+  const str = String(val).trim();
+  return str !== '' && str !== '—' && str !== 'No definida' && str !== 'No asignado' && str !== 'N/A' && str !== 'No definido' && str !== 'Sin fecha' && str !== 'OTRA';
 }
 
 /**
@@ -52,6 +88,190 @@ function renderSectionTitle(doc: jsPDF, title: string, yPos: number, accentColor
 }
 
 /**
+ * Dibuja un grupo de ítems dinámicamente en columnas o filas completas, ajustando el alto y previniendo colisiones.
+ */
+function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableWidth: number, margin: number): number {
+  let currY = startY;
+  const colW = printableWidth / 2 - 1.5;
+  let i = 0;
+  
+  while (i < items.length) {
+    const item = items[i];
+    const valStr = String(item.value).trim();
+    
+    // Decidir si debe ocupar toda la fila
+    const isName = item.isNameField || item.label.toLowerCase().includes('nombre') || item.label.toLowerCase().includes('responsable') || item.label.toLowerCase().includes('detalles') || item.label.toLowerCase().includes('proveedor');
+    const isLongVal = valStr.length > 35;
+    const isFullWidth = isName || isLongVal || item.colSpan === 2;
+    
+    if (isFullWidth) {
+      const w = printableWidth;
+      const x = margin;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      const splitVal = doc.splitTextToSize(valStr, w - 38);
+      const boxHeight = Math.max(8, splitVal.length * 4.2 + 3);
+      
+      if (currY + boxHeight > 275) {
+        doc.addPage();
+        currY = 20;
+      }
+      
+      // Caja de fondo
+      doc.setFillColor(248, 250, 252);
+      doc.rect(x, currY, w, boxHeight, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(x, currY, w, boxHeight, 'S');
+      
+      // Etiqueta
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(71, 85, 105);
+      doc.text(item.label, x + 3, currY + 5.5);
+      
+      // Valor
+      doc.setFont('helvetica', 'normal');
+      if (item.isStatus) {
+        doc.setFont('helvetica', 'bold');
+        if (valStr.toLowerCase().includes('vencido') || valStr.toLowerCase().includes('crítico') || valStr.toLowerCase().includes('baja') || valStr.toLowerCase().includes('no apto')) {
+          doc.setTextColor(239, 68, 68);
+        } else if (valStr.toLowerCase().includes('detalles') || valStr.toLowerCase().includes('mantenimiento')) {
+          doc.setTextColor(245, 158, 11);
+        } else {
+          doc.setTextColor(16, 185, 129);
+        }
+      } else {
+        doc.setTextColor(15, 23, 42);
+      }
+      
+      splitVal.forEach((line: string, lineIdx: number) => {
+        doc.text(line, x + 35, currY + 5.5 + (lineIdx * 4.2));
+      });
+      
+      currY += boxHeight + 2.5;
+      i++;
+    } else {
+      const nextItem = i + 1 < items.length ? items[i + 1] : null;
+      const nextValStr = nextItem ? String(nextItem.value).trim() : '';
+      const nextIsName = nextItem ? (nextItem.isNameField || nextItem.label.toLowerCase().includes('nombre') || nextItem.label.toLowerCase().includes('responsable') || nextItem.label.toLowerCase().includes('detalles') || nextItem.label.toLowerCase().includes('proveedor')) : false;
+      const nextIsLongVal = nextValStr.length > 35;
+      const nextIsFullWidth = nextItem ? (nextIsName || nextIsLongVal || nextItem.colSpan === 2) : true;
+      
+      if (nextItem && !nextIsFullWidth) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        const splitVal1 = doc.splitTextToSize(valStr, colW - 35);
+        const splitVal2 = doc.splitTextToSize(nextValStr, colW - 35);
+        const boxHeight = Math.max(8, Math.max(splitVal1.length, splitVal2.length) * 4.2 + 3);
+        
+        if (currY + boxHeight > 275) {
+          doc.addPage();
+          currY = 20;
+        }
+        
+        // Izquierdo
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, currY, colW, boxHeight, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(margin, currY, colW, boxHeight, 'S');
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text(item.label, margin + 3, currY + 5.5);
+        
+        doc.setFont('helvetica', 'normal');
+        if (item.isStatus) {
+          doc.setFont('helvetica', 'bold');
+          if (valStr.toLowerCase().includes('vencido') || valStr.toLowerCase().includes('crítico') || valStr.toLowerCase().includes('baja') || valStr.toLowerCase().includes('no apto')) {
+            doc.setTextColor(239, 68, 68);
+          } else if (valStr.toLowerCase().includes('detalles') || valStr.toLowerCase().includes('mantenimiento')) {
+            doc.setTextColor(245, 158, 11);
+          } else {
+            doc.setTextColor(16, 185, 129);
+          }
+        } else {
+          doc.setTextColor(15, 23, 42);
+        }
+        splitVal1.forEach((line: string, lineIdx: number) => {
+          doc.text(line, margin + 32, currY + 5.5 + (lineIdx * 4.2));
+        });
+        
+        // Derecho
+        const x2 = margin + colW + 3;
+        doc.setFillColor(248, 250, 252);
+        doc.rect(x2, currY, colW, boxHeight, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(x2, currY, colW, boxHeight, 'S');
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text(nextItem.label, x2 + 3, currY + 5.5);
+        
+        doc.setFont('helvetica', 'normal');
+        if (nextItem.isStatus) {
+          doc.setFont('helvetica', 'bold');
+          if (nextValStr.toLowerCase().includes('vencido') || nextValStr.toLowerCase().includes('crítico') || nextValStr.toLowerCase().includes('baja') || nextValStr.toLowerCase().includes('no apto')) {
+            doc.setTextColor(239, 68, 68);
+          } else if (nextValStr.toLowerCase().includes('detalles') || nextValStr.toLowerCase().includes('mantenimiento')) {
+            doc.setTextColor(245, 158, 11);
+          } else {
+            doc.setTextColor(16, 185, 129);
+          }
+        } else {
+          doc.setTextColor(15, 23, 42);
+        }
+        splitVal2.forEach((line: string, lineIdx: number) => {
+          doc.text(line, x2 + 32, currY + 5.5 + (lineIdx * 4.2));
+        });
+        
+        currY += boxHeight + 2.5;
+        i += 2;
+      } else {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        const splitVal = doc.splitTextToSize(valStr, colW - 35);
+        const boxHeight = Math.max(8, splitVal.length * 4.2 + 3);
+        
+        if (currY + boxHeight > 275) {
+          doc.addPage();
+          currY = 20;
+        }
+        
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, currY, colW, boxHeight, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(margin, currY, colW, boxHeight, 'S');
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text(item.label, margin + 3, currY + 5.5);
+        
+        doc.setFont('helvetica', 'normal');
+        if (item.isStatus) {
+          doc.setFont('helvetica', 'bold');
+          if (valStr.toLowerCase().includes('vencido') || valStr.toLowerCase().includes('crítico') || valStr.toLowerCase().includes('baja') || valStr.toLowerCase().includes('no apto')) {
+            doc.setTextColor(239, 68, 68);
+          } else if (valStr.toLowerCase().includes('detalles') || valStr.toLowerCase().includes('mantenimiento')) {
+            doc.setTextColor(245, 158, 11);
+          } else {
+            doc.setTextColor(16, 185, 129);
+          }
+        } else {
+          doc.setTextColor(15, 23, 42);
+        }
+        splitVal.forEach((line: string, lineIdx: number) => {
+          doc.text(line, margin + 32, currY + 5.5 + (lineIdx * 4.2));
+        });
+        
+        currY += boxHeight + 2.5;
+        i++;
+      }
+    }
+  }
+  return currY;
+}
+
+/**
  * Genera una Ficha Técnica profesional en formato PDF para un equipo específico.
  */
 export async function generateTechnicalSheetPDF(equipo: any) {
@@ -65,11 +285,11 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   const margin = 16;
   const printableWidth = 178;
 
-  // Cargar Logo de la empresa y foto del equipo
+  // Cargar Logo e imágenes
   const logoBase64 = await getBase64FromUrl('/logo.png');
   const fotoBase64 = equipo.Foto_Equipo ? await getBase64FromUrl(equipo.Foto_Equipo) : null;
   
-  // Generar QR en base64
+  // Generar QR
   const qrUrl = getScanUrl(equipo.Codigo_Interno);
   let qrBase64 = null;
   try {
@@ -87,8 +307,18 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   let titleStartX = 16;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64.data, logoBase64.format, 16, 8, 26, 26);
-      titleStartX = 46;
+      const maxLogoW = 36;
+      const maxLogoH = 26;
+      const aspect = logoBase64.width / logoBase64.height;
+      let logoW = maxLogoW;
+      let logoH = maxLogoW / aspect;
+      if (logoH > maxLogoH) {
+        logoH = maxLogoH;
+        logoW = maxLogoH * aspect;
+      }
+      const logoY = (42 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, 16, logoY, logoW, logoH);
+      titleStartX = 16 + logoW + 6;
     } catch(e) {
       console.error("Error dibujando logo:", e);
     }
@@ -96,11 +326,11 @@ export async function generateTechnicalSheetPDF(equipo: any) {
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.text('FICHA TÉCNICA DE ACTIVO', titleStartX, 21);
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(203, 213, 225); // Slate 300
   doc.text('SISTEMA INTEGRAL DE GESTIÓN QMS PRO · METROLOGÍA INDUSTRIAL', titleStartX, 28);
 
@@ -121,127 +351,54 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   let currY = 52;
 
   // --- 1. DATOS GENERALES E IDENTIFICACIÓN ---
-  currY = renderSectionTitle(doc, '1. Datos de Identificación y Ubicación', currY);
-  
-  const identItems = [
-    { label: 'Nombre Activo:', value: equipo.Nombre_Equipo },
+  const rawIdentItems = [
+    { label: 'Nombre Activo:', value: equipo.Nombre_Equipo, isNameField: true },
     { label: 'Tipo de Activo:', value: equipo.Tipo },
-    { label: 'Marca / Modelo:', value: `${equipo.Marca || '—'} / ${equipo.Modelo || '—'}` },
-    { label: 'Número Serie:', value: equipo.Serie || '—' },
-    { label: 'Rango / Resol.:', value: `${equipo.Rango_Medida || '—'} / ${equipo.Resolucion || '—'}` },
-    { label: 'Magnitud:', value: equipo.Magnitud || 'General' },
-    { label: 'Ubicación / Área:', value: equipo.Area_Asignada || 'No definida' },
-    { label: 'Responsable:', value: equipo.Responsable || 'No asignado' }
+    { label: 'Marca:', value: equipo.Marca },
+    { label: 'Modelo:', value: equipo.Modelo },
+    { label: 'Número Serie:', value: equipo.Serie },
+    { label: 'Rango Medida:', value: equipo.Rango_Medida },
+    { label: 'Resolución:', value: equipo.Resolucion },
+    { label: 'Magnitud:', value: equipo.Magnitud },
+    { label: 'Ubicación / Área:', value: equipo.Area_Asignada },
+    { label: 'Responsable:', value: equipo.Responsable }
   ];
 
-  // Renderizar tabla a 2 columnas
-  const colW = printableWidth / 2;
-  identItems.forEach((item, idx) => {
-    const isOdd = idx % 2 === 0;
-    const x = isOdd ? margin : margin + colW;
-    const y = currY + Math.floor(idx / 2) * 9;
-    
-    // Caja de fondo
-    doc.setFillColor(248, 250, 252);
-    doc.rect(x, y, colW - 3, 8, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.rect(x, y, colW - 3, 8, 'S');
+  const identItems = rawIdentItems.filter(item => hasValue(item.value));
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(item.label, x + 3, y + 5.5);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(15, 23, 42);
-    doc.text(String(item.value).substring(0, 32), x + 30, y + 5.5);
-  });
-
-  currY += (identItems.length / 2) * 9 + 8;
+  if (identItems.length > 0) {
+    currY = renderSectionTitle(doc, '1. Datos de Identificación y Ubicación', currY);
+    currY = renderGroupOfItems(doc, identItems, currY, printableWidth, margin);
+  }
 
   // --- 2. ESPECIFICACIONES TÉCNICAS Y METROLÓGICAS ---
-  currY = renderSectionTitle(doc, '2. Especificaciones Metrológicas y de Operación', currY);
-  
   const semaforo = calcularSemaforo(equipo.Fecha_Proximo_Control, equipo.Estado);
   const estadoTxt = semaforoLabel(semaforo, equipo.Estado);
 
-  const metrologyItems = [
-    { label: 'Tolerancia Admitida:', value: `± ${equipo.Tolerancia_Aceptable ?? '0'} ${equipo.Unidad_Tolerancia ?? 'un'}` },
-    { label: 'Intervalo de Control:', value: `${equipo.Periodicidad_Meses} Meses` },
+  const rawMetrologyItems = [
+    { label: 'Tolerancia Admitida:', value: equipo.Tolerancia_Aceptable != null ? `± ${equipo.Tolerancia_Aceptable} ${equipo.Unidad_Tolerancia ?? ''}` : null },
+    { label: 'Intervalo de Control:', value: equipo.Periodicidad_Meses ? `${equipo.Periodicidad_Meses} Meses` : null },
     { label: 'Fecha de Ingreso:', value: formatFecha(equipo.Fecha_Ingreso) },
     { label: 'Última Verificación:', value: formatFecha(equipo.Fecha_Ultima_Verificacion) },
     { label: 'Próximo Control:', value: formatFecha(equipo.Fecha_Proximo_Control) },
-    { label: 'Estado del Sistema:', value: estadoTxt }
+    { label: 'Estado del Activo:', value: estadoTxt, isStatus: true },
+    { label: 'Detalles de Estado:', value: equipo.Detalles_Estado },
+    { label: 'N° Certificado:', value: equipo.N_Certificado },
+    { label: 'Proveedor Servicio:', value: equipo.Proveedor_Servicio },
+    { label: 'Vence Certificado:', value: formatFecha(equipo.Fecha_Vencimiento_Certificado) },
+    { label: 'Accesorios:', value: equipo.Accesorios, colSpan: 2 },
+    { label: 'Insumos:', value: equipo.Insumos, colSpan: 2 }
   ];
 
-  metrologyItems.forEach((item, idx) => {
-    const isOdd = idx % 2 === 0;
-    const x = isOdd ? margin : margin + colW;
-    const y = currY + Math.floor(idx / 2) * 9;
-    
-    doc.setFillColor(248, 250, 252);
-    doc.rect(x, y, colW - 3, 8, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.rect(x, y, colW - 3, 8, 'S');
+  const metrologyItems = rawMetrologyItems.filter(item => hasValue(item.value));
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text(item.label, x + 3, y + 5.5);
-
-    doc.setFont('helvetica', 'normal');
-    if (item.label === 'Estado del Sistema:') {
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(semaforo === 'VERDE' ? '#10b981' : semaforo === 'AMARILLO' ? '#f59e0b' : '#ef4444');
-    } else {
-      doc.setTextColor(15, 23, 42);
-    }
-    doc.text(String(item.value).substring(0, 32), x + 32, y + 5.5);
-  });
-
-  currY += (metrologyItems.length / 2) * 9 + 4;
-
-  // Accesorios e Insumos (Fila completa)
-  if (equipo.Accesorios && equipo.Accesorios.trim() !== '' && equipo.Accesorios.trim() !== '—') {
-    doc.setFillColor(248, 250, 252);
-    doc.rect(margin, currY, printableWidth, 12, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.rect(margin, currY, printableWidth, 12, 'S');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text('Accesorios:', margin + 3, currY + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(15, 23, 42);
-    const splitAcc = doc.splitTextToSize(equipo.Accesorios, printableWidth - 32);
-    splitAcc.forEach((line: string, i: number) => {
-      doc.text(line, margin + 28, currY + 5 + (i * 3.8));
-    });
-    currY += 16;
-  }
-
-  if (equipo.Insumos && equipo.Insumos.trim() !== '' && equipo.Insumos.trim() !== '—') {
-    doc.setFillColor(248, 250, 252);
-    doc.rect(margin, currY, printableWidth, 12, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.rect(margin, currY, printableWidth, 12, 'S');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105);
-    doc.text('Insumos:', margin + 3, currY + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(15, 23, 42);
-    const splitIns = doc.splitTextToSize(equipo.Insumos, printableWidth - 32);
-    splitIns.forEach((line: string, i: number) => {
-      doc.text(line, margin + 28, currY + 5 + (i * 3.8));
-    });
-    currY += 18;
-  } else {
-    currY += 6;
+  if (metrologyItems.length > 0) {
+    currY = renderSectionTitle(doc, '2. Especificaciones Metrológicas y de Operación', currY);
+    currY = renderGroupOfItems(doc, metrologyItems, currY, printableWidth, margin);
   }
 
   // --- 3. EVIDENCIA FOTOGRÁFICA Y CÓDIGO QR ---
-  if (currY + 70 > 280) { doc.addPage(); currY = 20; }
+  if (currY + 70 > 275) { doc.addPage(); currY = 20; }
   currY = renderSectionTitle(doc, '3. Evidencia Fotográfica y Trazabilidad Digital QR', currY);
 
   doc.setFillColor(248, 250, 252);
@@ -249,27 +406,38 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   doc.setDrawColor(226, 232, 240);
   doc.rect(margin, currY, printableWidth, 65, 'S');
 
-  // Foto del equipo a la izquierda
+  // Foto a la izquierda respetando aspect ratio
   if (fotoBase64) {
     try {
-      doc.addImage(fotoBase64.data, fotoBase64.format, margin + 6, currY + 5, 95, 55);
+      const maxPhotoW = 95;
+      const maxPhotoH = 55;
+      const aspect = fotoBase64.width / fotoBase64.height;
+      let photoW = maxPhotoW;
+      let photoH = maxPhotoW / aspect;
+      if (photoH > maxPhotoH) {
+        photoH = maxPhotoH;
+        photoW = maxPhotoH * aspect;
+      }
+      const photoX = margin + 5 + (95 - photoW) / 2;
+      const photoY = currY + 5 + (55 - photoH) / 2;
+      doc.addImage(fotoBase64.data, fotoBase64.format, photoX, photoY, photoW, photoH);
     } catch(e) {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(9);
       doc.setTextColor(148, 163, 184);
-      doc.text('[Fotografía disponible en sistema]', margin + 30, currY + 30);
+      doc.text('[Fotografía disponible en sistema]', margin + 30, currY + 33);
     }
   } else {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
     doc.setTextColor(148, 163, 184);
-    doc.text('[Sin fotografía registrada en el activo]', margin + 25, currY + 32);
+    doc.text('[Sin fotografía registrada en el activo]', margin + 25, currY + 33);
   }
 
   // QR a la derecha
   if (qrBase64) {
     try {
-      doc.addImage(qrBase64, 'PNG', margin + 115, currY + 6, 42, 42);
+      doc.addImage(qrBase64, 'PNG', margin + 120, currY + 6, 42, 42);
     } catch(e) {
       console.error(e);
     }
@@ -277,20 +445,20 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(15, 23, 42);
-  doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 136, currY + 52, { align: 'center' });
+  doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 141, currY + 52, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text('Escanee para verificar autenticidad\ny registros en tiempo real.', margin + 136, currY + 57, { align: 'center' });
+  doc.text('Escanee para verificar autenticidad\ny registros en tiempo real.', margin + 141, currY + 57, { align: 'center' });
 
   currY += 75;
 
   // --- 4. HISTORIAL DE VERIFICACIONES ---
   if (equipo.historiales && equipo.historiales.length > 0) {
-    if (currY + 40 > 280) { doc.addPage(); currY = 20; }
+    if (currY + 40 > 275) { doc.addPage(); currY = 20; }
     currY = renderSectionTitle(doc, '4. Historial de Controles y Verificaciones Metrológicas', currY);
 
-    // Cabecera de la tabla
+    // Cabecera
     doc.setFillColor(15, 23, 42);
     doc.rect(margin, currY, printableWidth, 8, 'F');
     doc.setTextColor(255, 255, 255);
@@ -305,7 +473,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     currY += 8;
 
     equipo.historiales.slice(0, 8).forEach((h: any, idx: number) => {
-      if (currY + 10 > 280) { doc.addPage(); currY = 20; }
+      if (currY + 10 > 275) { doc.addPage(); currY = 20; }
       
       const bg = idx % 2 === 0 ? 255 : 248;
       doc.setFillColor(bg, bg, bg);
@@ -336,7 +504,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     });
   }
 
-  // --- Pie de Página Multi-página ---
+  // Pie de Página
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
@@ -386,18 +554,28 @@ export async function generatePatronSheetPDF(patron: any) {
   let titleStartX = 16;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64.data, logoBase64.format, 16, 8, 26, 26);
-      titleStartX = 46;
+      const maxLogoW = 36;
+      const maxLogoH = 26;
+      const aspect = logoBase64.width / logoBase64.height;
+      let logoW = maxLogoW;
+      let logoH = maxLogoW / aspect;
+      if (logoH > maxLogoH) {
+        logoH = maxLogoH;
+        logoW = maxLogoH * aspect;
+      }
+      const logoY = (42 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, 16, logoY, logoW, logoH);
+      titleStartX = 16 + logoW + 6;
     } catch(e) {}
   }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.text('CERTIFICADO DE PATRÓN', titleStartX, 21);
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(233, 213, 255);
   doc.text('QMS PRO · CONTROL DE PATRONES DE REFERENCIA Y ESTÁNDARES', titleStartX, 28);
 
@@ -416,46 +594,23 @@ export async function generatePatronSheetPDF(patron: any) {
   let currY = 52;
 
   // --- 1. INFORMACIÓN DEL PATRÓN ---
-  currY = renderSectionTitle(doc, '1. Especificaciones y Datos del Patrón', currY, [168, 85, 247]);
-
-  const pItems = [
-    { label: 'Nombre Patrón:', value: patron.Nombre_Patron },
+  const rawPItems = [
+    { label: 'Nombre Patrón:', value: patron.Nombre_Patron, isNameField: true },
     { label: 'Código Interno:', value: patron.Codigo },
-    { label: 'Magnitud:', value: patron.Magnitud || 'General' },
-    { label: 'Laboratorio Calib.:', value: patron.Proveedor_Laboratorio || 'N/A' },
-    { label: 'N° Certificado:', value: patron.N_Certificado || 'N/A' },
+    { label: 'Magnitud:', value: patron.Magnitud },
+    { label: 'Laboratorio Calib.:', value: patron.Proveedor_Laboratorio },
+    { label: 'N° Certificado:', value: patron.N_Certificado },
     { label: 'Fecha Calibración:', value: formatFecha(patron.Fecha_Calibracion_Externa) },
     { label: 'Vencimiento Cert.:', value: formatFecha(patron.Fecha_Vencimiento_Certificado) },
-    { label: 'Estado Vigencia:', value: patron.Estado_Vigencia }
+    { label: 'Estado Vigencia:', value: patron.Estado_Vigencia, isStatus: true }
   ];
 
-  const colW = printableWidth / 2;
-  pItems.forEach((item, idx) => {
-    const isOdd = idx % 2 === 0;
-    const x = isOdd ? margin : margin + colW;
-    const y = currY + Math.floor(idx / 2) * 9;
-    
-    doc.setFillColor(250, 250, 250);
-    doc.rect(x, y, colW - 3, 8, 'F');
-    doc.setDrawColor(230, 230, 230);
-    doc.rect(x, y, colW - 3, 8, 'S');
+  const pItems = rawPItems.filter(item => hasValue(item.value));
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(88, 28, 135);
-    doc.text(item.label, x + 3, y + 5.5);
-
-    doc.setFont('helvetica', 'normal');
-    if (item.label === 'Estado Vigencia:') {
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(item.value === 'VIGENTE' ? '#10b981' : '#ef4444');
-    } else {
-      doc.setTextColor(15, 23, 42);
-    }
-    doc.text(String(item.value).substring(0, 32), x + 32, y + 5.5);
-  });
-
-  currY += (pItems.length / 2) * 9 + 8;
+  if (pItems.length > 0) {
+    currY = renderSectionTitle(doc, '1. Especificaciones y Datos del Patrón', currY, [168, 85, 247]);
+    currY = renderGroupOfItems(doc, pItems, currY, printableWidth, margin);
+  }
 
   // --- 2. EVIDENCIA FOTOGRÁFICA Y QR ---
   if (currY + 70 > 280) { doc.addPage(); currY = 20; }
@@ -468,28 +623,39 @@ export async function generatePatronSheetPDF(patron: any) {
 
   if (fotoBase64) {
     try {
-      doc.addImage(fotoBase64.data, fotoBase64.format, margin + 6, currY + 5, 95, 55);
+      const maxPhotoW = 95;
+      const maxPhotoH = 55;
+      const aspect = fotoBase64.width / fotoBase64.height;
+      let photoW = maxPhotoW;
+      let photoH = maxPhotoW / aspect;
+      if (photoH > maxPhotoH) {
+        photoH = maxPhotoH;
+        photoW = maxPhotoH * aspect;
+      }
+      const photoX = margin + 5 + (95 - photoW) / 2;
+      const photoY = currY + 5 + (55 - photoH) / 2;
+      doc.addImage(fotoBase64.data, fotoBase64.format, photoX, photoY, photoW, photoH);
     } catch(e) {}
   } else {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
     doc.setTextColor(148, 163, 184);
-    doc.text('[Sin fotografía registrada en el patrón]', margin + 25, currY + 32);
+    doc.text('[Sin fotografía registrada en el patrón]', margin + 25, currY + 33);
   }
 
   if (qrBase64) {
     try {
-      doc.addImage(qrBase64, 'PNG', margin + 115, currY + 6, 42, 42);
+      doc.addImage(qrBase64, 'PNG', margin + 120, currY + 6, 42, 42);
     } catch(e) {}
   }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(15, 23, 42);
-  doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 136, currY + 52, { align: 'center' });
+  doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 141, currY + 52, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text('Escanee para verificar autenticidad\ny uso metrológico en tiempo real.', margin + 136, currY + 57, { align: 'center' });
+  doc.text('Escanee para verificar autenticidad\ny uso metrológico en tiempo real.', margin + 141, currY + 57, { align: 'center' });
 
   currY += 75;
 
@@ -576,8 +742,18 @@ export async function generateExecutiveSummaryPDF(stats: any) {
   let titleStartX = 16;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64.data, logoBase64.format, 16, 8, 26, 26);
-      titleStartX = 46;
+      const maxLogoW = 36;
+      const maxLogoH = 26;
+      const aspect = logoBase64.width / logoBase64.height;
+      let logoW = maxLogoW;
+      let logoH = maxLogoW / aspect;
+      if (logoH > maxLogoH) {
+        logoH = maxLogoH;
+        logoW = maxLogoH * aspect;
+      }
+      const logoY = (42 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, 16, logoY, logoW, logoH);
+      titleStartX = 16 + logoW + 6;
     } catch(e) {}
   }
 
