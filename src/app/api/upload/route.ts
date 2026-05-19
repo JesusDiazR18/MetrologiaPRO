@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File
     const assetId = formData.get('assetId') as string || formData.get('idPatron') as string
     const assetType = formData.get('assetType') as string || 'PATRON'
+    const uploadType = formData.get('uploadType') as string || 'CERTIFICADO'
     const nCert = formData.get('nCert') as string
     const prov = formData.get('prov') as string
     const fechaCal = formData.get('fechaCal') as string
@@ -21,42 +22,65 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'certificados')
+    const folderName = uploadType === 'FOTO' ? 'fotos' : 'certificados'
+    const uploadDir = join(process.cwd(), 'public', 'uploads', folderName)
+    await mkdir(uploadDir, { recursive: true })
+
     const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
     const path = join(uploadDir, fileName)
 
     await writeFile(path, buffer)
-    const publicPath = `/uploads/certificados/${fileName}`
+    const publicPath = `/uploads/${folderName}/${fileName}`
 
     let updated
-    if (assetType === 'EQUIPO' || assetType === 'INSTRUMENTO') {
-      const updateData: any = { PDF_Certificado: publicPath }
-      if (nCert) updateData.N_Certificado = nCert
-      if (prov) updateData.Proveedor_Servicio = prov
-      if (fechaCal) updateData.Fecha_Ultima_Verificacion = new Date(fechaCal)
-      if (fechaVenc) updateData.Fecha_Vencimiento_Certificado = new Date(fechaVenc)
 
-      updated = await prisma.instrumentoEquipo.update({
-        where: { ID_Equipo: assetId },
-        data: updateData
-      })
-    } else {
-      const updateData: any = { PDF_Certificado: publicPath, Estado_Vigencia: 'VIGENTE' }
-      if (nCert) updateData.N_Certificado = nCert
-      if (prov) updateData.Proveedor_Laboratorio = prov
-      if (fechaCal) updateData.Fecha_Calibracion_Externa = new Date(fechaCal)
-      if (fechaVenc) {
-        const vDate = new Date(fechaVenc)
-        updateData.Fecha_Vencimiento_Certificado = vDate
-        if (vDate.getTime() < Date.now()) {
-          updateData.Estado_Vigencia = 'VENCIDO'
-        }
+    if (uploadType === 'FOTO') {
+      if (assetType === 'EQUIPO' || assetType === 'INSTRUMENTO') {
+        updated = await prisma.instrumentoEquipo.update({
+          where: { ID_Equipo: assetId },
+          data: { Foto_Equipo: publicPath }
+        })
+      } else if (assetType === 'PATRON') {
+        updated = await prisma.patronReferencia.update({
+          where: { ID_Patron: assetId },
+          data: { Foto_Patron: publicPath }
+        })
+      } else if (assetType === 'HISTORIAL') {
+        updated = await prisma.historialVerificacion.update({
+          where: { ID_Log: assetId },
+          data: { Evidencia_Foto: publicPath }
+        })
       }
+    } else {
+      if (assetType === 'EQUIPO' || assetType === 'INSTRUMENTO') {
+        const updateData: any = { PDF_Certificado: publicPath }
+        if (nCert) updateData.N_Certificado = nCert
+        if (prov) updateData.Proveedor_Servicio = prov
+        if (fechaCal) updateData.Fecha_Ultima_Verificacion = new Date(fechaCal)
+        if (fechaVenc) updateData.Fecha_Vencimiento_Certificado = new Date(fechaVenc)
 
-      updated = await prisma.patronReferencia.update({
-        where: { ID_Patron: assetId },
-        data: updateData
-      })
+        updated = await prisma.instrumentoEquipo.update({
+          where: { ID_Equipo: assetId },
+          data: updateData
+        })
+      } else {
+        const updateData: any = { PDF_Certificado: publicPath, Estado_Vigencia: 'VIGENTE' }
+        if (nCert) updateData.N_Certificado = nCert
+        if (prov) updateData.Proveedor_Laboratorio = prov
+        if (fechaCal) updateData.Fecha_Calibracion_Externa = new Date(fechaCal)
+        if (fechaVenc) {
+          const vDate = new Date(fechaVenc)
+          updateData.Fecha_Vencimiento_Certificado = vDate
+          if (vDate.getTime() < Date.now()) {
+            updateData.Estado_Vigencia = 'VENCIDO'
+          }
+        }
+
+        updated = await prisma.patronReferencia.update({
+          where: { ID_Patron: assetId },
+          data: updateData
+        })
+      }
     }
 
     return NextResponse.json({ success: true, path: publicPath, updated })

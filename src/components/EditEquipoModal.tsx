@@ -44,6 +44,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
   const [customMag, setCustomMag] = useState(initialCustomMag)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
 
   const magnitudesDisponibles = [
     'TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION',
@@ -93,6 +94,14 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
         body: JSON.stringify(payload)
       })
       if (r.ok) {
+        if (photoFile) {
+          const formDataObj = new FormData()
+          formDataObj.append('file', photoFile)
+          formDataObj.append('assetId', equipo.ID_Equipo)
+          formDataObj.append('assetType', equipo.Tipo)
+          formDataObj.append('uploadType', 'FOTO')
+          await fetch('/api/upload', { method: 'POST', body: formDataObj }).catch(err => console.error('Error subiendo foto:', err))
+        }
         onSaved()
       } else {
         const d = await r.json()
@@ -293,6 +302,56 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                   <label className="form-label">Insumos que Consume</label>
                   <input className="form-control" value={formData.Insumos} onChange={e => setFormData({...formData, Insumos: e.target.value})} placeholder="Ej: Baterías 9V, papel térmico..." />
                 </div>
+              </div>
+
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Fotografía del Activo (Opcional)</label>
+                {equipo.Foto_Equipo && !photoFile && (
+                  <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--snow-1)', borderRadius: 10, border: '1px solid var(--snow-3)' }}>
+                    <img src={equipo.Foto_Equipo} alt="Foto actual" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>Foto actual cargada</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Sube una nueva foto abajo si deseas reemplazarla</div>
+                    </div>
+                  </div>
+                )}
+                {photoFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--snow-1)', border: '1px solid var(--cyan)', borderRadius: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{photoFile.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar Foto</button>
+                  </div>
+                ) : (
+                  <label 
+                    style={{ 
+                      border: '2px dashed #cbd5e1', 
+                      borderRadius: 14, 
+                      padding: '24px 20px', 
+                      textAlign: 'center', 
+                      background: '#f8fafc', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: 8,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <span style={{ fontSize: 28 }}>📸</span>
+                    <div style={{ fontWeight: 600, color: 'var(--oxford-blue)', fontSize: 13 }}>
+                      Haz clic para subir o arrastra la nueva foto del equipo aquí
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                      onChange={e => e.target.files?.[0] && setPhotoFile(e.target.files[0])} 
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>

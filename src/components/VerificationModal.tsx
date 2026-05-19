@@ -194,6 +194,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const [selectedPatronId, setSelectedPatronId] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
 
   useEffect(() => {
     fetch('/api/patrones')
@@ -238,7 +239,18 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      if (r.ok) { onSaved() }
+      if (r.ok) { 
+        const d = await r.json()
+        if (photoFile && d.ID_Log) {
+          const formDataObj = new FormData()
+          formDataObj.append('file', photoFile)
+          formDataObj.append('assetId', d.ID_Log)
+          formDataObj.append('assetType', 'HISTORIAL')
+          formDataObj.append('uploadType', 'FOTO')
+          await fetch('/api/upload', { method: 'POST', body: formDataObj }).catch(err => console.error('Error subiendo foto:', err))
+        }
+        onSaved() 
+      }
       else { 
         const d = await r.json()
         setError(d.error ?? 'Error al guardar la verificación')
@@ -473,6 +485,47 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             <div className="form-group-modern" style={{ marginBottom: 0 }}>
               <label><FileText size={14} /> Comentarios / Observaciones</label>
               <textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Anotaciones generales del estado del equipo o condiciones ambientales..." rows={2} />
+            </div>
+
+            <div className="form-group-modern" style={{ marginTop: 20, marginBottom: 0 }}>
+              <label style={{ marginBottom: 4, display: 'block' }}>📸 Evidencia Fotográfica (Opcional)</label>
+              {photoFile ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f1f5f9', border: '1px solid #0ea5e9', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 36, height: 36, background: '#e0f2fe', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{photoFile.name}</span>
+                  </div>
+                  <button type="button" onClick={() => setPhotoFile(null)} style={{ background: '#fee2e2', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar</button>
+                </div>
+              ) : (
+                <label 
+                  style={{ 
+                    border: '2px dashed #cbd5e1', 
+                    borderRadius: 14, 
+                    padding: '20px', 
+                    textAlign: 'center', 
+                    background: '#f8fafc', 
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    gap: 8,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: 24 }}>📸</span>
+                  <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
+                    Haz clic para subir o arrastra la foto de evidencia aquí
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                    onChange={e => e.target.files?.[0] && setPhotoFile(e.target.files[0])} 
+                  />
+                </label>
+              )}
             </div>
           </div>
 

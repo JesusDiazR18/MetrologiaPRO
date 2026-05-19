@@ -46,6 +46,7 @@ interface Equipo {
   Proveedor_Servicio?: string | null
   Fecha_Vencimiento_Certificado?: string | null
   PDF_Certificado?: string | null
+  Foto_Equipo?: string | null
   historiales: {
     ID_Log: string
     Fecha_Ejecucion: string
@@ -53,6 +54,7 @@ interface Equipo {
     Resultado_Status: string
     Tecnico_Ejecutor: string
     Observaciones?: string | null
+    Evidencia_Foto?: string | null
   }[]
 }
 
@@ -76,6 +78,7 @@ function EquiposContent() {
   const [renewEquipo, setRenewEquipo] = useState<Equipo | null>(null)
   const [qrLabelEquipo, setQrLabelEquipo] = useState<Equipo | null>(null)
   const [modalHistorical, setModalHistorical] = useState<Equipo | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   const load = useCallback(async (query = '', tipoF = '') => {
@@ -454,6 +457,18 @@ function EquiposContent() {
                                       <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{e.Insumos}</span>
                                     </div>
                                   )}
+                                  {e.Foto_Equipo && (
+                                    <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <span className="spec-label" style={{ display: 'block', marginBottom: 8, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Foto del Equipo</span>
+                                      <img 
+                                        src={e.Foto_Equipo} 
+                                        alt={e.Nombre_Equipo} 
+                                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                                        onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(e.Foto_Equipo || null) }}
+                                        title="Clic para ampliar foto"
+                                      />
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
@@ -511,6 +526,7 @@ function EquiposContent() {
                                       <th>Resultado</th>
                                       <th>Técnico</th>
                                       <th>Observaciones</th>
+                                      <th style={{ textAlign: 'center' }}>Evidencia</th>
                                       <th style={{ textAlign: 'center' }}>Acción</th>
                                     </tr>
                                   </thead>
@@ -527,6 +543,20 @@ function EquiposContent() {
                                         <td>{h.Tecnico_Ejecutor}</td>
                                         <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 200, whiteSpace: 'normal' }}>{h.Observaciones || '—'}</td>
                                         <td style={{ textAlign: 'center' }}>
+                                          {h.Evidencia_Foto ? (
+                                            <button 
+                                              className="btn btn-ghost btn-xs"
+                                              style={{ color: 'var(--accent)', border: '1px solid var(--accent-dim)', padding: '4px 8px', fontSize: 11, borderRadius: 6 }}
+                                              onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(h.Evidencia_Foto ?? null) }}
+                                              title="Ver Evidencia Fotográfica"
+                                            >
+                                              📸 Ver Foto
+                                            </button>
+                                          ) : (
+                                            <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>—</span>
+                                          )}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
                                           <button 
                                             className="btn btn-ghost btn-xs" 
                                             style={{ color: 'var(--danger)', padding: '4px' }}
@@ -540,7 +570,7 @@ function EquiposContent() {
                                     ))}
                                     {e.historiales.length === 0 && (
                                       <tr>
-                                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
+                                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
                                           No hay verificaciones registradas para este activo.
                                         </td>
                                       </tr>
@@ -565,8 +595,10 @@ function EquiposContent() {
         .spec-row {
           display: flex;
           justify-content: space-between;
+          align-items: flex-start;
           padding: 8px 0;
           border-bottom: 1px solid rgba(255,255,255,0.03);
+          gap: 16px;
         }
         .spec-row:last-child {
           border-bottom: none;
@@ -574,11 +606,16 @@ function EquiposContent() {
         .spec-label {
           font-size: 12px;
           color: var(--text-dim);
+          flex-shrink: 0;
+          min-width: 100px;
         }
         .spec-value {
           font-size: 12px;
           font-weight: 600;
           color: var(--text-main);
+          text-align: right;
+          word-break: break-word;
+          flex-grow: 1;
         }
         .btn-xs {
           font-size: 10px;
@@ -674,6 +711,16 @@ function EquiposContent() {
           }}
           onClose={() => setQrLabelEquipo(null)}
         />
+      )}
+      {selectedPhoto && (
+        <div className="modal-overlay" onClick={() => setSelectedPhoto(null)} style={{ zIndex: 4000, display: 'grid', placeItems: 'center', padding: 24, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)' }}>
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} onClick={ev => ev.stopPropagation()}>
+            <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
+              <button onClick={() => setSelectedPhoto(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', fontSize: 20, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>×</button>
+            </div>
+            <img src={selectedPhoto} alt="Evidencia ampliada" style={{ maxWidth: '100%', maxHeight: '85vh', display: 'block', objectFit: 'contain' }} />
+          </div>
+        </div>
       )}
     </div>
   )

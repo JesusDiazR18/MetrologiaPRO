@@ -63,6 +63,7 @@ model PatronReferencia {
   N_Certificado                 String?
   Proveedor_Laboratorio         String?
   PDF_Certificado               String?
+  Foto_Patron                   String?
   Estado_Vigencia               String                // VIGENTE | VENCIDO | SIN CERTIFICADO
   Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA
 
@@ -87,6 +88,7 @@ model HistorialVerificacion {
   Firma_Digital           String?
   Observaciones           String?
   PDF_Certificado_interno String?
+  Evidencia_Foto          String?
   Tipo_Verificacion       String?   @default("CALIBRACION") // OPERATIVIDAD | CALIBRACION
   Acciones_Pendientes     String?
   Estado_Seguimiento      String?                       // PENDIENTE | COMPLETADO | N/A

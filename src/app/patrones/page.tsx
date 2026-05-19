@@ -21,6 +21,7 @@ interface Patron {
   PDF_Certificado: string | null
   Estado_Vigencia: string
   Magnitud: string | null
+  Foto_Patron?: string | null
 }
 
 export default function PatronesPage() {
@@ -33,6 +34,7 @@ export default function PatronesPage() {
   const [renewPatron, setRenewPatron] = useState<Patron | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [qrLabelAsset, setQrLabelAsset] = useState<any | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
 
   useEffect(() => {
     loadPatrones()
@@ -305,6 +307,18 @@ export default function PatronesPage() {
                                 </div>
                               </div>
                             </div>
+                            {p.Foto_Patron && (
+                              <div style={{ marginTop: 8 }}>
+                                <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>Fotografía del Patrón</label>
+                                <img 
+                                  src={p.Foto_Patron} 
+                                  alt={p.Nombre_Patron} 
+                                  style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 12, border: '1px solid var(--snow-3)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'pointer' }} 
+                                  onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(p.Foto_Patron ?? null) }}
+                                  title="Clic para ampliar foto"
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -366,6 +380,16 @@ export default function PatronesPage() {
           }}
           onClose={() => setQrLabelAsset(null)}
         />
+      )}
+      {selectedPhoto && (
+        <div className="modal-overlay" onClick={() => setSelectedPhoto(null)} style={{ zIndex: 4000, display: 'grid', placeItems: 'center', padding: 24, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)' }}>
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} onClick={ev => ev.stopPropagation()}>
+            <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
+              <button onClick={() => setSelectedPhoto(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', fontSize: 20, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>×</button>
+            </div>
+            <img src={selectedPhoto} alt="Evidencia ampliada" style={{ maxWidth: '100%', maxHeight: '85vh', display: 'block', objectFit: 'contain' }} />
+          </div>
+        </div>
       )}
     </div>
   )
