@@ -1,39 +1,28 @@
-# Walkthrough: Control de Activos, Magnitudes Múltiples y Flujo Dual de Verificación QMS
+# Walkthrough: Rediseño Premium de Dashboard, Consolidación de API y Optimización de Velocidad
 
-## 1. Gestión de Especificaciones y Suministros
-Se incorporaron de manera nativa y robusta los campos de seguimiento logístico y metrológico para el inventario de activos.
-- **Campos Agregados**: `Accesorios` e `Insumos` en el esquema de base de datos (`InstrumentoEquipo`).
-- **Interfaz de Usuario**: Integrados en los modales de creación (`CreateEquipoModal.tsx`) y edición (`EditEquipoModal.tsx`), así como en la vista de especificaciones de la tarjeta desplegable en el catálogo general de equipos (`src/app/equipos/page.tsx`).
-
----
-
-## 2. Soporte Metrológico Multimagnitud
-Para dar soporte a equipos complejos (por ejemplo, Plastómetros / Melt Indexers que requieren control simultáneo de Masa, Temperatura y Tiempo), el sistema ahora gestiona magnitudes múltiples.
-- **Selección Múltiple Premium**: Se sustituyó el menú desplegable tradicional por un grupo interactivo de botones tipo "pills" en la interfaz. El usuario puede activar una o varias magnitudes físicas para un mismo activo.
-- **Compatibilidad de Calibración**: Al iniciar un control, el modal filtra los patrones de referencia disponibles asegurando que coincidan con al menos una de las magnitudes configuradas en el equipo.
+## 1. Rediseño Compacto del Dashboard (Stitch 2.0)
+Se reestructuró por completo el Panel de Control (`src/app/page.tsx`) para ofrecer una interfaz moderna, compacta y de alta densidad de información:
+- **Remoción de Encabezados Redundantes**: Se eliminó la sección `dashboard-header` (título de página y botones sueltos), ya que el layout global (`AppLayout.tsx`) proporciona el título y el botón de escaneo.
+- **KPI Ribbon (Barra Horizontal)**: Se reemplazaron las tarjetas extra grandes por una barra horizontal estilizada con efecto glassmorphism, reduciendo el espacio vertical un 70%. Cada métrica incluye indicadores visuales discretos (dots) y resúmenes descriptivos de las subcategorías.
+- **Botón de Reporte Ejecutivo Integrado**: El botón para generar el reporte general en PDF ahora se integra directamente en la cabecera del Explorador de Activos, consolidando las acciones en su contexto de uso.
 
 ---
 
-## 3. Flujo Dual de Verificación: Operatividad vs Calibración
-Se reestructuró por completo la experiencia de control técnico en `VerificationModal.tsx` introduciendo dos modalidades especializadas seleccionables desde pestañas superiores en el modal:
-
-### Modalidad 1: Inspección de Operatividad
-Diseñada para revisiones rutinarias de estado funcional directo sin toma de lecturas numéricas.
-- **Controles**: Permite registrar el estado de aptitud (`OPERATIVO` o `ACCION_PENDIENTE`), comentarios generales y la descripción detallada de **Acciones Pendientes por realizar**.
-- **Seguimiento Automático**: Al ingresar un texto en acciones pendientes, la API etiqueta automáticamente el evento en estado de seguimiento activo para futuras auditorías.
-
-### Modalidad 2: Calibración Metrológica
-El flujo clásico de toma de muestras cuantitativas.
-- **Controles**: Selección de patrón de referencia, ingreso de medida del patrón, medida del instrumento y cálculo instantáneo de la desviación y tolerancia con representación gráfica en barra de progreso.
+## 2. Distribución Interactiva y Donut Moderno
+Se actualizó la visualización gráfica para hacerla más intuitiva y compacta:
+- **Donut Chart con Métricas Centrales**: El gráfico circular ahora es un Donut chart de trazo fino con el porcentaje de **Conformidad / Vigencia Global** (`complianceGlobal%`) incrustado directamente en el centro.
+- **Filtrado Interactivo**: Al hacer clic en cualquiera de las secciones del Donut (Al día, Advertencia, Crítico) o en su leyenda, la lista del Explorador de Activos se filtra instantáneamente para mostrar solo los elementos correspondientes a ese estado metrológico.
 
 ---
 
-## 4. Corrección Ergonómica de Modales
-Se optimizó la arquitectura CSS y de maquetación en el modal de verificación.
-- **Solución de Desbordamiento**: Configurado con contenedor `flex` vertical, altura máxima controlada a `92vh` y cuerpo con `overflow-y: auto`.
-- **Accesibilidad**: El pie de página con el botón de guardar permanece anclado en la parte inferior, asegurando visibilidad total en cualquier resolución o dispositivo móvil.
+## 3. Consolidación de API y Optimización de Rendimiento
+Para acelerar la carga de la aplicación y reducir el consumo de recursos de la base de datos PostgreSQL en Vercel:
+- **Endpoint Estadístico Consolidado**: Se modificó `/api/estadisticas` para retornar las listas completas de `equipos` y `patrones` (incluyendo sus últimos registros históricos) además de los reportes calculados.
+- **Reducción de Peticiones Concurrentes**: El Dashboard ahora realiza una **única petición de red** en lugar de tres peticiones paralelas en el montaje inicial del componente. Esto reduce la latencia de red en clientes lentos y previene la saturación de conexiones Prisma en entornos serverless.
 
 ---
 
-## 5. Verificación de Compilación
-El proyecto fue sometido a la compilación estricta de Next.js y TypeScript (`npm run build`), completando el proceso exitosamente en 21.7s con cero advertencias o errores.
+## 4. Despliegue y Sincronización Automática
+- **Integración con Vercel**: Se confirmaron los cambios en Git y se empujaron a la rama `main` de GitHub (`origin/main`) para disparar el despliegue automático del proyecto en Vercel.
+- **Verificación de Compilación**: Se ejecutó localmente el comando `npm run build` confirmando que el proyecto compila al 100% sin errores de tipado o empaquetado.
+
