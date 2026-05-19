@@ -72,6 +72,36 @@ function hasValue(val: any): boolean {
 }
 
 /**
+ * Asigna color de texto al estado del activo según la norma metrológica.
+ */
+function getStatusColor(valStr: string): [number, number, number] {
+  const s = valStr.toLowerCase();
+  if (
+    s.includes('vencido') || 
+    s.includes('critico') || 
+    s.includes('crítico') ||
+    s.includes('baja') || 
+    s.includes('obsoleto') || 
+    s.includes('no apto') || 
+    s.includes('fuera de servicio') || 
+    s.includes('inoperativo') || 
+    s.includes('dañado') ||
+    s.includes('rojo')
+  ) {
+    return [239, 68, 68]; // Rojo (Peligro/No Operativo)
+  }
+  if (
+    s.includes('detalles') || 
+    s.includes('mantenimiento') || 
+    s.includes('pendiente') || 
+    s.includes('amarillo')
+  ) {
+    return [245, 158, 11]; // Amarillo / Naranja (Advertencia)
+  }
+  return [16, 185, 129]; // Verde (Operativo)
+}
+
+/**
  * Renderiza un encabezado de sección con estilo premium (Fondo oscuro y acento lateral).
  */
 function renderSectionTitle(doc: jsPDF, title: string, yPos: number, accentColor: [number, number, number] = [0, 229, 255]): number {
@@ -82,9 +112,9 @@ function renderSectionTitle(doc: jsPDF, title: string, yPos: number, accentColor
   
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.text(title.toUpperCase(), 23, yPos + 5.5);
-  return yPos + 12;
+  return yPos + 11;
 }
 
 /**
@@ -133,13 +163,8 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
       doc.setFont('helvetica', 'normal');
       if (item.isStatus) {
         doc.setFont('helvetica', 'bold');
-        if (valStr.toLowerCase().includes('vencido') || valStr.toLowerCase().includes('crítico') || valStr.toLowerCase().includes('baja') || valStr.toLowerCase().includes('no apto')) {
-          doc.setTextColor(239, 68, 68);
-        } else if (valStr.toLowerCase().includes('detalles') || valStr.toLowerCase().includes('mantenimiento')) {
-          doc.setTextColor(245, 158, 11);
-        } else {
-          doc.setTextColor(16, 185, 129);
-        }
+        const color = getStatusColor(valStr);
+        doc.setTextColor(color[0], color[1], color[2]);
       } else {
         doc.setTextColor(15, 23, 42);
       }
@@ -182,13 +207,8 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
         doc.setFont('helvetica', 'normal');
         if (item.isStatus) {
           doc.setFont('helvetica', 'bold');
-          if (valStr.toLowerCase().includes('vencido') || valStr.toLowerCase().includes('crítico') || valStr.toLowerCase().includes('baja') || valStr.toLowerCase().includes('no apto')) {
-            doc.setTextColor(239, 68, 68);
-          } else if (valStr.toLowerCase().includes('detalles') || valStr.toLowerCase().includes('mantenimiento')) {
-            doc.setTextColor(245, 158, 11);
-          } else {
-            doc.setTextColor(16, 185, 129);
-          }
+          const color = getStatusColor(valStr);
+          doc.setTextColor(color[0], color[1], color[2]);
         } else {
           doc.setTextColor(15, 23, 42);
         }
@@ -210,13 +230,8 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
         doc.setFont('helvetica', 'normal');
         if (nextItem.isStatus) {
           doc.setFont('helvetica', 'bold');
-          if (nextValStr.toLowerCase().includes('vencido') || nextValStr.toLowerCase().includes('crítico') || nextValStr.toLowerCase().includes('baja') || nextValStr.toLowerCase().includes('no apto')) {
-            doc.setTextColor(239, 68, 68);
-          } else if (nextValStr.toLowerCase().includes('detalles') || nextValStr.toLowerCase().includes('mantenimiento')) {
-            doc.setTextColor(245, 158, 11);
-          } else {
-            doc.setTextColor(16, 185, 129);
-          }
+          const color = getStatusColor(nextValStr);
+          doc.setTextColor(color[0], color[1], color[2]);
         } else {
           doc.setTextColor(15, 23, 42);
         }
@@ -249,13 +264,8 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
         doc.setFont('helvetica', 'normal');
         if (item.isStatus) {
           doc.setFont('helvetica', 'bold');
-          if (valStr.toLowerCase().includes('vencido') || valStr.toLowerCase().includes('crítico') || valStr.toLowerCase().includes('baja') || valStr.toLowerCase().includes('no apto')) {
-            doc.setTextColor(239, 68, 68);
-          } else if (valStr.toLowerCase().includes('detalles') || valStr.toLowerCase().includes('mantenimiento')) {
-            doc.setTextColor(245, 158, 11);
-          } else {
-            doc.setTextColor(16, 185, 129);
-          }
+          const color = getStatusColor(valStr);
+          doc.setTextColor(color[0], color[1], color[2]);
         } else {
           doc.setTextColor(15, 23, 42);
         }
@@ -298,17 +308,23 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     console.error("Error generando QR:", e);
   }
 
-  // --- Encabezado Premium ---
-  doc.setFillColor(15, 23, 42); // Navy premium oscuro
-  doc.rect(0, 0, pageWidth, 42, 'F');
-  doc.setFillColor(0, 229, 255); // Franja inferior cyan
-  doc.rect(0, 42, pageWidth, 1.5, 'F');
+  // --- Encabezado Tipo Ficha ISO 9001 ---
+  doc.setDrawColor(30, 41, 59); // Slate 800
+  doc.setLineWidth(0.4);
+  doc.line(16, 15, 194, 15); // Top
+  doc.line(16, 41, 194, 41); // Bottom
+  doc.line(16, 15, 16, 41);  // Left
+  doc.line(194, 15, 194, 41); // Right
   
-  let titleStartX = 16;
+  // Líneas divisorias verticales
+  doc.line(60, 15, 60, 41);
+  doc.line(148, 15, 148, 41);
+  
+  // Celda Izquierda: Logo de la Empresa
   if (logoBase64) {
     try {
-      const maxLogoW = 36;
-      const maxLogoH = 26;
+      const maxLogoW = 34;
+      const maxLogoH = 20;
       const aspect = logoBase64.width / logoBase64.height;
       let logoW = maxLogoW;
       let logoH = maxLogoW / aspect;
@@ -316,39 +332,63 @@ export async function generateTechnicalSheetPDF(equipo: any) {
         logoH = maxLogoH;
         logoW = maxLogoH * aspect;
       }
-      const logoY = (42 - logoH) / 2;
-      doc.addImage(logoBase64.data, logoBase64.format, 16, logoY, logoW, logoH);
-      titleStartX = 16 + logoW + 6;
+      const logoX = 16 + (44 - logoW) / 2;
+      const logoY = 15 + (26 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error("Error dibujando logo:", e);
     }
   }
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('FICHA TÉCNICA DE ACTIVO', titleStartX, 21);
   
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(203, 213, 225); // Slate 300
-  doc.text('SISTEMA INTEGRAL DE GESTIÓN QMS PRO · METROLOGÍA INDUSTRIAL', titleStartX, 28);
-
-  // Cuadro derecho del encabezado
+  // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(0, 229, 255);
-  doc.text(`ID: ${equipo.Codigo_Interno}`, 194, 21, { align: 'right' });
+  doc.setFontSize(13);
+  doc.setTextColor(15, 23, 42); // slate-900
+  doc.text('FICHA TÉCNICA DE ACTIVO', 104, 23, { align: 'center' });
+  
+  doc.line(60, 27, 148, 27); // Divisor horizontal
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`Emisión: ${formatFecha(new Date().toISOString())}`, 194, 28, { align: 'right' });
+  doc.setTextColor(71, 85, 105); // slate-600
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 104, 34, { align: 'center' });
+  
+  // Celda Derecha: Metadatos
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text('ISO 9001:2015 Compliant', 194, 33, { align: 'right' });
+  doc.setTextColor(71, 85, 105);
+  doc.text('CÓDIGO:', 152, 21);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(equipo.Codigo_Interno, 190, 21, { align: 'right' });
+  
+  doc.line(148, 24, 194, 24);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('EMISIÓN:', 152, 29);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatFecha(new Date().toISOString()), 190, 29, { align: 'right' });
+  
+  doc.line(148, 32, 194, 32);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('REVISIÓN:', 152, 37);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text('01', 190, 37, { align: 'right' });
 
-  let currY = 52;
+  let currY = 48;
+
+  // --- Limpieza y formateo de Magnitud ---
+  const cleanMagnitud = equipo.Magnitud
+    ? equipo.Magnitud.split(',').map((m: string) => {
+        const trimmed = m.trim();
+        return trimmed === 'OTRA' ? 'OTRA (Sin especificar)' : trimmed;
+      }).join(', ')
+    : null;
 
   // --- 1. DATOS GENERALES E IDENTIFICACIÓN ---
   const rawIdentItems = [
@@ -359,7 +399,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     { label: 'Número Serie:', value: equipo.Serie },
     { label: 'Rango Medida:', value: equipo.Rango_Medida },
     { label: 'Resolución:', value: equipo.Resolucion },
-    { label: 'Magnitud:', value: equipo.Magnitud },
+    { label: 'Magnitud:', value: cleanMagnitud },
     { label: 'Ubicación / Área:', value: equipo.Area_Asignada },
     { label: 'Responsable:', value: equipo.Responsable }
   ];
@@ -488,11 +528,8 @@ export async function generateTechnicalSheetPDF(equipo: any) {
       doc.text(h.Tecnico_Ejecutor.substring(0, 24), margin + 32, currY + 5.5);
       doc.text(h.Variacion_Calculada?.toFixed(4) || '—', margin + 85, currY + 5.5);
 
-      if (h.Resultado_Status === 'APTO') {
-        doc.setTextColor(16, 185, 129);
-      } else {
-        doc.setTextColor(239, 68, 68);
-      }
+      const colorStatus = getStatusColor(h.Resultado_Status);
+      doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
       doc.text(h.Resultado_Status, margin + 112, currY + 5.5);
 
@@ -513,7 +550,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.setFont('helvetica', 'normal');
-    doc.text('Sistema Integral de Gestión QMS Pro · Documento de Control Metrológico Oficial', margin, 287);
+    doc.text('Sistema de Control Metrológico · Documento de Control Metrológico Oficial', margin, 287);
     doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 287, { align: 'right' });
   }
 
@@ -545,17 +582,23 @@ export async function generatePatronSheetPDF(patron: any) {
     console.error(e);
   }
 
-  // Encabezado Púrpura Premium
-  doc.setFillColor(88, 28, 135); // Deep Purple 900
-  doc.rect(0, 0, pageWidth, 42, 'F');
-  doc.setFillColor(192, 132, 252); // Franja inferior lila
-  doc.rect(0, 42, pageWidth, 1.5, 'F');
+  // --- Encabezado Tipo Ficha ISO 9001 (Púrpura) ---
+  doc.setDrawColor(88, 28, 135); // Purple 900
+  doc.setLineWidth(0.4);
+  doc.line(16, 15, 194, 15); // Top
+  doc.line(16, 41, 194, 41); // Bottom
+  doc.line(16, 15, 16, 41);  // Left
+  doc.line(194, 15, 194, 41); // Right
   
-  let titleStartX = 16;
+  // Líneas divisorias verticales
+  doc.line(60, 15, 60, 41);
+  doc.line(148, 15, 148, 41);
+  
+  // Celda Izquierda: Logo
   if (logoBase64) {
     try {
-      const maxLogoW = 36;
-      const maxLogoH = 26;
+      const maxLogoW = 34;
+      const maxLogoH = 20;
       const aspect = logoBase64.width / logoBase64.height;
       let logoW = maxLogoW;
       let logoH = maxLogoW / aspect;
@@ -563,41 +606,69 @@ export async function generatePatronSheetPDF(patron: any) {
         logoH = maxLogoH;
         logoW = maxLogoH * aspect;
       }
-      const logoY = (42 - logoH) / 2;
-      doc.addImage(logoBase64.data, logoBase64.format, 16, logoY, logoW, logoH);
-      titleStartX = 16 + logoW + 6;
-    } catch(e) {}
+      const logoX = 16 + (44 - logoW) / 2;
+      const logoY = 15 + (26 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
+    } catch(e) {
+      console.error(e);
+    }
   }
-
-  doc.setTextColor(255, 255, 255);
+  
+  // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('CERTIFICADO DE PATRÓN', titleStartX, 21);
+  doc.setFontSize(13);
+  doc.setTextColor(88, 28, 135); // Deep Purple
+  doc.text('CERTIFICADO DE PATRÓN', 104, 23, { align: 'center' });
+  
+  doc.line(60, 27, 148, 27); // Divisor horizontal
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(233, 213, 255);
-  doc.text('QMS PRO · CONTROL DE PATRONES DE REFERENCIA Y ESTÁNDARES', titleStartX, 28);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(192, 132, 252);
-  doc.text(`ID: ${patron.Codigo}`, 194, 21, { align: 'right' });
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`Emisión: ${formatFecha(new Date().toISOString())}`, 194, 28, { align: 'right' });
+  doc.setTextColor(107, 114, 128); // gray-500
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 104, 34, { align: 'center' });
+  
+  // Celda Derecha: Metadatos
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(216, 180, 254);
-  doc.text('Estándar de Referencia Trazable', 194, 33, { align: 'right' });
+  doc.setTextColor(88, 28, 135);
+  doc.text('CÓDIGO:', 152, 21);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(patron.Codigo, 190, 21, { align: 'right' });
+  
+  doc.line(148, 24, 194, 24);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(88, 28, 135);
+  doc.text('EMISIÓN:', 152, 29);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatFecha(new Date().toISOString()), 190, 29, { align: 'right' });
+  
+  doc.line(148, 32, 194, 32);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(88, 28, 135);
+  doc.text('REVISIÓN:', 152, 37);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text('01', 190, 37, { align: 'right' });
 
-  let currY = 52;
+  let currY = 48;
+
+  // --- Limpieza y formateo de Magnitud ---
+  const cleanMagnitud = patron.Magnitud
+    ? patron.Magnitud.split(',').map((m: string) => {
+        const trimmed = m.trim();
+        return trimmed === 'OTRA' ? 'OTRA (Sin especificar)' : trimmed;
+      }).join(', ')
+    : null;
 
   // --- 1. INFORMACIÓN DEL PATRÓN ---
   const rawPItems = [
     { label: 'Nombre Patrón:', value: patron.Nombre_Patron, isNameField: true },
     { label: 'Código Interno:', value: patron.Codigo },
-    { label: 'Magnitud:', value: patron.Magnitud },
+    { label: 'Magnitud:', value: cleanMagnitud },
     { label: 'Laboratorio Calib.:', value: patron.Proveedor_Laboratorio },
     { label: 'N° Certificado:', value: patron.N_Certificado },
     { label: 'Fecha Calibración:', value: formatFecha(patron.Fecha_Calibracion_Externa) },
@@ -689,11 +760,8 @@ export async function generatePatronSheetPDF(patron: any) {
       doc.text(formatFecha(h.Fecha_Ejecucion), margin + 4, currY + 5.5);
       doc.text(h.equipo?.Nombre_Equipo?.substring(0, 50) || 'Equipo no vinculado', margin + 35, currY + 5.5);
 
-      if (h.Resultado_Status === 'APTO') {
-        doc.setTextColor(16, 185, 129);
-      } else {
-        doc.setTextColor(239, 68, 68);
-      }
+      const colorStatus = getStatusColor(h.Resultado_Status);
+      doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
       doc.text(h.Resultado_Status, margin + 135, currY + 5.5);
 
@@ -710,7 +778,7 @@ export async function generatePatronSheetPDF(patron: any) {
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.setFont('helvetica', 'normal');
-    doc.text('QMS Pro Metrology · Estándar de Referencia Oficial', margin, 287);
+    doc.text('Sistema de Control Metrológico · Estándar de Referencia Oficial', margin, 287);
     doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 287, { align: 'right' });
   }
 
@@ -733,17 +801,23 @@ export async function generateExecutiveSummaryPDF(stats: any) {
 
   const logoBase64 = await getBase64FromUrl('/logo.png');
 
-  // Header Azul Corporativo
-  doc.setFillColor(30, 64, 175); // Blue 800
-  doc.rect(0, 0, pageWidth, 42, 'F');
-  doc.setFillColor(96, 165, 250); // Franja inferior azul clara
-  doc.rect(0, 42, pageWidth, 1.5, 'F');
+  // --- Encabezado Tipo Ficha ISO 9001 (Azul) ---
+  doc.setDrawColor(30, 64, 175); // Blue 800
+  doc.setLineWidth(0.4);
+  doc.line(16, 15, 194, 15); // Top
+  doc.line(16, 41, 194, 41); // Bottom
+  doc.line(16, 15, 16, 41);  // Left
+  doc.line(194, 15, 194, 41); // Right
   
-  let titleStartX = 16;
+  // Líneas divisorias verticales
+  doc.line(60, 15, 60, 41);
+  doc.line(148, 15, 148, 41);
+  
+  // Celda Izquierda: Logo
   if (logoBase64) {
     try {
-      const maxLogoW = 36;
-      const maxLogoH = 26;
+      const maxLogoW = 34;
+      const maxLogoH = 20;
       const aspect = logoBase64.width / logoBase64.height;
       let logoW = maxLogoW;
       let logoH = maxLogoW / aspect;
@@ -751,32 +825,55 @@ export async function generateExecutiveSummaryPDF(stats: any) {
         logoH = maxLogoH;
         logoW = maxLogoH * aspect;
       }
-      const logoY = (42 - logoH) / 2;
-      doc.addImage(logoBase64.data, logoBase64.format, 16, logoY, logoW, logoH);
-      titleStartX = 16 + logoW + 6;
-    } catch(e) {}
+      const logoX = 16 + (44 - logoW) / 2;
+      const logoY = 15 + (26 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
+    } catch(e) {
+      console.error(e);
+    }
   }
-
-  doc.setTextColor(255, 255, 255);
+  
+  // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text('REPORTE EJECUTIVO METROLÓGICO', titleStartX, 21);
+  doc.setFontSize(13);
+  doc.setTextColor(30, 64, 175); // corporate-blue
+  doc.text('REPORTE EJECUTIVO METROLÓGICO', 104, 23, { align: 'center' });
+  
+  doc.line(60, 27, 148, 27); // Divisor horizontal
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(219, 234, 254);
-  doc.text('SISTEMA INTEGRAL DE GESTIÓN DE CALIDAD Y METROLOGÍA INDUSTRIAL', titleStartX, 28);
-
+  doc.setTextColor(71, 85, 105); // slate-600
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 104, 34, { align: 'center' });
+  
+  // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(96, 165, 250);
-  doc.text(new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase(), 194, 21, { align: 'right' });
+  doc.setFontSize(8);
+  doc.setTextColor(30, 64, 175);
+  doc.text('PERIODO:', 152, 21);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`Emisión: ${formatFecha(new Date().toISOString())}`, 194, 28, { align: 'right' });
+  doc.setTextColor(15, 23, 42);
+  doc.text(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase(), 190, 21, { align: 'right' });
+  
+  doc.line(148, 24, 194, 24);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 64, 175);
+  doc.text('EMISIÓN:', 152, 29);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatFecha(new Date().toISOString()), 190, 29, { align: 'right' });
+  
+  doc.line(148, 32, 194, 32);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 64, 175);
+  doc.text('TIPO:', 152, 37);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text('DIAGNÓSTICO', 190, 37, { align: 'right' });
 
-  let currY = 52;
+  let currY = 48;
 
   currY = renderSectionTitle(doc, '1. Resumen Global de Indicadores (KPIs)', currY, [59, 130, 246]);
 
@@ -801,7 +898,8 @@ export async function generateExecutiveSummaryPDF(stats: any) {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(kpi.label.includes('Verde') ? '#10b981' : kpi.label.includes('Amarillo') ? '#f59e0b' : kpi.label.includes('Rojo') ? '#ef4444' : '#1e40af');
+    const color = getStatusColor(kpi.label);
+    doc.setTextColor(color[0], color[1], color[2]);
     doc.text(String(kpi.value), margin + printableWidth - 6, currY + 6, { align: 'right' });
     currY += 11;
   });
@@ -847,7 +945,7 @@ export async function generateExecutiveSummaryPDF(stats: any) {
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.setFont('helvetica', 'normal');
-    doc.text('QMS Pro Executive Management Suite · Reporte de Dirección', margin, 287);
+    doc.text('Sistema de Control Metrológico · Reporte de Dirección', margin, 287);
     doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 287, { align: 'right' });
   }
 
