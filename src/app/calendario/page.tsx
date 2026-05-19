@@ -299,7 +299,7 @@ export default function CalendarioPage() {
                         return (
                           <Link 
                             key={e.ID_Equipo} 
-                            href={`/equipos?q=${encodeURIComponent(e.Codigo_Interno)}`}
+                            href={`/equipos?q=${encodeURIComponent(e.ID_Equipo)}`}
                             style={{ textDecoration: 'none', display: 'block' }}
                           >
                             <div style={{ 
@@ -328,7 +328,7 @@ export default function CalendarioPage() {
                                   <h4 style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{e.Nombre_Equipo}</h4>
                                   <span style={{ fontSize: 9, fontWeight: 800, color: semaforoHex(s) }}>{diasRestantes(e.Fecha_Proximo_Control)}</span>
                                 </div>
-                                <p style={{ fontSize: 11, color: '#64748b' }}>ID: {e.Codigo_Interno}</p>
+                                <p style={{ fontSize: 11, color: '#64748b' }}>ID: {e.ID_Equipo}</p>
                               </div>
                               <ChevronRight size={14} color="#cbd5e1" />
                             </div>

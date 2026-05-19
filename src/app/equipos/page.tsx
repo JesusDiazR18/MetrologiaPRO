@@ -95,7 +95,10 @@ function EquiposContent() {
         if (query && data.length === 1) {
           setExpanded(data[0].ID_Equipo)
         } else if (query) {
-          const exact = data.find((e: Equipo) => e.Codigo_Interno.toLowerCase() === query.toLowerCase())
+          const exact = data.find((e: Equipo) => 
+            e.Codigo_Interno.toLowerCase() === query.toLowerCase() ||
+            e.ID_Equipo.toLowerCase() === query.toLowerCase()
+          )
           if (exact) setExpanded(exact.ID_Equipo)
         }
       } else {
@@ -305,7 +308,7 @@ function EquiposContent() {
                             background: 'rgba(0, 229, 255, 0.05)',
                             padding: '4px 8px',
                             borderRadius: '4px'
-                          }}>{e.Codigo_Interno}</span>
+                          }}>{e.ID_Equipo}</span>
                         </td>
                         <td className="mobile-card-title">
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -318,7 +321,7 @@ function EquiposContent() {
                             )}
                           </div>
                           <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
-                          <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{e.Codigo_Interno} · {e.Area_Asignada ?? 'Sin área'}</div>
+                          <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{e.ID_Equipo} · {e.Area_Asignada ?? 'Sin área'}</div>
                         </td>
                         <td className="desktop-only">
                           <div style={{ fontSize: 13, fontWeight: 500 }}>{e.Responsable ?? '—'}</div>
@@ -393,7 +396,7 @@ function EquiposContent() {
                                 >
                                   <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
                                     <QRCodeSVG
-                                      value={getScanUrl(e.Codigo_Interno)}
+                                      value={getScanUrl(e.ID_Equipo)}
                                       size={84}
                                       bgColor="#ffffff"
                                       fgColor="#0f172a"
@@ -693,7 +696,7 @@ function EquiposContent() {
           equipo={{
             ID_Equipo: modalHistorical.ID_Equipo,
             Nombre_Equipo: modalHistorical.Nombre_Equipo,
-            Codigo_Interno: modalHistorical.Codigo_Interno
+            Codigo_Interno: modalHistorical.ID_Equipo
           }}
           onClose={() => setModalHistorical(null)}
           onSaved={() => { setModalHistorical(null); load(q, tipo) }}
@@ -703,7 +706,7 @@ function EquiposContent() {
         <QRLabelModal
           asset={{
             id: qrLabelEquipo.ID_Equipo,
-            code: qrLabelEquipo.Codigo_Interno,
+            code: qrLabelEquipo.ID_Equipo,
             name: qrLabelEquipo.Nombre_Equipo,
             status: qrLabelEquipo.Estado,
             statusLabel: semaforoLabel(calcularSemaforo(qrLabelEquipo.Fecha_Proximo_Control, qrLabelEquipo.Estado), qrLabelEquipo.Estado),

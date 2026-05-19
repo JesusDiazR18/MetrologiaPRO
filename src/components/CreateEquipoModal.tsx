@@ -77,8 +77,8 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
-    if (!formData.ID_Equipo || !formData.Nombre_Equipo || !formData.Codigo_Interno) {
-      setError('ID, Nombre y Código son obligatorios')
+    if (!formData.ID_Equipo || !formData.Nombre_Equipo) {
+      setError('ID y Nombre son obligatorios')
       return
     }
     setSaving(true)
@@ -91,6 +91,7 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
 
       const payload = {
         ...formData,
+        Codigo_Interno: formData.ID_Equipo.trim(),
         Magnitud: finalMagnitud.join(', '),
         Tolerancia_Aceptable: parseFloat(formData.Tolerancia_Aceptable) || 0,
         Periodicidad_Meses: parseInt(formData.Periodicidad_Meses) || 12,
@@ -236,21 +237,7 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
               </div>
 
               <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Código Interno (QR) *</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      className="form-control" 
-                      value={formData.Codigo_Interno} 
-                      onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})}
-                      required
-                    />
-                    <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 4, fontWeight: 700 }}>
-                      ✨ CÓDIGO QR GENERADO
-                    </div>
-                  </div>
-                </div>
-                <div className="form-group">
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label className="form-label">Área Asignada</label>
                   <input 
                     className="form-control" 

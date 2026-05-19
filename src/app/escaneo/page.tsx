@@ -57,7 +57,7 @@ function EscaneoContent() {
         const normalized: PrintableAsset[] = [
           ...resEquipos.map((e: any) => ({
             id: e.ID_Equipo,
-            codigo: e.Codigo_Interno,
+            codigo: e.ID_Equipo,
             nombre: e.Nombre_Equipo,
             tipo: 'EQUIPO/INSTRUMENTO',
             subtipo: e.Tipo,

@@ -65,8 +65,8 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
-    if (!formData.Nombre_Equipo || !formData.Codigo_Interno) {
-      setError('Nombre y Código son obligatorios')
+    if (!formData.Nombre_Equipo) {
+      setError('Nombre es obligatorio')
       return
     }
     setSaving(true)
@@ -79,6 +79,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
 
       const payload = {
         ...formData,
+        Codigo_Interno: equipo.ID_Equipo,
         Magnitud: finalMagnitud.join(', '),
         Tolerancia_Aceptable: parseFloat(String(formData.Tolerancia_Aceptable)) || 0,
         Periodicidad_Meses: parseInt(String(formData.Periodicidad_Meses)) || 12,
@@ -144,11 +145,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                 </div>
               </div>
               <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Código Interno (QR) *</label>
-                  <input className="form-control" value={formData.Codigo_Interno} onChange={e => setFormData({...formData, Codigo_Interno: e.target.value})} required />
-                </div>
-                <div className="form-group">
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label className="form-label">Área Asignada</label>
                   <input className="form-control" value={formData.Area_Asignada} onChange={e => setFormData({...formData, Area_Asignada: e.target.value})} />
                 </div>
