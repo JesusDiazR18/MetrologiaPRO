@@ -7,9 +7,26 @@ export async function GET() {
     // Sincronización robusta: Verificar integridad antes de proceder
     await prisma.$queryRaw`SELECT 1`
 
+    // Consulta consolidada y optimizada
     const [equipos, patrones, historiales] = await Promise.all([
-      prisma.instrumentoEquipo.findMany(),
-      prisma.patronReferencia.findMany(),
+      prisma.instrumentoEquipo.findMany({
+        include: {
+          historiales: {
+            orderBy: { Fecha_Ejecucion: 'desc' },
+            take: 5,
+          }
+        },
+        orderBy: { Codigo_Interno: 'asc' }
+      }),
+      prisma.patronReferencia.findMany({
+        include: {
+          historiales: {
+            orderBy: { Fecha_Ejecucion: 'desc' },
+            take: 5,
+          }
+        },
+        orderBy: { ID_Patron: 'asc' }
+      }),
       prisma.historialVerificacion.findMany({
         orderBy: { Fecha_Ejecucion: 'desc' },
         take: 15,
@@ -26,10 +43,9 @@ export async function GET() {
     const alertasCriticas = equipos
       .filter(e => (calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'ROJO') || e.Estado === 'NO_APTO')
       .sort((a, b) => {
-        // Priorizar vencidos (Rojo) sobre No Aptos
         return new Date(a.Fecha_Proximo_Control || 0).getTime() - new Date(b.Fecha_Proximo_Control || 0).getTime()
       })
-      .slice(0, 5) // Mostramos solo las 5 más urgentes para no saturar el Dashboard
+      .slice(0, 5)
       .map(e => ({
         id: e.ID_Equipo,
         codigo: e.Codigo_Interno,
@@ -43,11 +59,27 @@ export async function GET() {
       { name: 'Instrumentos', value: equipos.filter(e => e.Tipo === 'INSTRUMENTO').length },
     ]
 
+    // Normalizar estado de vigencia para patrones
+    const processedPatrones = patrones.map(p => {
+      let estado = p.Estado_Vigencia
+      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '') {
+        estado = 'SIN CERTIFICADO'
+      } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
+        estado = 'VENCIDO'
+      }
+      return {
+        ...p,
+        Estado_Vigencia: estado
+      }
+    })
+
     return NextResponse.json({
       ...report,
       equiposByTipo,
       alertasCriticas,
       ultimasVerificaciones: historiales,
+      equipos,
+      patrones: processedPatrones,
       // Retrocompatibilidad con UI actual
       porciento: report.pctApto,
       alDia: report.alDia,
@@ -62,3 +94,4 @@ export async function GET() {
     }, { status: 500 })
   }
 }
+

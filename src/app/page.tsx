@@ -53,7 +53,7 @@ export default function DashboardPage() {
   // Filtros locales
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
-  const [tipoFilter, setTipoFilter] = useState<string | null>(null) // null, 'EQUIPO', 'INSTRUMENTO', 'PATRON'
+  const [tipoFilter, setTipoFilter] = useState<string | null>(null)
 
   // Modales de detalle
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null)
@@ -62,32 +62,24 @@ export default function DashboardPage() {
   // Descarga individual loading states
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null)
 
+  // AUDITORÍA Y OPTIMIZACIÓN: Solo hacemos 1 fetch consolidado en lugar de 3 para reducir latencia y carga de DB.
   async function loadAllData() {
     try {
       setLoading(true)
       setError(null)
-      const [rStats, rEquipos, rPatrones] = await Promise.all([
-        fetch('/api/estadisticas'),
-        fetch('/api/equipos'),
-        fetch('/api/patrones')
-      ])
+      const response = await fetch('/api/estadisticas')
 
-      if (!rStats.ok || !rEquipos.ok || !rPatrones.ok) {
-        throw new Error('Error de comunicación con la base de datos central.')
+      if (!response.ok) {
+        throw new Error('Error al sincronizar datos del servidor.')
       }
 
-      const [dStats, dEquipos, dPatrones] = await Promise.all([
-        rStats.json(),
-        rEquipos.json(),
-        rPatrones.json()
-      ])
-
-      setStats(dStats)
-      setEquipos(dEquipos)
-      setPatrones(dPatrones)
+      const data = await response.json()
+      setStats(data)
+      setEquipos(data.equipos || [])
+      setPatrones(data.patrones || [])
     } catch (err: any) {
       console.error('Error cargando panel:', err)
-      setError(err.message || 'Error al conectar con el centro de datos metrológicos.')
+      setError(err.message || 'Error al conectar con el servidor')
     } finally {
       setLoading(false)
     }
@@ -110,7 +102,7 @@ export default function DashboardPage() {
         id: e.ID_Equipo,
         codigo: e.Codigo_Interno || e.ID_Equipo,
         nombre: e.Nombre_Equipo,
-        tipoActivo: e.Tipo || 'EQUIPO', // 'EQUIPO' o 'INSTRUMENTO'
+        tipoActivo: e.Tipo || 'EQUIPO',
         status,
         categoria: 'equipo'
       })
@@ -182,111 +174,86 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="loading-center" style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '60vh', justifyContent: 'center', alignItems: 'center' }}>
-        <div className="spinner" style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <p style={{ fontWeight: 600, color: 'var(--text-dim)' }}>Sincronizando Sistema Metrológico Pro...</p>
+        <div className="spinner" style={{ width: 32, height: 32, border: '3px solid #f3f3f3', borderTop: '3px solid var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontWeight: 600, color: 'var(--text-dim)', fontSize: 13 }}>Sincronizando Sistema Metrológico PRO...</p>
       </div>
     )
   }
 
   if (error || !stats) {
     return (
-      <div className="empty-state" style={{ color: 'var(--danger)', background: 'var(--danger-dim)', border: '1px solid var(--danger)', padding: 32, borderRadius: 20, textAlign: 'center', maxWidth: 500, margin: '40px auto' }}>
-        <AlertCircle size={48} style={{ margin: '0 auto 16px' }} />
-        <h2 style={{ fontSize: 20, fontWeight: 800 }}>Anomalía de Sincronización</h2>
-        <p style={{ marginTop: 8, fontSize: 14, opacity: 0.8 }}>{error || 'No se pudieron recuperar las estadísticas del sistema.'}</p>
-        <button onClick={loadAllData} className="btn btn-primary" style={{ marginTop: 20, background: 'var(--danger)', border: 'none', color: '#fff', padding: '10px 20px', borderRadius: 12, cursor: 'pointer' }}>Reintentar Sincronización</button>
+      <div className="empty-state" style={{ color: 'var(--danger)', background: 'var(--danger-dim)', border: '1px solid var(--danger)', padding: 24, borderRadius: 16, textAlign: 'center', maxWidth: 440, margin: '40px auto' }}>
+        <AlertCircle size={40} style={{ margin: '0 auto 12px' }} />
+        <h2 style={{ fontSize: 18, fontWeight: 800 }}>Error de Sincronización</h2>
+        <p style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>{error || 'No se pudieron recuperar las estadísticas.'}</p>
+        <button onClick={loadAllData} className="btn btn-primary" style={{ marginTop: 16, background: 'var(--danger)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Reintentar</button>
       </div>
     )
   }
 
   return (
     <div className="dashboard-wrapper">
-      {/* 1. Header del Dashboard */}
-      <div className="dashboard-header">
-        <div>
-          <div className="dashboard-badge">
-            <Sparkles size={12} color="var(--accent)" />
-            <span>Centro de Operaciones Metrológicas</span>
-          </div>
-          <h1>Panel de Control</h1>
-          <p className="subtitle">{formatFechaLarga(new Date())} · Todo en línea</p>
-        </div>
-
-        <div className="action-buttons-row">
-          <button 
-            className="btn-dashboard btn-primary-gradient" 
-            onClick={() => generateExecutiveSummaryPDF(stats)}
-          >
-            <Download size={15} />
-            <span>Generar Reporte PDF</span>
-          </button>
-          
-          <Link href="/escaneo" className="btn-dashboard btn-secondary-outline">
-            <Zap size={15} />
-            <span>Escanear QR</span>
-          </Link>
-
-          <Link href="/equipos" className="btn-dashboard btn-ghost">
-            <Plus size={15} />
-            <span>Registrar Activo</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* 2. KPIs Compactos */}
-      <div className="kpis-container">
+      
+      {/* 1. KPIs Ribbon (Ultra-Compacto & Premium) */}
+      <div className="kpi-glass-bar">
         {/* KPI 1 */}
-        <div className="kpi-card" onClick={() => { setTipoFilter(null); setStatusFilter(null); }}>
-          <div className="kpi-icon-wrapper" style={{ background: 'var(--accent-glow)', color: 'var(--accent)' }}>
-            <Activity size={18} />
+        <div className="kpi-bar-item clickable" onClick={() => { setTipoFilter(null); setStatusFilter(null); }}>
+          <div className="kpi-meta">
+            <span className="kpi-dot bg-blue" />
+            <span className="kpi-bar-label">Activos Totales</span>
           </div>
-          <div className="kpi-data">
-            <span className="kpi-label">Activos Totales</span>
-            <span className="kpi-val">{stats.totalActivos}</span>
-            <span className="kpi-info-sub">Eq: {equipos.filter(e => e.Tipo === 'EQUIPO').length} · Ins: {equipos.filter(e => e.Tipo === 'INSTRUMENTO').length} · Pat: {patrones.length}</span>
+          <div className="kpi-bar-value-row">
+            <span className="kpi-bar-val">{stats.totalActivos}</span>
+            <span className="kpi-bar-sub">Eq: {equipos.filter(e => e.Tipo === 'EQUIPO').length} · Ins: {equipos.filter(e => e.Tipo === 'INSTRUMENTO').length} · Pat: {patrones.length}</span>
           </div>
         </div>
+
+        <div className="kpi-bar-divider" />
 
         {/* KPI 2 */}
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
-            <ShieldCheck size={18} />
+        <div className="kpi-bar-item">
+          <div className="kpi-meta">
+            <span className="kpi-dot bg-green" />
+            <span className="kpi-bar-label">Vigencia Global</span>
           </div>
-          <div className="kpi-data">
-            <span className="kpi-label">Vigencia Global</span>
-            <span className="kpi-val">{stats.complianceGlobal}%</span>
-            <span className="kpi-info-sub">Activos en norma ISO 9001</span>
+          <div className="kpi-bar-value-row">
+            <span className="kpi-bar-val">{stats.complianceGlobal}%</span>
+            <span className="kpi-bar-sub">Conformidad ISO 9001</span>
           </div>
         </div>
+
+        <div className="kpi-bar-divider" />
 
         {/* KPI 3 */}
-        <div className="kpi-card" onClick={() => setStatusFilter('ROJO')} style={{ cursor: 'pointer' }}>
-          <div className="kpi-icon-wrapper" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}>
-            <AlertTriangle size={18} className={stats.vencidos + stats.noAptos + stats.patronesVencidos > 0 ? 'pulse-alert' : ''} />
+        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter('ROJO')}>
+          <div className="kpi-meta">
+            <span className="kpi-dot bg-red blinking" />
+            <span className="kpi-bar-label" style={{ color: (stats.vencidos + stats.noAptos + stats.patronesVencidos) > 0 ? 'var(--danger)' : 'inherit' }}>Alertas Críticas</span>
           </div>
-          <div className="kpi-data">
-            <span className="kpi-label">Alertas Críticas</span>
-            <span className="kpi-val" style={{ color: (stats.vencidos + stats.noAptos + stats.patronesVencidos) > 0 ? 'var(--danger)' : 'inherit' }}>
+          <div className="kpi-bar-value-row">
+            <span className="kpi-bar-val" style={{ color: (stats.vencidos + stats.noAptos + stats.patronesVencidos) > 0 ? 'var(--danger)' : 'inherit' }}>
               {(stats.vencidos || 0) + (stats.noAptos || 0) + (stats.patronesVencidos || 0)}
             </span>
-            <span className="kpi-info-sub">Acción metrológica urgente</span>
+            <span className="kpi-bar-sub">Requieren acción inmediata</span>
           </div>
         </div>
 
+        <div className="kpi-bar-divider" />
+
         {/* KPI 4 */}
-        <div className="kpi-card" onClick={() => setStatusFilter('AMARILLO')} style={{ cursor: 'pointer' }}>
-          <div className="kpi-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}>
-            <Clock size={18} />
+        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter('AMARILLO')}>
+          <div className="kpi-meta">
+            <span className="kpi-dot bg-yellow" />
+            <span className="kpi-bar-label">Por Vencer</span>
           </div>
-          <div className="kpi-data">
-            <span className="kpi-label">Próximos Controles</span>
-            <span className="kpi-val">{stats.proximos || 0}</span>
-            <span className="kpi-info-sub">Control en los sig. 30 días</span>
+          <div className="kpi-bar-value-row">
+            <span className="kpi-bar-val">{stats.proximos || 0}</span>
+            <span className="kpi-bar-sub">Control sig. 30 días</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Panel Principal */}
+      {/* 2. Panel Principal (Diseño Compacto Integrado) */}
       <div className="dashboard-grid">
         
         {/* Lado Izquierdo: Explorador Inteligente de Activos (60% ancho) */}
@@ -295,17 +262,27 @@ export default function DashboardPage() {
             <div className="panel-card-header">
               <div>
                 <h2>Explorador Inteligente de Activos</h2>
-                <p className="card-subtitle">Filtra, busca y descarga reportes de calibración al instante</p>
+                <p className="card-subtitle">Búsqueda rápida de equipos, instrumentos y patrones de referencia</p>
               </div>
-              <div className="panel-badge-count">
-                {filteredAssets.length} de {allAssets.length}
+              <div className="header-actions">
+                <button 
+                  className="btn-compact-pdf" 
+                  onClick={() => generateExecutiveSummaryPDF(stats)}
+                  title="Generar Reporte Ejecutivo General en PDF"
+                >
+                  <Download size={13} />
+                  <span>Reporte Ejecutivo PDF</span>
+                </button>
+                <div className="panel-badge-count">
+                  {filteredAssets.length} de {allAssets.length}
+                </div>
               </div>
             </div>
 
             {/* Filtros e Input de búsqueda */}
             <div className="filters-section">
               <div className="search-bar-wrapper">
-                <Search size={16} className="search-icon" />
+                <Search size={14} className="search-icon" />
                 <input 
                   type="text" 
                   placeholder="Buscar por código, nombre, marca o responsable..." 
@@ -353,16 +330,15 @@ export default function DashboardPage() {
                 onClick={() => setStatusFilter('ROJO')} 
                 className={`status-pill pill-red ${statusFilter === 'ROJO' ? 'active' : ''}`}
               >
-                <span className="dot" /> Críticos / Fuera de Norma
+                <span className="dot" /> Críticos
               </button>
 
               {(statusFilter || searchQuery || tipoFilter) && (
                 <button 
                   onClick={() => { setStatusFilter(null); setSearchQuery(''); setTipoFilter(null); }} 
                   className="btn-clear-filters"
-                  title="Restaurar Filtros"
                 >
-                  <RotateCcw size={12} /> Limpiar
+                  <RotateCcw size={10} /> Restablecer filtros
                 </button>
               )}
             </div>
@@ -371,7 +347,7 @@ export default function DashboardPage() {
             <div className="assets-scroll-container">
               {filteredAssets.length === 0 ? (
                 <div className="empty-assets-state">
-                  <Info size={32} />
+                  <Info size={28} />
                   <p>No se encontraron activos con los filtros aplicados.</p>
                 </div>
               ) : (
@@ -387,7 +363,7 @@ export default function DashboardPage() {
                             background: isPat ? 'rgba(124, 58, 237, 0.08)' : 'var(--accent-glow)',
                             color: isPat ? '#7c3aed' : 'var(--accent)'
                           }}>
-                            {isPat ? <FlaskConical size={15} /> : <Award size={15} />}
+                            {isPat ? <FlaskConical size={14} /> : <Award size={14} />}
                           </div>
                           <div className="asset-info-col">
                             <div className="asset-code-row">
@@ -402,9 +378,9 @@ export default function DashboardPage() {
                         <div className="asset-row-actions">
                           {/* Semáforo */}
                           <span className="semaforo-pill" style={{ 
-                            background: `${semColor}12`, 
+                            background: `${semColor}10`, 
                             color: semColor,
-                            border: `1px solid ${semColor}20`
+                            border: `1px solid ${semColor}18`
                           }}>
                             <span className="semaforo-dot" style={{ background: semColor }} />
                             {asset.status === 'VERDE' ? 'Al día' : asset.status === 'AMARILLO' ? 'Por vencer' : 'Crítico'}
@@ -419,16 +395,16 @@ export default function DashboardPage() {
                             {pdfLoadingId === asset.id ? (
                               <div className="mini-spinner" />
                             ) : (
-                              <Download size={14} />
+                              <Download size={13} />
                             )}
                           </button>
 
                           <button 
                             className="btn-action-icon"
                             onClick={() => setSelectedAsset(asset)}
-                            title="Ver Ficha Técnica Interactiva"
+                            title="Ver Ficha Técnica"
                           >
-                            <Eye size={14} />
+                            <Eye size={13} />
                           </button>
                         </div>
                       </div>
@@ -443,7 +419,7 @@ export default function DashboardPage() {
         {/* Lado Derecho: Distribución Visual & Logs Recientes (40% ancho) */}
         <div className="grid-right">
           
-          {/* Card Gráfico Circular */}
+          {/* Card Gráfico Circular (Donut con info central) */}
           <div className="panel-card compact">
             <div className="panel-card-header no-border">
               <div>
@@ -454,15 +430,15 @@ export default function DashboardPage() {
 
             <div className="chart-wrapper">
               {mounted && pieData.length > 0 && (
-                <div style={{ width: '100%', height: 160, position: 'relative' }}>
+                <div style={{ width: '100%', height: 140, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
+                        innerRadius={45}
+                        outerRadius={55}
                         paddingAngle={3}
                         dataKey="value"
                         onClick={(data) => {
@@ -473,12 +449,19 @@ export default function DashboardPage() {
                         style={{ cursor: 'pointer', outline: 'none' }}
                       >
                         {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                          <Cell key={`cell-${index}`} fill={entry.color} style={{ outline: 'none' }} />
                         ))}
                       </Pie>
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
+                  
+                  {/* Cumplimiento en el centro del Donut */}
+                  <div className="donut-center-info">
+                    <span className="donut-pct">{stats.complianceGlobal}%</span>
+                    <span className="donut-lbl">Vigente</span>
+                  </div>
+
                   {statusFilter && (
                     <button className="reset-chart-btn" onClick={() => setStatusFilter(null)}>
                       <RotateCcw size={10} /> Resetear
@@ -514,17 +497,17 @@ export default function DashboardPage() {
             </div>
 
             <div className="activity-timeline-compact">
-              {stats.ultimasVerificaciones?.slice(0, 5).map((log) => {
+              {stats.ultimasVerificaciones?.slice(0, 4).map((log) => {
                 const statusColor = log.Resultado_Status === 'APTO' ? 'var(--success)' : 'var(--danger)'
                 
                 return (
                   <div key={log.ID_Log} className="timeline-row-compact" onClick={() => setSelectedLog(log)}>
                     <div className="timeline-left-icon">
                       <div className="icon-pill" style={{ 
-                        background: log.Resultado_Status === 'APTO' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        background: log.Resultado_Status === 'APTO' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
                         color: statusColor
                       }}>
-                        {log.Resultado_Status === 'APTO' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                        {log.Resultado_Status === 'APTO' ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       </div>
                       <div className="timeline-connector" />
                     </div>
@@ -555,7 +538,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. MODAL DETALLE DE ACTIVO */}
+      {/* MODAL DETALLE DE ACTIVO */}
       {selectedAsset && (
         <div className="modal-overlay" onClick={() => setSelectedAsset(null)}>
           <div className="dashboard-modal-card" onClick={e => e.stopPropagation()}>
@@ -564,7 +547,7 @@ export default function DashboardPage() {
                 background: selectedAsset.categoria === 'patron' ? 'rgba(124, 58, 237, 0.1)' : 'var(--accent-glow)',
                 color: selectedAsset.categoria === 'patron' ? '#7c3aed' : 'var(--accent)'
               }}>
-                {selectedAsset.categoria === 'patron' ? <FlaskConical size={20} /> : <Award size={20} />}
+                {selectedAsset.categoria === 'patron' ? <FlaskConical size={18} /> : <Award size={18} />}
               </div>
               <div className="modal-title-col">
                 <span className="modal-asset-type">{selectedAsset.tipoActivo}</span>
@@ -581,7 +564,7 @@ export default function DashboardPage() {
                   <img src={selectedAsset.Foto_Equipo || selectedAsset.Foto_Patron} alt="Evidencia del activo" className="modal-photo-img" />
                 ) : (
                   <div className="modal-no-photo">
-                    <Info size={24} color="var(--text-soft)" />
+                    <Info size={20} color="var(--text-soft)" />
                     <span>Sin registro fotográfico disponible</span>
                   </div>
                 )}
@@ -653,7 +636,7 @@ export default function DashboardPage() {
                 onClick={() => handleDownloadPDF(selectedAsset)}
                 disabled={pdfLoadingId === selectedAsset.id}
               >
-                {pdfLoadingId === selectedAsset.id ? <div className="mini-spinner" /> : <Download size={14} />}
+                {pdfLoadingId === selectedAsset.id ? <div className="mini-spinner" /> : <Download size={13} />}
                 <span>Descargar PDF</span>
               </button>
               
@@ -662,7 +645,7 @@ export default function DashboardPage() {
                 className="modal-btn modal-btn-secondary"
                 onClick={() => setSelectedAsset(null)}
               >
-                <ExternalLink size={14} />
+                <ExternalLink size={13} />
                 <span>Ir al Registro</span>
               </Link>
             </div>
@@ -671,16 +654,16 @@ export default function DashboardPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 5. MODAL DETALLE DE MOVIMIENTO/LOG */}
+      {/* MODAL DETALLE DE MOVIMIENTO/LOG */}
       {selectedLog && (
         <div className="modal-overlay" onClick={() => setSelectedLog(null)}>
           <div className="dashboard-modal-card mini" onClick={e => e.stopPropagation()}>
             <div className="modal-header-row">
               <div className="avatar-header" style={{
-                background: logStatusColor(selectedLog.Resultado_Status) + '15',
+                background: logStatusColor(selectedLog.Resultado_Status) + '12',
                 color: logStatusColor(selectedLog.Resultado_Status)
               }}>
-                {selectedLog.Resultado_Status === 'APTO' ? <CheckCircle size={20} /> : <XCircle size={20} />}
+                {selectedLog.Resultado_Status === 'APTO' ? <CheckCircle size={18} /> : <XCircle size={18} />}
               </div>
               <div className="modal-title-col">
                 <span className="modal-asset-type">Registro de Control Metrológico</span>
@@ -712,10 +695,10 @@ export default function DashboardPage() {
                     {selectedLog.Variacion_Calculada !== null ? `${selectedLog.Variacion_Calculada.toFixed(5)}` : '—'}
                   </span>
                 </div>
-                <div className="specs-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '12px 0' }}>
+                <div className="specs-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '10px 0' }}>
                   <span className="spec-lbl">Observaciones del Informe</span>
                   <div className="spec-textarea-display">
-                    {selectedLog.Observaciones || 'Sin observaciones o notas registradas para este control.'}
+                    {selectedLog.Observaciones || 'Sin observaciones registradas.'}
                   </div>
                 </div>
               </div>
@@ -733,206 +716,147 @@ export default function DashboardPage() {
       {/* Estilos CSS del Dashboard */}
       <style jsx>{`
         .dashboard-wrapper {
-          padding: 12px 0;
+          padding: 8px 0;
           display: flex;
           flex-direction: column;
-          gap: 24px;
-          animation: fadeIn 0.4s ease-out;
+          gap: 16px;
+          animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(6px); }
           to { opacity: 1; transform: translateY(0); }
         }
 
-        .dashboard-header {
+        /* 1. KPIs Ribbon - Glass & Ultra-Compact */
+        .kpi-glass-bar {
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid var(--snow-3);
+          border-radius: 14px;
+          padding: 10px 20px;
           display: flex;
+          align-items: center;
           justify-content: space-between;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
+          box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+          gap: 12px;
         }
 
-        .dashboard-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: var(--accent-glow);
-          color: var(--accent);
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          border: 1px solid rgba(14, 165, 233, 0.15);
-          margin-bottom: 8px;
-        }
-
-        .dashboard-header h1 {
-          font-size: 26px;
-          font-weight: 900;
-          letter-spacing: -0.03em;
-          color: var(--text-main);
-          line-height: 1.1;
-        }
-
-        .dashboard-header .subtitle {
-          font-size: 13px;
-          color: var(--text-muted);
-          margin-top: 4px;
-        }
-
-        .action-buttons-row {
+        .kpi-bar-item {
           display: flex;
           align-items: center;
           gap: 10px;
+          flex: 1;
+          min-width: 0;
         }
 
-        .btn-dashboard {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 16px;
-          font-size: 13px;
-          font-weight: 700;
-          border-radius: 12px;
+        .kpi-bar-item.clickable {
           cursor: pointer;
-          transition: all 0.2s ease;
-          text-decoration: none;
-          height: 40px;
-          border: none;
+          transition: all 0.2s;
+        }
+        .kpi-bar-item.clickable:hover {
+          opacity: 0.8;
+          transform: translateY(-0.5px);
         }
 
-        .btn-primary-gradient {
-          background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%);
-          color: #fff;
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
-        }
-
-        .btn-primary-gradient:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
-        }
-
-        .btn-secondary-outline {
-          background: #fff;
-          border: 1px solid var(--snow-3);
-          color: var(--text-main);
-        }
-
-        .btn-secondary-outline:hover {
-          background: var(--snow-1);
-          border-color: var(--snow-3);
-        }
-
-        .btn-ghost {
-          background: var(--snow-2);
-          color: var(--text-main);
-        }
-
-        .btn-ghost:hover {
-          background: var(--snow-3);
-        }
-
-        /* KPIs */
-        .kpis-container {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-        }
-
-        .kpi-card {
-          background: #fff;
-          border: 1px solid var(--snow-3);
-          border-radius: 16px;
-          padding: 16px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          box-shadow: var(--shadow-sm);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .kpi-card:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-md);
-          border-color: var(--accent-glow);
-        }
-
-        .kpi-icon-wrapper {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          display: grid;
-          place-items: center;
+        .kpi-icon-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
           flex-shrink: 0;
         }
 
-        .kpi-data {
+        .kpi-blue-dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+        .kpi-green-dot { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .kpi-red-dot { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+        .kpi-yellow-dot { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+
+        .kpi-text-container {
           display: flex;
           flex-direction: column;
           min-width: 0;
         }
 
-        .kpi-label {
-          font-size: 11px;
+        .kpi-bar-label {
+          font-size: 10px;
           font-weight: 700;
           color: var(--text-muted);
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.04em;
+          line-height: 1.1;
         }
 
-        .kpi-val {
-          font-size: 22px;
-          font-weight: 800;
+        .kpi-bar-value-row {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+          margin-top: 1px;
+        }
+
+        .kpi-bar-val {
+          font-size: 18px;
+          font-weight: 850;
           color: var(--text-main);
           letter-spacing: -0.02em;
-          line-height: 1.2;
-          margin: 2px 0;
+          line-height: 1;
         }
 
-        .kpi-info-sub {
-          font-size: 10px;
+        .kpi-bar-sub {
+          font-size: 9px;
           color: var(--text-soft);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
-        /* Dashboard Grid Layout */
+        .kpi-bar-divider {
+          width: 1px;
+          height: 24px;
+          background: var(--snow-3);
+          flex-shrink: 0;
+        }
+
+        .blinking {
+          animation: blinker 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes blinker {
+          50% { opacity: 0.3; }
+        }
+
+        /* 2. Dashboard Grid Layout */
         .dashboard-grid {
           display: grid;
-          grid-template-columns: 1.6fr 1fr;
-          gap: 20px;
+          grid-template-columns: 1.62fr 1fr;
+          gap: 16px;
           align-items: start;
         }
 
         .grid-left {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
         }
 
         .grid-right {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
         }
 
         /* Panel Card */
         .panel-card {
           background: #fff;
           border: 1px solid var(--snow-3);
-          border-radius: 20px;
-          box-shadow: var(--shadow-sm);
-          padding: 20px;
+          border-radius: 16px;
+          box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.03);
+          padding: 16px;
           display: flex;
           flex-direction: column;
         }
 
         .panel-card.compact {
-          padding: 16px;
+          padding: 14px;
         }
 
         .panel-card-header {
@@ -940,43 +864,68 @@ export default function DashboardPage() {
           justify-content: space-between;
           align-items: flex-start;
           border-bottom: 1px solid var(--snow-2);
-          padding-bottom: 12px;
-          margin-bottom: 14px;
+          padding-bottom: 10px;
+          margin-bottom: 12px;
         }
 
         .panel-card-header.no-border {
           border-bottom: none;
           padding-bottom: 0;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .panel-card-header h2 {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 800;
           color: var(--text-main);
           letter-spacing: -0.01em;
         }
 
         .card-subtitle {
-          font-size: 11px;
+          font-size: 10px;
           color: var(--text-muted);
-          margin-top: 2px;
+          margin-top: 1px;
+        }
+
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .panel-badge-count {
           background: var(--snow-2);
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 800;
           color: var(--text-main);
-          padding: 4px 10px;
+          padding: 2px 8px;
           border-radius: 20px;
+        }
+
+        .btn-compact-pdf {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #0f172a;
+          color: #fff;
+          font-size: 10.5px;
+          font-weight: 700;
+          padding: 5px 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-compact-pdf:hover {
+          background: #1e293b;
+          transform: translateY(-0.5px);
         }
 
         /* Seccion Filtros */
         .filters-section {
           display: flex;
-          gap: 10px;
-          margin-bottom: 12px;
+          gap: 8px;
+          margin-bottom: 10px;
           align-items: center;
         }
 
@@ -987,7 +936,7 @@ export default function DashboardPage() {
 
         .search-icon {
           position: absolute;
-          left: 12px;
+          left: 10px;
           top: 50%;
           transform: translateY(-50%);
           color: var(--text-soft);
@@ -997,9 +946,9 @@ export default function DashboardPage() {
           width: 100%;
           background: var(--snow-1);
           border: 1px solid var(--snow-3);
-          border-radius: 12px;
-          padding: 9px 12px 9px 36px;
-          font-size: 13px;
+          border-radius: 10px;
+          padding: 7px 10px 7px 30px;
+          font-size: 12.5px;
           color: var(--text-main);
           outline: none;
           transition: all 0.2s ease;
@@ -1008,7 +957,7 @@ export default function DashboardPage() {
         .search-bar-wrapper input:focus {
           background: #fff;
           border-color: var(--accent);
-          box-shadow: 0 0 0 3px var(--accent-glow);
+          box-shadow: 0 0 0 2.5px var(--accent-glow);
         }
 
         .filter-select-group {
@@ -1018,43 +967,39 @@ export default function DashboardPage() {
         .filter-dropdown {
           background: var(--snow-1);
           border: 1px solid var(--snow-3);
-          border-radius: 12px;
-          padding: 8px 12px;
-          font-size: 13px;
+          border-radius: 10px;
+          padding: 6.5px 10px;
+          font-size: 12px;
           font-weight: 600;
           color: var(--text-dim);
           outline: none;
           cursor: pointer;
         }
 
-        .filter-dropdown:focus {
-          border-color: var(--accent);
-        }
-
         /* Pills de estado */
         .status-pills-row {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           flex-wrap: wrap;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
           border-bottom: 1px solid var(--snow-2);
-          padding-bottom: 12px;
+          padding-bottom: 10px;
         }
 
         .status-pill {
           background: var(--snow-2);
           border: none;
           color: var(--text-dim);
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
-          padding: 6px 12px;
-          border-radius: 10px;
+          padding: 5px 10px;
+          border-radius: 8px;
           cursor: pointer;
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          transition: all 0.2s;
+          gap: 5px;
+          transition: all 0.15s;
         }
 
         .status-pill:hover {
@@ -1062,13 +1007,13 @@ export default function DashboardPage() {
         }
 
         .status-pill.active {
-          background: var(--nav-bg-accent);
+          background: #0f172a;
           color: #fff;
         }
 
         .status-pill .dot {
-          width: 6px;
-          height: 6px;
+          width: 5px;
+          height: 5px;
           border-radius: 50%;
         }
 
@@ -1084,13 +1029,13 @@ export default function DashboardPage() {
           background: none;
           border: none;
           color: var(--text-soft);
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 4px;
-          margin-left: 8px;
+          margin-left: 6px;
         }
 
         .btn-clear-filters:hover {
@@ -1099,13 +1044,13 @@ export default function DashboardPage() {
 
         /* Lista de Activos */
         .assets-scroll-container {
-          max-height: 380px;
+          max-height: 330px;
           overflow-y: auto;
           padding-right: 4px;
         }
 
         .assets-scroll-container::-webkit-scrollbar {
-          width: 5px;
+          width: 4px;
         }
         .assets-scroll-container::-webkit-scrollbar-thumb {
           background: var(--snow-3);
@@ -1113,30 +1058,30 @@ export default function DashboardPage() {
         }
 
         .empty-assets-state {
-          padding: 40px;
+          padding: 30px;
           text-align: center;
           color: var(--text-muted);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-          font-size: 13px;
+          gap: 6px;
+          font-size: 12px;
         }
 
         .assets-compact-list {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
         .asset-list-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 10px 12px;
-          border-radius: 14px;
+          padding: 8px 10px;
+          border-radius: 10px;
           border: 1px solid var(--snow-2);
-          transition: all 0.2s ease;
+          transition: all 0.15s ease;
           background: #fff;
         }
 
@@ -1149,16 +1094,16 @@ export default function DashboardPage() {
         .asset-row-main {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           flex: 1;
           min-width: 0;
           cursor: pointer;
         }
 
         .asset-avatar {
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
           display: grid;
           place-items: center;
           flex-shrink: 0;
@@ -1178,32 +1123,33 @@ export default function DashboardPage() {
 
         .asset-code {
           font-family: var(--font-mono);
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 800;
           color: var(--text-main);
         }
 
         .asset-type-badge {
-          font-size: 9px;
+          font-size: 8.5px;
           font-weight: 700;
           background: var(--snow-2);
           color: var(--text-muted);
-          padding: 1px 5px;
-          border-radius: 4px;
+          padding: 0px 4px;
+          border-radius: 3px;
           text-transform: uppercase;
         }
 
         .asset-name {
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 700;
           color: var(--text-main);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          line-height: 1.3;
         }
 
         .asset-meta {
-          font-size: 10px;
+          font-size: 9.5px;
           color: var(--text-soft);
           white-space: nowrap;
           overflow: hidden;
@@ -1221,29 +1167,29 @@ export default function DashboardPage() {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 10px;
+          font-size: 9.5px;
           font-weight: 700;
-          padding: 3px 8px;
-          border-radius: 6px;
+          padding: 2.5px 6.5px;
+          border-radius: 5px;
         }
 
         .semaforo-dot {
-          width: 5px;
-          height: 5px;
+          width: 4px;
+          height: 4px;
           border-radius: 50%;
         }
 
         .btn-action-icon {
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
           border: 1px solid var(--snow-3);
           background: #fff;
           color: var(--text-dim);
           cursor: pointer;
           display: grid;
           place-items: center;
-          transition: all 0.2s;
+          transition: all 0.15s;
         }
 
         .btn-action-icon:hover {
@@ -1261,14 +1207,14 @@ export default function DashboardPage() {
         .chart-wrapper {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 12px;
           justify-content: center;
         }
 
         .chart-legend {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
           flex-shrink: 0;
         }
 
@@ -1276,13 +1222,13 @@ export default function DashboardPage() {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 600;
           color: var(--text-dim);
           cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 6px;
-          transition: background 0.2s;
+          padding: 3px 6px;
+          border-radius: 5px;
+          transition: background 0.15s;
         }
 
         .legend-item:hover {
@@ -1295,8 +1241,8 @@ export default function DashboardPage() {
         }
 
         .legend-dot {
-          width: 8px;
-          height: 8px;
+          width: 6.5px;
+          height: 6.5px;
           border-radius: 50%;
         }
 
@@ -1305,14 +1251,37 @@ export default function DashboardPage() {
           font-family: var(--font-mono);
         }
 
+        .donut-center-info {
+          position: absolute;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+        }
+        .donut-pct {
+          font-size: 18px;
+          font-weight: 850;
+          color: var(--text-main);
+          line-height: 1;
+        }
+        .donut-lbl {
+          font-size: 8px;
+          font-weight: 700;
+          color: var(--text-soft);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-top: 1px;
+        }
+
         .reset-chart-btn {
           position: absolute;
           top: 0;
           right: 0;
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 700;
-          padding: 2px 6px;
-          border-radius: 6px;
+          padding: 2px 5px;
+          border-radius: 5px;
           background: var(--snow-2);
           border: none;
           color: var(--text-dim);
@@ -1323,14 +1292,15 @@ export default function DashboardPage() {
         .activity-timeline-compact {
           display: flex;
           flex-direction: column;
-          max-height: 280px;
+          max-height: 250px;
           overflow-y: auto;
           padding-right: 2px;
+          gap: 2px;
         }
 
         .timeline-row-compact {
           display: flex;
-          gap: 10px;
+          gap: 8px;
           cursor: pointer;
         }
 
@@ -1341,9 +1311,9 @@ export default function DashboardPage() {
         }
 
         .icon-pill {
-          width: 22px;
-          height: 22px;
-          border-radius: 6px;
+          width: 18px;
+          height: 18px;
+          border-radius: 5px;
           display: grid;
           place-items: center;
           flex-shrink: 0;
@@ -1353,8 +1323,8 @@ export default function DashboardPage() {
           width: 1px;
           background: var(--snow-3);
           flex: 1;
-          min-height: 20px;
-          margin: 4px 0;
+          min-height: 16px;
+          margin: 3px 0;
         }
 
         .timeline-row-compact:last-child .timeline-connector {
@@ -1363,7 +1333,7 @@ export default function DashboardPage() {
 
         .timeline-info-block {
           flex: 1;
-          padding-bottom: 12px;
+          padding-bottom: 8px;
           min-width: 0;
         }
 
@@ -1375,18 +1345,18 @@ export default function DashboardPage() {
 
         .timeline-title-code {
           font-family: var(--font-mono);
-          font-size: 11px;
-          font-weight: 800;
+          font-size: 10px;
+          font-weight: 850;
           color: var(--text-main);
         }
 
         .timeline-date {
-          font-size: 9px;
+          font-size: 8.5px;
           color: var(--text-muted);
         }
 
         .timeline-desc-name {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           color: var(--text-dim);
           white-space: nowrap;
@@ -1396,42 +1366,31 @@ export default function DashboardPage() {
 
         .timeline-footer-line {
           display: flex;
-          gap: 8px;
-          font-size: 10px;
+          gap: 6px;
+          font-size: 9.5px;
           color: var(--text-soft);
           align-items: center;
-          margin-top: 2px;
+          margin-top: 1px;
         }
 
         .timeline-footer-line .var-val {
           background: var(--snow-2);
-          padding: 1px 4px;
-          border-radius: 4px;
+          padding: 0.5px 3px;
+          border-radius: 3px;
           font-family: var(--font-mono);
-          font-size: 9px;
+          font-size: 8.5px;
         }
 
         .timeline-status-badge {
           margin-left: auto;
           font-weight: 800;
-          font-size: 9px;
-        }
-
-        /* Pulsado de alerta */
-        .pulse-alert {
-          animation: pulse-red 1.8s infinite;
-        }
-
-        @keyframes pulse-red {
-          0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.4)); }
-          50% { transform: scale(1.08); filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.7)); }
-          100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+          font-size: 8.5px;
         }
 
         /* Spinner en botón */
         .mini-spinner {
-          width: 12px;
-          height: 12px;
+          width: 10px;
+          height: 10px;
           border: 2px solid #ccc;
           border-top: 2px solid var(--accent);
           border-radius: 50%;
@@ -1447,8 +1406,8 @@ export default function DashboardPage() {
         .modal-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(15, 23, 42, 0.35);
-          backdrop-filter: blur(8px);
+          background: rgba(15, 23, 42, 0.3);
+          backdrop-filter: blur(6px);
           z-index: 1100;
           display: grid;
           place-items: center;
@@ -1457,38 +1416,38 @@ export default function DashboardPage() {
 
         .dashboard-modal-card {
           background: #fff;
-          border-radius: 20px;
+          border-radius: 16px;
           width: 100%;
-          max-width: 520px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+          max-width: 480px;
+          box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.12);
           display: flex;
           flex-direction: column;
           border: 1px solid var(--snow-3);
           overflow: hidden;
-          animation: modalPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: modalPop 0.2s ease-out;
         }
 
         .dashboard-modal-card.mini {
-          max-width: 440px;
+          max-width: 400px;
         }
 
         @keyframes modalPop {
-          from { transform: scale(0.96); opacity: 0; }
+          from { transform: scale(0.97); opacity: 0; }
           to { transform: scale(1); opacity: 1; }
         }
 
         .modal-header-row {
           display: flex;
           align-items: center;
-          gap: 14px;
-          padding: 18px 20px;
+          gap: 12px;
+          padding: 14px 16px;
           border-bottom: 1px solid var(--snow-2);
         }
 
         .avatar-header {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
           display: grid;
           place-items: center;
           flex-shrink: 0;
@@ -1502,7 +1461,7 @@ export default function DashboardPage() {
         }
 
         .modal-asset-type {
-          font-size: 9px;
+          font-size: 8.5px;
           text-transform: uppercase;
           font-weight: 800;
           color: var(--text-soft);
@@ -1510,7 +1469,7 @@ export default function DashboardPage() {
         }
 
         .modal-title-col h3 {
-          font-size: 15px;
+          font-size: 13.5px;
           font-weight: 800;
           color: var(--text-main);
           line-height: 1.2;
@@ -1518,7 +1477,7 @@ export default function DashboardPage() {
 
         .modal-asset-code {
           font-family: var(--font-mono);
-          font-size: 11px;
+          font-size: 10.5px;
           color: var(--text-muted);
           font-weight: 700;
         }
@@ -1527,23 +1486,23 @@ export default function DashboardPage() {
           background: none;
           border: none;
           color: var(--text-soft);
-          font-size: 24px;
+          font-size: 20px;
           cursor: pointer;
-          padding: 4px;
+          padding: 2px;
         }
 
         .modal-body-content {
-          padding: 18px 20px;
+          padding: 14px 16px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
         }
 
         .modal-photo-section {
           width: 100%;
-          height: 150px;
+          height: 130px;
           background: var(--snow-1);
-          border-radius: 12px;
+          border-radius: 10px;
           border: 1px dashed var(--snow-3);
           overflow: hidden;
           display: grid;
@@ -1560,8 +1519,8 @@ export default function DashboardPage() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 6px;
-          font-size: 11px;
+          gap: 4px;
+          font-size: 10px;
           color: var(--text-soft);
         }
 
@@ -1569,15 +1528,15 @@ export default function DashboardPage() {
           display: flex;
           flex-direction: column;
           border: 1px solid var(--snow-2);
-          border-radius: 12px;
+          border-radius: 10px;
           overflow: hidden;
         }
 
         .specs-row {
           display: flex;
           justify-content: space-between;
-          padding: 8px 12px;
-          font-size: 12px;
+          padding: 6.5px 10px;
+          font-size: 11.5px;
           border-bottom: 1px solid var(--snow-2);
           background: #fff;
           align-items: center;
@@ -1608,27 +1567,27 @@ export default function DashboardPage() {
         .spec-textarea-display {
           background: var(--snow-1);
           border: 1px solid var(--snow-3);
-          border-radius: 8px;
-          padding: 10px;
-          font-size: 12px;
+          border-radius: 6px;
+          padding: 8px;
+          font-size: 11.5px;
           color: var(--text-dim);
           line-height: 1.4;
-          min-height: 60px;
+          min-height: 44px;
         }
 
         .badge-status-fill {
-          font-size: 10px;
+          font-size: 9.5px;
           font-weight: 700;
-          padding: 2px 8px;
-          border-radius: 6px;
+          padding: 2px 6.5px;
+          border-radius: 5px;
           text-transform: uppercase;
         }
 
         .modal-actions-footer {
           background: var(--snow-1);
-          padding: 12px 20px;
+          padding: 10px 16px;
           display: flex;
-          gap: 10px;
+          gap: 8px;
           justify-content: flex-end;
           border-top: 1px solid var(--snow-2);
         }
@@ -1636,24 +1595,24 @@ export default function DashboardPage() {
         .modal-btn {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          height: 36px;
-          padding: 0 14px;
-          font-size: 12px;
+          gap: 5px;
+          height: 32px;
+          padding: 0 12px;
+          font-size: 11px;
           font-weight: 700;
-          border-radius: 10px;
+          border-radius: 8px;
           cursor: pointer;
           border: none;
           text-decoration: none;
         }
 
         .modal-btn-primary {
-          background: var(--nav-bg);
+          background: #0f172a;
           color: #fff;
         }
 
         .modal-btn-primary:hover {
-          background: var(--nav-bg-accent);
+          background: #1e293b;
         }
 
         .modal-btn-secondary {
@@ -1668,8 +1627,15 @@ export default function DashboardPage() {
 
         /* Responsive */
         @media (max-width: 1024px) {
-          .kpis-container {
-            grid-template-columns: repeat(2, 1fr);
+          .kpi-glass-bar {
+            flex-wrap: wrap;
+            gap: 16px 8px;
+          }
+          .kpi-bar-divider {
+            display: none;
+          }
+          .kpi-bar-item {
+            flex: 1 1 40%;
           }
           .dashboard-grid {
             grid-template-columns: 1fr;
@@ -1677,21 +1643,12 @@ export default function DashboardPage() {
         }
 
         @media (max-width: 600px) {
-          .dashboard-header {
+          .kpi-glass-bar {
             flex-direction: column;
             align-items: stretch;
           }
-          .action-buttons-row {
-            flex-direction: column;
-            align-items: stretch;
-          }
-          .btn-dashboard {
-            width: 100%;
-            justify-content: center;
-          }
-          .kpis-container {
-            grid-template-columns: 1fr;
-            gap: 12px;
+          .kpi-bar-item {
+            flex: 1 1 100%;
           }
           .filters-section {
             flex-direction: column;
@@ -1702,6 +1659,14 @@ export default function DashboardPage() {
           }
           .chart-wrapper {
             flex-direction: column;
+          }
+          .panel-card-header {
+            flex-direction: column;
+            gap: 8px;
+          }
+          .header-actions {
+            width: 100%;
+            justify-content: space-between;
           }
         }
       `}</style>
