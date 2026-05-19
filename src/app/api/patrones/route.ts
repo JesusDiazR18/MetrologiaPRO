@@ -7,9 +7,20 @@ export async function GET(request: Request) {
     const suggest = searchParams.get('suggestId') === 'true'
 
     if (suggest) {
-      const count = await prisma.patronReferencia.count()
-      const num = (count + 1).toString().padStart(3, '0')
-      const nextId = `PAT-${num}`
+      const patrones = await prisma.patronReferencia.findMany({
+        select: { ID_Patron: true }
+      })
+      let maxNum = 0
+      patrones.forEach(p => {
+        const parts = p.ID_Patron.split('-')
+        if (parts.length === 2 && parts[0] === 'PAT') {
+          const num = parseInt(parts[1], 10)
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+          }
+        }
+      })
+      const nextId = `PAT-${(maxNum + 1).toString().padStart(3, '0')}`
       return NextResponse.json({ nextId })
     }
 

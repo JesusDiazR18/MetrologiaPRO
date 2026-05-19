@@ -11,9 +11,21 @@ export async function GET(request: Request) {
 
     if (suggest && tipo) {
       const prefix = tipo === 'EQUIPO' ? 'E' : 'I'
-      const count = await prisma.instrumentoEquipo.count({ where: { Tipo: tipo } })
-      const num = (count + 1).toString().padStart(2, '0')
-      const nextId = `${prefix}-${num}`
+      const equipos = await prisma.instrumentoEquipo.findMany({
+        where: { Tipo: tipo },
+        select: { ID_Equipo: true }
+      })
+      let maxNum = 0
+      equipos.forEach(eq => {
+        const parts = eq.ID_Equipo.split('-')
+        if (parts.length === 2 && parts[0] === prefix) {
+          const num = parseInt(parts[1], 10)
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+          }
+        }
+      })
+      const nextId = `${prefix}-${(maxNum + 1).toString().padStart(2, '0')}`
       return NextResponse.json({ nextId })
     }
 
