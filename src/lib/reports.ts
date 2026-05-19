@@ -140,7 +140,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
-      const splitVal = doc.splitTextToSize(valStr, w - 38);
+      const splitVal = doc.splitTextToSize(valStr, w - 43);
       const boxHeight = Math.max(8, splitVal.length * 4.2 + 3);
       
       if (currY + boxHeight > 275) {
@@ -170,7 +170,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
       }
       
       splitVal.forEach((line: string, lineIdx: number) => {
-        doc.text(line, x + 35, currY + 5.5 + (lineIdx * 4.2));
+        doc.text(line, x + 40, currY + 5.5 + (lineIdx * 4.2));
       });
       
       currY += boxHeight + 2.5;
@@ -185,8 +185,8 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
       if (nextItem && !nextIsFullWidth) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
-        const splitVal1 = doc.splitTextToSize(valStr, colW - 35);
-        const splitVal2 = doc.splitTextToSize(nextValStr, colW - 35);
+        const splitVal1 = doc.splitTextToSize(valStr, colW - 41);
+        const splitVal2 = doc.splitTextToSize(nextValStr, colW - 41);
         const boxHeight = Math.max(8, Math.max(splitVal1.length, splitVal2.length) * 4.2 + 3);
         
         if (currY + boxHeight > 275) {
@@ -213,7 +213,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
           doc.setTextColor(15, 23, 42);
         }
         splitVal1.forEach((line: string, lineIdx: number) => {
-          doc.text(line, margin + 32, currY + 5.5 + (lineIdx * 4.2));
+          doc.text(line, margin + 38, currY + 5.5 + (lineIdx * 4.2));
         });
         
         // Derecho
@@ -236,7 +236,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
           doc.setTextColor(15, 23, 42);
         }
         splitVal2.forEach((line: string, lineIdx: number) => {
-          doc.text(line, x2 + 32, currY + 5.5 + (lineIdx * 4.2));
+          doc.text(line, x2 + 38, currY + 5.5 + (lineIdx * 4.2));
         });
         
         currY += boxHeight + 2.5;
@@ -244,7 +244,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
       } else {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
-        const splitVal = doc.splitTextToSize(valStr, colW - 35);
+        const splitVal = doc.splitTextToSize(valStr, colW - 41);
         const boxHeight = Math.max(8, splitVal.length * 4.2 + 3);
         
         if (currY + boxHeight > 275) {
@@ -270,7 +270,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
           doc.setTextColor(15, 23, 42);
         }
         splitVal.forEach((line: string, lineIdx: number) => {
-          doc.text(line, margin + 32, currY + 5.5 + (lineIdx * 4.2));
+          doc.text(line, margin + 38, currY + 5.5 + (lineIdx * 4.2));
         });
         
         currY += boxHeight + 2.5;
@@ -308,17 +308,19 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     console.error("Error generando QR:", e);
   }
 
-  // --- Encabezado Tipo Ficha ISO 9001 ---
-  doc.setDrawColor(30, 41, 59); // Slate 800
-  doc.setLineWidth(0.4);
-  doc.line(16, 15, 194, 15); // Top
-  doc.line(16, 41, 194, 41); // Bottom
-  doc.line(16, 15, 16, 41);  // Left
-  doc.line(194, 15, 194, 41); // Right
+  // --- Encabezado Moderno con Fondo Azul Profundo ---
+  doc.setFillColor(15, 23, 42); // Azul profundo (Slate 900)
+  doc.rect(16, 15, 178, 30, 'F');
   
-  // Líneas divisorias verticales
-  doc.line(60, 15, 60, 41);
-  doc.line(148, 15, 148, 41);
+  // Línea de acento Cyan en la parte inferior del encabezado
+  doc.setFillColor(0, 229, 255);
+  doc.rect(16, 45, 178, 1.5, 'F');
+
+  // Separadores verticales sutiles en el encabezado
+  doc.setDrawColor(51, 65, 85); // Slate 700
+  doc.setLineWidth(0.3);
+  doc.line(60, 17, 60, 43);
+  doc.line(146, 17, 146, 43);
   
   // Celda Izquierda: Logo de la Empresa
   if (logoBase64) {
@@ -333,7 +335,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
         logoW = maxLogoH * aspect;
       }
       const logoX = 16 + (44 - logoW) / 2;
-      const logoY = 15 + (26 - logoH) / 2;
+      const logoY = 15 + (30 - logoH) / 2;
       doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error("Error dibujando logo:", e);
@@ -343,52 +345,44 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.setTextColor(15, 23, 42); // slate-900
-  doc.text('FICHA TÉCNICA DE ACTIVO', 104, 23, { align: 'center' });
+  doc.setTextColor(255, 255, 255); // Blanco
+  doc.text('FICHA TÉCNICA DE ACTIVO', 103, 26, { align: 'center' });
   
-  doc.line(60, 27, 148, 27); // Divisor horizontal
+  doc.line(68, 29, 138, 29); // Divisor horizontal sutil
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105); // slate-600
-  doc.text('SISTEMA DE CONTROL METROLÓGICO', 104, 34, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 229, 255); // Cyan
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(71, 85, 105);
-  doc.text('CÓDIGO:', 152, 21);
+  doc.setTextColor(148, 163, 184); // Gris claro
+  doc.text('CÓDIGO:', 148, 23);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(equipo.Codigo_Interno, 190, 21, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(equipo.Codigo_Interno, 192, 23, { align: 'right' });
   
-  doc.line(148, 24, 194, 24);
+  doc.line(148, 26, 192, 26);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text('EMISIÓN:', 152, 29);
+  doc.setTextColor(148, 163, 184);
+  doc.text('EMISIÓN:', 148, 31);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(formatFecha(new Date().toISOString()), 190, 29, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
   
-  doc.line(148, 32, 194, 32);
+  doc.line(148, 34, 192, 34);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text('REVISIÓN:', 152, 37);
+  doc.setTextColor(148, 163, 184);
+  doc.text('REVISIÓN:', 148, 39);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text('01', 190, 37, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text('01', 192, 39, { align: 'right' });
 
-  let currY = 48;
-
-  // --- Limpieza y formateo de Magnitud ---
-  const cleanMagnitud = equipo.Magnitud
-    ? equipo.Magnitud.split(',').map((m: string) => {
-        const trimmed = m.trim();
-        return trimmed === 'OTRA' ? 'OTRA (Sin especificar)' : trimmed;
-      }).join(', ')
-    : null;
+  let currY = 52;
 
   // --- 1. DATOS GENERALES E IDENTIFICACIÓN ---
   const rawIdentItems = [
@@ -399,7 +393,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     { label: 'Número Serie:', value: equipo.Serie },
     { label: 'Rango Medida:', value: equipo.Rango_Medida },
     { label: 'Resolución:', value: equipo.Resolucion },
-    { label: 'Magnitud:', value: cleanMagnitud },
+    { label: 'Magnitud:', value: equipo.Magnitud },
     { label: 'Ubicación / Área:', value: equipo.Area_Asignada },
     { label: 'Responsable:', value: equipo.Responsable }
   ];
@@ -416,7 +410,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   const estadoTxt = semaforoLabel(semaforo, equipo.Estado);
 
   const rawMetrologyItems = [
-    { label: 'Tolerancia Admitida:', value: equipo.Tolerancia_Aceptable != null ? `± ${equipo.Tolerancia_Aceptable} ${equipo.Unidad_Tolerancia ?? ''}` : null },
+    { label: 'Tolerancia Admitida:', value: equipo.Tolerancia_Aceptable != null ? `+/- ${equipo.Tolerancia_Aceptable} ${equipo.Unidad_Tolerancia ?? ''}` : null },
     { label: 'Intervalo de Control:', value: equipo.Periodicidad_Meses ? `${equipo.Periodicidad_Meses} Meses` : null },
     { label: 'Fecha de Ingreso:', value: formatFecha(equipo.Fecha_Ingreso) },
     { label: 'Última Verificación:', value: formatFecha(equipo.Fecha_Ultima_Verificacion) },
@@ -582,17 +576,19 @@ export async function generatePatronSheetPDF(patron: any) {
     console.error(e);
   }
 
-  // --- Encabezado Tipo Ficha ISO 9001 (Púrpura) ---
-  doc.setDrawColor(88, 28, 135); // Purple 900
-  doc.setLineWidth(0.4);
-  doc.line(16, 15, 194, 15); // Top
-  doc.line(16, 41, 194, 41); // Bottom
-  doc.line(16, 15, 16, 41);  // Left
-  doc.line(194, 15, 194, 41); // Right
+  // --- Encabezado Moderno con Fondo Púrpura Oscuro ---
+  doc.setFillColor(76, 29, 149); // Púrpura profundo (Purple 900)
+  doc.rect(16, 15, 178, 30, 'F');
   
-  // Líneas divisorias verticales
-  doc.line(60, 15, 60, 41);
-  doc.line(148, 15, 148, 41);
+  // Línea de acento lila
+  doc.setFillColor(192, 132, 252);
+  doc.rect(16, 45, 178, 1.5, 'F');
+
+  // Separadores verticales sutiles en el encabezado
+  doc.setDrawColor(124, 58, 237); // Purple 600
+  doc.setLineWidth(0.3);
+  doc.line(60, 17, 60, 43);
+  doc.line(146, 17, 146, 43);
   
   // Celda Izquierda: Logo
   if (logoBase64) {
@@ -607,7 +603,7 @@ export async function generatePatronSheetPDF(patron: any) {
         logoW = maxLogoH * aspect;
       }
       const logoX = 16 + (44 - logoW) / 2;
-      const logoY = 15 + (26 - logoH) / 2;
+      const logoY = 15 + (30 - logoH) / 2;
       doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error(e);
@@ -617,58 +613,50 @@ export async function generatePatronSheetPDF(patron: any) {
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.setTextColor(88, 28, 135); // Deep Purple
-  doc.text('CERTIFICADO DE PATRÓN', 104, 23, { align: 'center' });
+  doc.setTextColor(255, 255, 255);
+  doc.text('CERTIFICADO DE PATRÓN', 103, 26, { align: 'center' });
   
-  doc.line(60, 27, 148, 27); // Divisor horizontal
+  doc.line(68, 29, 138, 29); // Divisor horizontal sutil
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(107, 114, 128); // gray-500
-  doc.text('SISTEMA DE CONTROL METROLÓGICO', 104, 34, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(192, 132, 252); // Lila
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(88, 28, 135);
-  doc.text('CÓDIGO:', 152, 21);
+  doc.setTextColor(216, 180, 254); // Lila claro
+  doc.text('CÓDIGO:', 148, 23);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(patron.Codigo, 190, 21, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(patron.Codigo, 192, 23, { align: 'right' });
   
-  doc.line(148, 24, 194, 24);
+  doc.line(148, 26, 192, 26);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(88, 28, 135);
-  doc.text('EMISIÓN:', 152, 29);
+  doc.setTextColor(216, 180, 254);
+  doc.text('EMISIÓN:', 148, 31);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(formatFecha(new Date().toISOString()), 190, 29, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
   
-  doc.line(148, 32, 194, 32);
+  doc.line(148, 34, 192, 34);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(88, 28, 135);
-  doc.text('REVISIÓN:', 152, 37);
+  doc.setTextColor(216, 180, 254);
+  doc.text('REVISIÓN:', 148, 39);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text('01', 190, 37, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text('01', 192, 39, { align: 'right' });
 
-  let currY = 48;
-
-  // --- Limpieza y formateo de Magnitud ---
-  const cleanMagnitud = patron.Magnitud
-    ? patron.Magnitud.split(',').map((m: string) => {
-        const trimmed = m.trim();
-        return trimmed === 'OTRA' ? 'OTRA (Sin especificar)' : trimmed;
-      }).join(', ')
-    : null;
+  let currY = 52;
 
   // --- 1. INFORMACIÓN DEL PATRÓN ---
   const rawPItems = [
     { label: 'Nombre Patrón:', value: patron.Nombre_Patron, isNameField: true },
     { label: 'Código Interno:', value: patron.Codigo },
-    { label: 'Magnitud:', value: cleanMagnitud },
+    { label: 'Magnitud:', value: patron.Magnitud },
     { label: 'Laboratorio Calib.:', value: patron.Proveedor_Laboratorio },
     { label: 'N° Certificado:', value: patron.N_Certificado },
     { label: 'Fecha Calibración:', value: formatFecha(patron.Fecha_Calibracion_Externa) },
@@ -801,17 +789,19 @@ export async function generateExecutiveSummaryPDF(stats: any) {
 
   const logoBase64 = await getBase64FromUrl('/logo.png');
 
-  // --- Encabezado Tipo Ficha ISO 9001 (Azul) ---
-  doc.setDrawColor(30, 64, 175); // Blue 800
-  doc.setLineWidth(0.4);
-  doc.line(16, 15, 194, 15); // Top
-  doc.line(16, 41, 194, 41); // Bottom
-  doc.line(16, 15, 16, 41);  // Left
-  doc.line(194, 15, 194, 41); // Right
+  // --- Encabezado Moderno con Fondo Azul Marino ---
+  doc.setFillColor(30, 58, 138); // Azul marino profundo (Blue 900)
+  doc.rect(16, 15, 178, 30, 'F');
   
-  // Líneas divisorias verticales
-  doc.line(60, 15, 60, 41);
-  doc.line(148, 15, 148, 41);
+  // Línea de acento celeste
+  doc.setFillColor(96, 165, 250);
+  doc.rect(16, 45, 178, 1.5, 'F');
+
+  // Separadores verticales sutiles en el encabezado
+  doc.setDrawColor(29, 78, 216); // Blue 700
+  doc.setLineWidth(0.3);
+  doc.line(60, 17, 60, 43);
+  doc.line(146, 17, 146, 43);
   
   // Celda Izquierda: Logo
   if (logoBase64) {
@@ -826,7 +816,7 @@ export async function generateExecutiveSummaryPDF(stats: any) {
         logoW = maxLogoH * aspect;
       }
       const logoX = 16 + (44 - logoW) / 2;
-      const logoY = 15 + (26 - logoH) / 2;
+      const logoY = 15 + (30 - logoH) / 2;
       doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error(e);
@@ -836,44 +826,44 @@ export async function generateExecutiveSummaryPDF(stats: any) {
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.setTextColor(30, 64, 175); // corporate-blue
-  doc.text('REPORTE EJECUTIVO METROLÓGICO', 104, 23, { align: 'center' });
+  doc.setTextColor(255, 255, 255);
+  doc.text('REPORTE EJECUTIVO METROLÓGICO', 103, 26, { align: 'center' });
   
-  doc.line(60, 27, 148, 27); // Divisor horizontal
+  doc.line(68, 29, 138, 29); // Divisor horizontal sutil
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105); // slate-600
-  doc.text('SISTEMA DE CONTROL METROLÓGICO', 104, 34, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(96, 165, 250); // Celeste
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(30, 64, 175);
-  doc.text('PERIODO:', 152, 21);
+  doc.setTextColor(191, 219, 254); // Celeste claro
+  doc.text('PERIODO:', 148, 23);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase(), 190, 21, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase(), 192, 23, { align: 'right' });
   
-  doc.line(148, 24, 194, 24);
+  doc.line(148, 26, 192, 26);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 64, 175);
-  doc.text('EMISIÓN:', 152, 29);
+  doc.setTextColor(191, 219, 254);
+  doc.text('EMISIÓN:', 148, 31);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(formatFecha(new Date().toISOString()), 190, 29, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
   
-  doc.line(148, 32, 194, 32);
+  doc.line(148, 34, 192, 34);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 64, 175);
-  doc.text('TIPO:', 152, 37);
+  doc.setTextColor(191, 219, 254);
+  doc.text('TIPO:', 148, 39);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text('DIAGNÓSTICO', 190, 37, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text('DIAGNÓSTICO', 192, 39, { align: 'right' });
 
-  let currY = 48;
+  let currY = 52;
 
   currY = renderSectionTitle(doc, '1. Resumen Global de Indicadores (KPIs)', currY, [59, 130, 246]);
 
