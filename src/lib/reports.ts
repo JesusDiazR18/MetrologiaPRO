@@ -774,6 +774,22 @@ export async function generatePatronSheetPDF(patron: any) {
 }
 
 /**
+ * Auxiliar para renderizar un título de sección minimalista con una línea de acento sutil.
+ */
+function renderSectionTitleMinimal(doc: jsPDF, title: string, yPos: number): number {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59); // Slate 800
+  doc.text(title.toUpperCase(), 16, yPos + 4);
+  
+  // Línea sutil de separación
+  doc.setDrawColor(203, 213, 225); // Slate 300
+  doc.setLineWidth(0.3);
+  doc.line(16, yPos + 6, 194, yPos + 6);
+  return yPos + 10;
+}
+
+/**
  * Genera un Reporte Ejecutivo Mensual consolidado del Dashboard.
  */
 export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tipo?: string | null, fechaDesde?: string, fechaHasta?: string, status?: string | null }) {
@@ -789,25 +805,25 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
 
   const logoBase64 = await getBase64FromUrl('/logo.png');
 
-  // --- Encabezado Moderno con Fondo Azul Marino ---
+  // --- Encabezado Moderno Compacto con Fondo Slate Oscuro ---
   doc.setFillColor(15, 23, 42); // Slate 900
-  doc.rect(16, 15, 178, 30, 'F');
+  doc.rect(16, 15, 178, 24, 'F'); // Reducido a 24mm de alto para compactación
   
-  // Línea de acento celeste
-  doc.setFillColor(0, 229, 255); // Cyan
-  doc.rect(16, 45, 178, 1.5, 'F');
+  // Línea de acento Cyan sutil
+  doc.setFillColor(0, 229, 255);
+  doc.rect(16, 39, 178, 1, 'F');
 
   // Separadores verticales sutiles en el encabezado
   doc.setDrawColor(51, 65, 85); // Slate 700
   doc.setLineWidth(0.3);
-  doc.line(60, 17, 60, 43);
-  doc.line(146, 17, 146, 43);
+  doc.line(60, 17, 60, 37);
+  doc.line(146, 17, 146, 37);
   
   // Celda Izquierda: Logo
   if (logoBase64) {
     try {
       const maxLogoW = 34;
-      const maxLogoH = 20;
+      const maxLogoH = 16;
       const aspect = logoBase64.width / logoBase64.height;
       let logoW = maxLogoW;
       let logoH = maxLogoW / aspect;
@@ -816,7 +832,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
         logoW = maxLogoH * aspect;
       }
       const logoX = 16 + (44 - logoW) / 2;
-      const logoY = 15 + (30 - logoH) / 2;
+      const logoY = 15 + (24 - logoH) / 2;
       doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error(e);
@@ -825,48 +841,48 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12.5);
+  doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text('REPORTE EJECUTIVO METROLÓGICO', 103, 26, { align: 'center' });
+  doc.text('REPORTE EJECUTIVO METROLÓGICO', 103, 23, { align: 'center' });
   
-  doc.line(68, 29, 138, 29); // Divisor horizontal sutil
+  doc.line(68, 26, 138, 26); // Divisor horizontal sutil
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(0, 229, 255); // Cyan
-  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setTextColor(203, 213, 225); // Slate 300
+  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 31, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184); // Slate 400
-  doc.text('PERIODO:', 148, 23);
+  doc.text('PERIODO:', 148, 21);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase(), 192, 23, { align: 'right' });
+  doc.text(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase(), 192, 21, { align: 'right' });
   
-  doc.line(148, 26, 192, 26);
+  doc.line(148, 23, 192, 23);
   
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(148, 163, 184);
-  doc.text('EMISIÓN:', 148, 31);
+  doc.text('EMISIÓN:', 148, 28);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
+  doc.text(formatFecha(new Date().toISOString()), 192, 28, { align: 'right' });
   
-  doc.line(148, 34, 192, 34);
+  doc.line(148, 30, 192, 30);
   
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(148, 163, 184);
-  doc.text('TIPO:', 148, 39);
+  doc.text('TIPO:', 148, 35);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text('DIAGNÓSTICO', 192, 39, { align: 'right' });
+  doc.text('DIAGNÓSTICO', 192, 35, { align: 'right' });
 
-  let currY = 52;
+  let currY = 44;
 
   // --- Filtros Aplicados ---
-  let filterText = 'Filtros aplicados: Ninguno (Vista Global)';
+  let filterText = 'Filtro aplicado: Ninguno (Vista Global)';
   if (filterInfo) {
     const parts = [];
     if (filterInfo.tipo) {
@@ -881,227 +897,229 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
       parts.push(`Rango: ${desde} a ${hasta}`);
     }
     if (parts.length > 0) {
-      filterText = `Filtros aplicados: ${parts.join(' | ')}`;
+      filterText = `Filtro aplicado: ${parts.join(' | ')}`;
     }
   }
 
-  doc.setFillColor(241, 245, 249); // Slate 100
-  doc.rect(margin, currY, printableWidth, 7, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(71, 85, 105); // Slate 600
-  doc.text(filterText, margin + 4, currY + 4.8);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139); // Slate 500
+  doc.text(filterText, margin, currY + 4);
+
+  // Línea sutil bajo filtros
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(margin, currY + 6, margin + printableWidth, currY + 6);
 
   currY += 12;
 
-  // Sección 1: KPIs Ejecutivos (Grid Layout)
-  currY = renderSectionTitle(doc, '1. Resumen Global de Indicadores (KPIs)', currY, [0, 229, 255]);
+  // --- Sección 1: Resumen de Indicadores Metrológicos ---
+  currY = renderSectionTitleMinimal(doc, '1. Resumen de Indicadores Metrológicos', currY);
 
-  // Cuadrícula Row 1 (X: 16 -> 103, X: 107 -> 194)
-  const cardH = 18;
-  const colW1 = 86.5;
+  const isPatron = filterInfo?.tipo === 'PATRON';
+  const isEquipo = filterInfo?.tipo === 'EQUIPO';
+  const isInstrumento = filterInfo?.tipo === 'INSTRUMENTO';
 
-  // Card 1: Cumplimiento Global
-  doc.setFillColor(250, 250, 250);
-  doc.rect(margin, currY, colW1, cardH, 'F');
-  doc.setDrawColor(226, 232, 240);
-  doc.rect(margin, currY, colW1, cardH, 'S');
-  
-  // Línea izquierda del color de cumplimiento
+  const rows: { label: string; value: string | number; detail: string; color?: [number, number, number] }[] = [];
+
+  // Cumplimiento
+  let compLabel = 'Cumplimiento Global del Sistema';
+  if (isPatron) compLabel = 'Cumplimiento de Patrones';
+  else if (isEquipo) compLabel = 'Cumplimiento de Equipos';
+  else if (isInstrumento) compLabel = 'Cumplimiento de Instrumentos';
+
   const compliance = stats.complianceGlobal ?? 100;
-  const compColor = compliance >= 90 ? [16, 185, 129] : compliance >= 70 ? [245, 158, 11] : [239, 68, 68];
-  doc.setFillColor(compColor[0], compColor[1], compColor[2]);
-  doc.rect(margin, currY, 2.5, cardH, 'F');
+  const compColor: [number, number, number] = compliance >= 90 ? [22, 163, 74] : compliance >= 70 ? [217, 119, 6] : [220, 38, 38];
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 116, 139);
-  doc.text('CUMPLIMIENTO GLOBAL', margin + 6, currY + 5);
+  rows.push({
+    label: compLabel,
+    value: `${compliance}%`,
+    detail: compliance >= 90 ? 'Excelente (Dentro de norma)' : compliance >= 70 ? 'Aceptable (Bajo observación)' : 'Crítico (Atención requerida)',
+    color: compColor
+  });
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${compliance}%`, margin + 6, currY + 12);
+  // Total Activos
+  let totalLabel = 'Total Activos en Inventario';
+  if (isPatron) totalLabel = 'Total Patrones de Referencia';
+  else if (isEquipo) totalLabel = 'Total Equipos de Medición';
+  else if (isInstrumento) totalLabel = 'Total Instrumentos de Medición';
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Conformidad del plan metrológico', margin + 6, currY + 16);
+  rows.push({
+    label: totalLabel,
+    value: stats.totalActivos ?? 0,
+    detail: 'Unidades totales registradas'
+  });
 
-  // Card 2: Total Activos
+  // Solo mostrar desglose si NO hay filtro específico
+  if (!isPatron && !isEquipo && !isInstrumento) {
+    rows.push({
+      label: '  • Equipos de Medición',
+      value: stats.totalEquipos ?? 0,
+      detail: 'Activos principales'
+    });
+    rows.push({
+      label: '  • Instrumentos de Medición',
+      value: stats.totalInstrumentos ?? 0,
+      detail: 'Equipos auxiliares'
+    });
+    rows.push({
+      label: '  • Patrones de Referencia',
+      value: stats.totalPatrones ?? 0,
+      detail: 'Estándares certificados'
+    });
+  }
+
+  // Estados
+  const stateSuffix = isPatron ? 'Patrones' : isEquipo ? 'Equipos' : isInstrumento ? 'Instrumentos' : 'Activos';
+
+  rows.push({
+    label: `  - ${stateSuffix} Vigentes (Al Día)`,
+    value: stats.alDia ?? 0,
+    detail: 'Operación normal permitida',
+    color: [22, 163, 74]
+  });
+
+  rows.push({
+    label: `  - ${stateSuffix} Próximos a Vencer (Advertencia)`,
+    value: stats.proximos ?? 0,
+    detail: 'Vencimiento menor a 30 días',
+    color: [217, 119, 6]
+  });
+
+  rows.push({
+    label: `  - ${stateSuffix} fuera de Vigencia (Críticos)`,
+    value: stats.vencidos ?? 0,
+    detail: 'Calibración / Inspección pendiente',
+    color: [220, 38, 38]
+  });
+
+  // Renderizar la tabla minimalista de KPIs
   doc.setFillColor(250, 250, 250);
-  doc.rect(margin + colW1 + 5, currY, colW1, cardH, 'F');
-  doc.rect(margin + colW1 + 5, currY, colW1, cardH, 'S');
-  
-  doc.setFillColor(59, 130, 246); // Azul
-  doc.rect(margin + colW1 + 5, currY, 2.5, cardH, 'F');
+  doc.rect(margin, currY, printableWidth, 6.5 * rows.length + 6, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(margin, currY, printableWidth, 6.5 * rows.length + 6, 'S');
 
+  // Cabecera de la tabla
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 116, 139);
-  doc.text('ACTIVOS EN INVENTARIO', margin + colW1 + 11, currY + 5);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${stats.totalActivos ?? 0}`, margin + colW1 + 11, currY + 12);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text(`Equipos: ${stats.totalEquipos ?? 0}  ·  Patrones: ${stats.totalPatrones ?? 0}`, margin + colW1 + 11, currY + 16);
-
-  currY += cardH + 4;
-
-  // Cuadrícula Row 2 (3 Columnas: 55.6mm cada una, gap 4.5mm)
-  const colW2 = 56.3;
-  const gap2 = 4.5;
-
-  // Card 3: Al Día (Verde)
-  doc.setFillColor(250, 250, 250);
-  doc.rect(margin, currY, colW2, cardH, 'F');
-  doc.rect(margin, currY, colW2, cardH, 'S');
-  doc.setFillColor(16, 185, 129); // Verde
-  doc.rect(margin, currY, 2.5, cardH, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(16, 185, 129);
-  doc.text('AL DÍA', margin + 6, currY + 5);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${stats.alDia ?? 0}`, margin + 6, currY + 12);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Operación conforme', margin + 6, currY + 16);
-
-  // Card 4: Por Vencer (Amarillo)
-  const xCard4 = margin + colW2 + gap2;
-  doc.setFillColor(250, 250, 250);
-  doc.rect(xCard4, currY, colW2, cardH, 'F');
-  doc.rect(xCard4, currY, colW2, cardH, 'S');
-  doc.setFillColor(245, 158, 11); // Amarillo
-  doc.rect(xCard4, currY, 2.5, cardH, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(245, 158, 11);
-  doc.text('POR VENCER', xCard4 + 6, currY + 5);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${stats.proximos ?? 0}`, xCard4 + 6, currY + 12);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Control < 30 días', xCard4 + 6, currY + 16);
-
-  // Card 5: Críticos (Rojo)
-  const xCard5 = margin + (colW2 * 2) + (gap2 * 2);
-  doc.setFillColor(250, 250, 250);
-  doc.rect(xCard5, currY, colW2, cardH, 'F');
-  doc.rect(xCard5, currY, colW2, cardH, 'S');
-  doc.setFillColor(239, 68, 68); // Rojo
-  doc.rect(xCard5, currY, 2.5, cardH, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(239, 68, 68);
-  doc.text('CRÍTICOS', xCard5 + 6, currY + 5);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`${stats.vencidos ?? 0}`, xCard5 + 6, currY + 12);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Calibración urgente', xCard5 + 6, currY + 16);
-
-  currY += cardH + 10;
-
-  // Sección 2: Distribución de Inventario Activo
-  currY = renderSectionTitle(doc, '2. Distribución de Inventario Activo', currY, [0, 229, 255]);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  const descText = `El parque de activos consta de equipos e instrumentos de medición junto con patrones certificados de referencia metrológica. La composición porcentual se detalla a continuación:`;
-  doc.text(descText, margin, currY + 1);
+  doc.text('INDICADOR METROLÓGICO', margin + 4, currY + 4.5);
+  doc.text('VALOR', margin + 120, currY + 4.5, { align: 'right' });
+  doc.text('ESTADO / DETALLE', margin + 174, currY + 4.5, { align: 'right' });
 
-  // Proporción Visual Bar
-  const barY = currY + 6;
-  const totalActivosVal = (stats.totalEquipos ?? 0) + (stats.totalPatrones ?? 0);
-  const eqPct = totalActivosVal > 0 ? (stats.totalEquipos ?? 0) / totalActivosVal : 0.5;
-  const patPct = totalActivosVal > 0 ? (stats.totalPatrones ?? 0) / totalActivosVal : 0.5;
+  // Línea divisoria bajo cabecera
+  doc.setDrawColor(203, 213, 225);
+  doc.line(margin, currY + 6, margin + printableWidth, currY + 6);
 
-  const eqW = printableWidth * eqPct;
-  const patW = printableWidth * patPct;
-
-  // Dibuja la barra de equipos (Azul)
-  doc.setFillColor(59, 130, 246);
-  doc.rect(margin, barY, eqW, 4, 'F');
-
-  // Dibuja la barra de patrones (Celeste)
-  doc.setFillColor(147, 197, 253);
-  doc.rect(margin + eqW, barY, patW, 4, 'F');
-
-  // Leyenda bajo la barra
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(59, 130, 246);
-  doc.text(`Equipos / Instrumentos: ${stats.totalEquipos ?? 0} (${Math.round(eqPct * 100)}%)`, margin, barY + 8);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(29, 78, 216);
-  doc.text(`Patrones de Referencia: ${stats.totalPatrones ?? 0} (${Math.round(patPct * 100)}%)`, margin + printableWidth, barY + 8, { align: 'right' });
-
-  currY += 22;
-
-  // Sección 3: Alertas Críticas de Atención Inmediata
-  if (stats.alertasCriticas && stats.alertasCriticas.length > 0) {
-    currY = renderSectionTitle(doc, '3. Alertas Críticas de Atención Inmediata (Requieren Calibración)', currY, [239, 68, 68]);
-
-    // Tabla de Alertas
-    doc.setFillColor(15, 23, 42); // Slate 900
-    doc.rect(margin, currY, printableWidth, 8, 'F');
+  let rowY = currY + 6;
+  rows.forEach((r, idx) => {
+    if (idx % 2 === 1) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(margin, rowY, printableWidth, 6.5, 'F');
+    }
     
+    // Etiqueta
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+    doc.text(r.label, margin + 4, rowY + 4.5);
+
+    // Valor
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
+    if (r.color) {
+      doc.setTextColor(r.color[0], r.color[1], r.color[2]);
+    } else {
+      doc.setTextColor(15, 23, 42);
+    }
+    doc.text(String(r.value), margin + 120, rowY + 4.5, { align: 'right' });
+
+    // Detalle
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(r.detail, margin + 174, rowY + 4.5, { align: 'right' });
+
+    rowY += 6.5;
+  });
+
+  currY = rowY + 8;
+
+  // --- Sección 2: Distribución de Inventario Activo (Solo en Vista Global) ---
+  if (!isPatron && !isEquipo && !isInstrumento) {
+    currY = renderSectionTitleMinimal(doc, '2. Distribución de Inventario Activo', currY);
+
+    const totalActivosVal = (stats.totalEquipos ?? 0) + (stats.totalPatrones ?? 0) + (stats.totalInstrumentos ?? 0);
+    const eqPct = totalActivosVal > 0 ? (stats.totalEquipos ?? 0) / totalActivosVal : 0;
+    const instPct = totalActivosVal > 0 ? (stats.totalInstrumentos ?? 0) / totalActivosVal : 0;
+    const patPct = totalActivosVal > 0 ? (stats.totalPatrones ?? 0) / totalActivosVal : 0;
+
+    const distRows = [
+      { label: 'Equipos de Medición', count: stats.totalEquipos ?? 0, pct: `${Math.round(eqPct * 100)}%` },
+      { label: 'Instrumentos de Medición', count: stats.totalInstrumentos ?? 0, pct: `${Math.round(instPct * 100)}%` },
+      { label: 'Patrones de Referencia', count: stats.totalPatrones ?? 0, pct: `${Math.round(patPct * 100)}%` },
+    ];
+
+    doc.setFillColor(250, 250, 250);
+    doc.rect(margin, currY, printableWidth, 6.5 * distRows.length + 3, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(margin, currY, printableWidth, 6.5 * distRows.length + 3, 'S');
+
+    let distY = currY + 1.5;
+    distRows.forEach((dr) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(30, 41, 59);
+      doc.text(dr.label, margin + 4, distY + 4.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${dr.count} unidades (${dr.pct})`, margin + printableWidth - 6, distY + 4.5, { align: 'right' });
+
+      distY += 6.5;
+    });
+
+    currY = distY + 8;
+  }
+
+  // --- Sección 3: Alertas Críticas (El número de sección cambia dinámicamente) ---
+  if (stats.alertasCriticas && stats.alertasCriticas.length > 0) {
+    const sectionNum = (!isPatron && !isEquipo && !isInstrumento) ? '3' : '2';
+    currY = renderSectionTitleMinimal(doc, `${sectionNum}. Alertas Críticas de Atención Inmediata`, currY);
+
+    // Tabla de Alertas
+    doc.setFillColor(30, 41, 59); // Slate 800 cabecera
+    doc.rect(margin, currY, printableWidth, 7, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
     doc.setTextColor(255, 255, 255);
-    doc.text('CÓDIGO', margin + 4, currY + 5.5);
-    doc.text('NOMBRE DEL ACTIVO', margin + 32, currY + 5.5);
-    doc.text('MOTIVO / ESTADO', margin + 120, currY + 5.5);
+    doc.text('CÓDIGO', margin + 4, currY + 4.8);
+    doc.text('NOMBRE DEL ACTIVO', margin + 30, currY + 4.8);
+    doc.text('MOTIVO / ESTADO DE ALERTA', margin + printableWidth - 4, currY + 4.8, { align: 'right' });
 
-    currY += 8;
+    currY += 7;
 
-    stats.alertasCriticas.slice(0, 12).forEach((a: any, idx: number) => {
+    stats.alertasCriticas.slice(0, 15).forEach((a: any, idx: number) => {
       const nombreText = a.nombre || 'Sin nombre';
-      const splitNombre = doc.splitTextToSize(nombreText, 83); // 83mm para el nombre
-      const rowHeight = Math.max(8, splitNombre.length * 4.5 + 2);
+      const splitNombre = doc.splitTextToSize(nombreText, 100); // 100mm para el nombre
+      const rowHeight = Math.max(6.5, splitNombre.length * 4 + 2.5);
 
       if (currY + rowHeight > 275) {
         doc.addPage();
         currY = 20;
         
         // Repetir cabecera
-        doc.setFillColor(15, 23, 42);
-        doc.rect(margin, currY, printableWidth, 8, 'F');
+        doc.setFillColor(30, 41, 59);
+        doc.rect(margin, currY, printableWidth, 7, 'F');
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.5);
+        doc.setFontSize(7.5);
         doc.setTextColor(255, 255, 255);
-        doc.text('CÓDIGO', margin + 4, currY + 5.5);
-        doc.text('NOMBRE DEL ACTIVO', margin + 32, currY + 5.5);
-        doc.text('MOTIVO / ESTADO', margin + 120, currY + 5.5);
-        currY += 8;
+        doc.text('CÓDIGO', margin + 4, currY + 4.8);
+        doc.text('NOMBRE DEL ACTIVO', margin + 30, currY + 4.8);
+        doc.text('MOTIVO / ESTADO DE ALERTA', margin + printableWidth - 4, currY + 4.8, { align: 'right' });
+        currY += 7;
       }
 
       const bg = idx % 2 === 0 ? 255 : 250;
@@ -1111,31 +1129,33 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
       doc.line(margin, currY + rowHeight, margin + printableWidth, currY + rowHeight);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(30, 41, 59);
-      doc.text(a.codigo || '', margin + 4, currY + 5);
+      doc.text(a.codigo || '', margin + 4, currY + 4.5);
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(71, 85, 105);
       splitNombre.forEach((line: string, lineIdx: number) => {
-        doc.text(line, margin + 32, currY + 5 + (lineIdx * 4.5));
+        doc.text(line, margin + 30, currY + 4.5 + (lineIdx * 4));
       });
 
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(185, 28, 28);
-      const motivoText = a.status === 'ROJO' ? 'Control Vencido / Calibración Pendiente' : 'Estado NO APTO';
-      doc.text(motivoText, margin + 120, currY + 5);
+      doc.setFontSize(7.5);
+      doc.setTextColor(185, 28, 28); // Rojo
+      const motivoText = a.status === 'ROJO' ? 'Calibración Expirada / Crítico' : 'Estado NO APTO';
+      doc.text(motivoText, margin + printableWidth - 4, currY + 4.5, { align: 'right' });
 
       currY += rowHeight;
     });
   }
 
+  // Pie de Página
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setDrawColor(226, 232, 240);
     doc.line(margin, 282, pageWidth - margin, 282);
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.setFont('helvetica', 'normal');
     doc.text('Sistema de Control Metrológico · Reporte de Dirección', margin, 287);
