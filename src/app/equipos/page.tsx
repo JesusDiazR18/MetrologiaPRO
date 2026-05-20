@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ClipboardList, Search, SlidersHorizontal, Plus, ChevronsDown, 
-  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2, FileText, Edit, RefreshCw
+  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2, FileText, Edit, RefreshCw, RotateCcw
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes, getScanUrl } from '@/lib/metrologia'
@@ -78,6 +78,7 @@ function EquiposContent() {
   const [renewEquipo, setRenewEquipo] = useState<Equipo | null>(null)
   const [qrLabelEquipo, setQrLabelEquipo] = useState<Equipo | null>(null)
   const [modalHistorical, setModalHistorical] = useState<Equipo | null>(null)
+  const [showHistoricalModal, setShowHistoricalModal] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
@@ -219,6 +220,9 @@ function EquiposContent() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
           <button className="btn btn-ghost" onClick={() => setShowCreateModal(true)}>
             <Plus size={16} /> Añadir Activo
+          </button>
+          <button className="btn btn-ghost" style={{ color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)' }} onClick={() => setShowHistoricalModal(true)}>
+            <RotateCcw size={16} /> Verificación Anterior
           </button>
           <button className="btn btn-cyan" onClick={() => setModalEquipo({} as Equipo)}>
             <Activity size={16} /> Nueva Verificación
@@ -694,8 +698,17 @@ function EquiposContent() {
       {modalHistorical && (
         <HistoricalVerificationModal
           equipo={modalHistorical}
+          equipos={equipos}
           onClose={() => setModalHistorical(null)}
           onSaved={() => { setModalHistorical(null); load(q, tipo) }}
+        />
+      )}
+      {showHistoricalModal && (
+        <HistoricalVerificationModal
+          equipo={null}
+          equipos={equipos}
+          onClose={() => setShowHistoricalModal(false)}
+          onSaved={() => { setShowHistoricalModal(false); load(q, tipo) }}
         />
       )}
       {qrLabelEquipo && (

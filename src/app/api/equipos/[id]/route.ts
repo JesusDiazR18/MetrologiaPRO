@@ -52,7 +52,7 @@ export async function PUT(
       Responsable, Periodicidad_Meses, Foto_Equipo, Estado, PDF_Certificado, 
       Fecha_Vencimiento_Certificado, N_Certificado, Proveedor_Servicio, 
       Magnitud, Accesorios, Insumos, Detalles_Estado, Tiene_Solucion, 
-      Requiere_Seguimiento, Fecha_Ingreso
+      Requiere_Seguimiento, Fecha_Ingreso, Tolerancias_Multimagnitud
     } = body
 
     const targetEstado = (Estado === 'OBSOLETO' || Estado === 'BAJA') ? 'DE_BAJA_OBSOLETO' : Estado;
@@ -100,7 +100,8 @@ export async function PUT(
         Proveedor_Servicio,
         Magnitud,
         Accesorios,
-        Insumos
+        Insumos,
+        Tolerancias_Multimagnitud
       }
     })
 

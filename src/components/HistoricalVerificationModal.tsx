@@ -165,6 +165,7 @@ interface Equipo {
   Tolerancia_Aceptable: number
   Unidad_Tolerancia: string | null
   Magnitud?: string | null
+  Tolerancias_Multimagnitud?: string | null
 }
 
 interface Patron {
@@ -176,12 +177,16 @@ interface Patron {
 }
 
 interface Props {
-  equipo: Equipo
+  equipo: Equipo | null
+  equipos?: Equipo[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function HistoricalVerificationModal({ equipo, onClose, onSaved }: Props) {
+export default function HistoricalVerificationModal({ equipo, equipos = [], onClose, onSaved }: Props) {
+  const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo || '')
+  const selectedEquipo = equipos.find(e => e.ID_Equipo === selectedId) ?? equipo
+
   const [fechaEjecucion, setFechaEjecucion] = useState(new Date().toISOString().split('T')[0])
   const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
   const [medidaPatron, setMedidaPatron] = useState('')
@@ -195,6 +200,26 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [multimagnitudData, setMultimagnitudData] = useState<Record<string, {
+    FK_ID_Patron_Usado: string;
+    Medida_Instrumento: string;
+    Medida_Patron: string;
+  }>>({})
+
+  useEffect(() => {
+    if (selectedEquipo) {
+      const mags = selectedEquipo.Magnitud ? selectedEquipo.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
+      const init: Record<string, { FK_ID_Patron_Usado: string; Medida_Instrumento: string; Medida_Patron: string }> = {}
+      mags.forEach((m: string) => {
+        init[m] = {
+          FK_ID_Patron_Usado: '',
+          Medida_Instrumento: '',
+          Medida_Patron: ''
+        }
+      })
+      setMultimagnitudData(init)
+    }
+  }, [selectedId, selectedEquipo])
 
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -214,18 +239,59 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
   const varNum = (tipoVerif === 'CALIBRACION' && medidaPatron && medidaInstrumento)
     ? calcularVariacion(parseFloat(medidaInstrumento), parseFloat(medidaPatron))
     : null
-  const statusCalc = varNum != null && equipo
-    ? calcularStatus(varNum, equipo.Tolerancia_Aceptable)
+  const statusCalc = varNum != null && selectedEquipo
+    ? calcularStatus(varNum, selectedEquipo.Tolerancia_Aceptable)
     : null
+
+  const computeMagCalcs = (magName: string) => {
+    const item = multimagnitudData[magName]
+    if (!item || !item.Medida_Patron || !item.Medida_Instrumento) return null
+    const instr = parseFloat(item.Medida_Instrumento)
+    const patr = parseFloat(item.Medida_Patron)
+    if (isNaN(instr) || isNaN(patr)) return null
+    const varNum = calcularVariacion(instr, patr)
+    
+    let magTolerancia = selectedEquipo?.Tolerancia_Aceptable ?? 0
+    let magUnidad = selectedEquipo?.Unidad_Tolerancia ?? ''
+    if (selectedEquipo?.Tolerancias_Multimagnitud) {
+      try {
+        const map = JSON.parse(selectedEquipo.Tolerancias_Multimagnitud)
+        if (map[magName]) {
+          magTolerancia = parseFloat(map[magName].tolerancia) || 0
+          magUnidad = map[magName].unidad || ''
+        }
+      } catch(e) {}
+    }
+    const status = calcularStatus(varNum, magTolerancia)
+    return { varNum, status, magTolerancia, magUnidad }
+  }
+
+  // Filtrar patrones si el equipo tiene magnitud
+  const equipoMags = selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
+    if (!selectedId) { setError('Selecciona un equipo'); return }
     if (!tecnico.trim()) { setError('El nombre del técnico es requerido'); return }
     if (!fechaEjecucion) { setError('La fecha de ejecución es requerida'); return }
 
     if (tipoVerif === 'CALIBRACION') {
-      if (!selectedPatronId) { setError('Selecciona el patrón utilizado'); return }
-      if (!medidaPatron || !medidaInstrumento) { setError('Completa las medidas del patrón e instrumento'); return }
+      if (equipoMags.length > 1) {
+        for (const mag of equipoMags) {
+          const item = multimagnitudData[mag]
+          if (!item || !item.FK_ID_Patron_Usado) {
+            setError(`Selecciona el patrón utilizado para la magnitud ${mag}`);
+            return;
+          }
+          if (!item.Medida_Patron || !item.Medida_Instrumento) {
+            setError(`Completa las medidas del patrón e instrumento para la magnitud ${mag}`);
+            return;
+          }
+        }
+      } else {
+        if (!selectedPatronId) { setError('Selecciona el patrón utilizado'); return }
+        if (!medidaPatron || !medidaInstrumento) { setError('Completa las medidas del patrón e instrumento'); return }
+      }
     }
     
     setSaving(true); setError('')
@@ -235,20 +301,42 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
         photoBase64 = await fileToBase64(photoFile)
       }
 
+      let multimagnitudPayload = null
+      let finalStatus = statusCalc || 'APTO'
+
+      if (tipoVerif === 'CALIBRACION' && equipoMags.length > 1) {
+        multimagnitudPayload = equipoMags.map(mag => {
+          const item = multimagnitudData[mag]
+          const calcs = computeMagCalcs(mag)
+          return {
+            Magnitud_Controlada: mag,
+            FK_ID_Patron_Usado: item.FK_ID_Patron_Usado,
+            Medida_Instrumento: parseFloat(item.Medida_Instrumento),
+            Medida_Patron: parseFloat(item.Medida_Patron),
+            Resultado_Status: calcs?.status ?? 'APTO',
+            Variacion_Calculada: calcs?.varNum ?? 0
+          }
+        })
+        
+        const hasNoApto = multimagnitudPayload.some(item => item.Resultado_Status === 'NO_APTO')
+        finalStatus = hasNoApto ? 'NO_APTO' : 'APTO'
+      }
+
       const payload = {
-        FK_ID_Equipo: equipo.ID_Equipo,
+        FK_ID_Equipo: selectedId,
         isHistoricalLog: true,
         Fecha_Ejecucion: new Date(fechaEjecucion).toISOString(),
-        FK_ID_Patron_Usado: tipoVerif === 'CALIBRACION' ? selectedPatronId : null,
-        Medida_Patron: tipoVerif === 'CALIBRACION' ? parseFloat(medidaPatron) : null,
-        Medida_Instrumento: tipoVerif === 'CALIBRACION' ? parseFloat(medidaInstrumento) : null,
-        Variacion_Calculada: tipoVerif === 'CALIBRACION' ? varNum : null,
-        Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : (statusCalc || 'APTO'),
+        FK_ID_Patron_Usado: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? selectedPatronId : null,
+        Medida_Patron: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaPatron) : null,
+        Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaInstrumento) : null,
+        Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? varNum : null,
+        Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : finalStatus,
         Tecnico_Ejecutor: tecnico.trim(),
         Observaciones: obs.trim() || 'Verificación histórica cargada manualmente.',
         Tipo_Verificacion: tipoVerif,
         Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
-        Evidencia_Foto: photoBase64 || null
+        Evidencia_Foto: photoBase64 || null,
+        multimagnitudData: multimagnitudPayload
       }
 
       const r = await fetch('/api/historial', {
@@ -270,18 +358,15 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
     }
   }
 
-  // Filtrar patrones si el equipo tiene magnitud
-  const equipoMags = equipo?.Magnitud ? equipo.Magnitud.split(',').map(m => m.trim()) : []
+  const isInstrument = selectedEquipo?.Tipo === 'INSTRUMENTO'
+  const tab2Label = isInstrument ? '2. Verificación' : '2. Calibración / Verificación'
+
   const patronesFiltrados = patrones.filter(p => {
     if (equipoMags.length === 0) return true
     if (!p.Magnitud) return true
     return equipoMags.some(mag => p.Magnitud?.includes(mag))
   })
-
   const patronesAMostrar = patronesFiltrados.length > 0 ? patronesFiltrados : patrones
-
-  const isInstrument = equipo.Tipo === 'INSTRUMENTO'
-  const tab2Label = isInstrument ? '2. Verificación' : '2. Calibración / Verificación'
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -293,7 +378,9 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
             </div>
             <div>
               <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>Agregar Verificación Anterior</h2>
-              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Carga de historial metrológico previo para {equipo.Codigo_Interno}</p>
+              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                {selectedEquipo ? `Carga de historial metrológico previo para ${selectedEquipo.Codigo_Interno}` : 'Carga de historial metrológico previo'}
+              </p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="btn-close-large">
@@ -364,10 +451,29 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
               </div>
             )}
 
-            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{equipo.Nombre_Equipo}</div>
-              <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Código: {equipo.Codigo_Interno}</div>
-            </div>
+            {equipo && equipo.ID_Equipo ? (
+              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{equipo.Nombre_Equipo}</div>
+                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Código: {equipo.Codigo_Interno}</div>
+              </div>
+            ) : (
+              <div className="form-group-modern" style={{ marginBottom: 20 }}>
+                <label><User size={14} /> Equipo / Instrumento a registrar *</label>
+                <SearchableSelect 
+                  options={equipos.map(e => ({
+                    value: e.ID_Equipo,
+                    label: `${e.Codigo_Interno} — ${e.Nombre_Equipo} ${e.Magnitud ? `(${e.Magnitud})` : ''}`
+                  }))}
+                  value={selectedId}
+                  onChange={val => {
+                    setSelectedId(val);
+                    setSelectedPatronId('');
+                  }}
+                  placeholder="Buscar por código o nombre del equipo…"
+                  icon={<User size={14} />}
+                />
+              </div>
+            )}
 
             <div className="form-group-modern">
               <label><Calendar size={14} /> Fecha de Ejecución *</label>
@@ -416,72 +522,171 @@ export default function HistoricalVerificationModal({ equipo, onClose, onSaved }
 
             {/* SECCIÓN CALIBRACIÓN METROLÓGICA */}
             {tipoVerif === 'CALIBRACION' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeIn 0.3s' }}>
-                <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <CheckCircle2 size={14} /> Patrón utilizado *
-                    </span>
-                    {equipo?.Magnitud && (
-                      <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 800 }}>
-                        MAGNITUD: {equipo.Magnitud}
-                      </span>
-                    )}
-                  </label>
-                  <SearchableSelect 
-                    options={patronesAMostrar.map(p => ({
-                      value: p.ID_Patron,
-                      label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
-                    }))}
-                    value={selectedPatronId}
-                    onChange={val => setSelectedPatronId(val)}
-                    placeholder="Buscar por código o nombre del patrón…"
-                    icon={<CheckCircle2 size={14} />}
-                  />
-                  {patronesFiltrados.length === 0 && equipo?.Magnitud && (
-                    <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
-                      ⚠️ No hay patrones vigentes registrados para {equipo.Magnitud}. Se muestran todos.
-                    </div>
-                  )}
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fadeIn 0.3s' }}>
+                {equipoMags.length > 1 ? (
+                  equipoMags.map(mag => {
+                    const item = multimagnitudData[mag] || { FK_ID_Patron_Usado: '', Medida_Instrumento: '', Medida_Patron: '' }
+                    const calcs = computeMagCalcs(mag)
+                    const filteredPatrons = patrones.filter(p => !p.Magnitud || p.Magnitud.includes(mag))
+                    const patronesAMostrar = filteredPatrons.length > 0 ? filteredPatrons : patrones
 
-                <div className="metrology-grid">
-                  <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                    <label><Calculator size={14} /> Medida Patrón *</label>
-                    <input type="number" step="any" value={medidaPatron} onChange={e => setMedidaPatron(e.target.value)} placeholder="0.00" required />
-                  </div>
-                  <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                    <label><Calculator size={14} /> Medida Instrumento *</label>
-                    <input type="number" step="any" value={medidaInstrumento} onChange={e => setMedidaInstrumento(e.target.value)} placeholder="0.00" required />
-                  </div>
-                </div>
-
-                {varNum != null && equipo && (
-                  <div className={`status-card ${statusCalc === 'APTO' ? 'is-apto' : 'is-no-apto'}`} style={{ borderLeft: `6px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, margin: 0 }}>
-                    <div style={{ flex: 1 }}>
-                      <span className="status-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Calculator size={10} /> Variación Detectada
-                      </span>
-                      <div className="status-val" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        {varNum > 0 ? '+' : ''}{varNum.toFixed(4)} 
-                        <span style={{ fontSize: 14, opacity: 0.6 }}>{equipo.Unidad_Tolerancia ?? ''}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                        <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{ 
-                            width: `${Math.min(100, (Math.abs(varNum) / equipo.Tolerancia_Aceptable) * 100)}%`, 
-                            height: '100%', 
-                            background: statusCalc === 'APTO' ? '#10b981' : '#ef4444',
-                            transition: 'width 0.3s ease'
-                          }} />
+                    return (
+                      <div key={mag} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Activity size={16} color="#0ea5e9" /> MAGNITUD: {mag}
+                          </span>
+                          {calcs && (
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: 20,
+                              border: `1.5px solid ${calcs.status === 'APTO' ? '#10b981' : '#ef4444'}`,
+                              color: calcs.status === 'APTO' ? '#10b981' : '#ef4444',
+                              background: calcs.status === 'APTO' ? '#ecfdf5' : '#fef2f2'
+                            }}>
+                              {calcs.status === 'APTO' ? '✓ APTO' : '✗ NO APTO'}
+                            </span>
+                          )}
                         </div>
-                        <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{equipo.Tolerancia_Aceptable}</span>
+
+                        <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                          <label><CheckCircle2 size={12} /> Patrón utilizado *</label>
+                          <SearchableSelect
+                            options={patronesAMostrar.map(p => ({
+                              value: p.ID_Patron,
+                              label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
+                            }))}
+                            value={item.FK_ID_Patron_Usado}
+                            onChange={val => setMultimagnitudData(prev => ({
+                              ...prev,
+                              [mag]: { ...prev[mag], FK_ID_Patron_Usado: val }
+                            }))}
+                            placeholder="Buscar y seleccionar patrón..."
+                            icon={<CheckCircle2 size={12} />}
+                          />
+                        </div>
+
+                        <div className="metrology-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                            <label><Calculator size={12} /> Medida Patrón *</label>
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.Medida_Patron}
+                              onChange={e => setMultimagnitudData(prev => ({
+                                ...prev,
+                                [mag]: { ...prev[mag], Medida_Patron: e.target.value }
+                              }))}
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
+                          <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                            <label><Calculator size={12} /> Medida Instrumento *</label>
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.Medida_Instrumento}
+                              onChange={e => setMultimagnitudData(prev => ({
+                                ...prev,
+                                [mag]: { ...prev[mag], Medida_Instrumento: e.target.value }
+                              }))}
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {calcs && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#475569' }}>
+                              <span>Variación: {calcs.varNum > 0 ? '+' : ''}{calcs.varNum.toFixed(4)} {calcs.magUnidad}</span>
+                              <span>Tolerancia: ±{calcs.magTolerancia} {calcs.magUnidad}</span>
+                            </div>
+                            <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{
+                                width: `${Math.min(100, (Math.abs(calcs.varNum) / calcs.magTolerancia) * 100)}%`,
+                                height: '100%',
+                                background: calcs.status === 'APTO' ? '#10b981' : '#ef4444',
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <>
+                    <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                      <label style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <CheckCircle2 size={14} /> Patrón utilizado *
+                        </span>
+                        {selectedEquipo?.Magnitud && (
+                          <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 800 }}>
+                            MAGNITUD: {selectedEquipo.Magnitud}
+                          </span>
+                        )}
+                      </label>
+                      <SearchableSelect 
+                        options={patronesAMostrar.map(p => ({
+                          value: p.ID_Patron,
+                          label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
+                        }))}
+                        value={selectedPatronId}
+                        onChange={val => setSelectedPatronId(val)}
+                        placeholder="Buscar por código o nombre del patrón…"
+                        icon={<CheckCircle2 size={14} />}
+                      />
+                      {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
+                        <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
+                          ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="metrology-grid">
+                      <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                        <label><Calculator size={14} /> Medida Patrón *</label>
+                        <input type="number" step="any" value={medidaPatron} onChange={e => setMedidaPatron(e.target.value)} placeholder="0.00" required />
+                      </div>
+                      <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                        <label><Calculator size={14} /> Medida Instrumento *</label>
+                        <input type="number" step="any" value={medidaInstrumento} onChange={e => setMedidaInstrumento(e.target.value)} placeholder="0.00" required />
                       </div>
                     </div>
-                    <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>
-                      {statusCalc === 'APTO' ? <><CheckCircle2 size={18} /> APTO</> : <><XCircle size={18} /> NO APTO</>}
-                    </div>
-                  </div>
+
+                    {varNum != null && selectedEquipo && (
+                      <div className={`status-card ${statusCalc === 'APTO' ? 'is-apto' : 'is-no-apto'}`} style={{ borderLeft: `6px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, margin: 0 }}>
+                        <div style={{ flex: 1 }}>
+                          <span className="status-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Calculator size={10} /> Variación Detectada
+                          </span>
+                          <div className="status-val" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                            {varNum > 0 ? '+' : ''}{varNum.toFixed(4)} 
+                            <span style={{ fontSize: 14, opacity: 0.6 }}>{selectedEquipo.Unidad_Tolerancia ?? ''}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{ 
+                                width: `${Math.min(100, (Math.abs(varNum) / selectedEquipo.Tolerancia_Aceptable) * 100)}%`, 
+                                height: '100%', 
+                                background: statusCalc === 'APTO' ? '#10b981' : '#ef4444',
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                            <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{selectedEquipo.Tolerancia_Aceptable}</span>
+                          </div>
+                        </div>
+                        <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>
+                          {statusCalc === 'APTO' ? <><CheckCircle2 size={18} /> APTO</> : <><XCircle size={18} /> NO APTO</>}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

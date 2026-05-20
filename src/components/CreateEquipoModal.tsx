@@ -41,6 +41,25 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
   const [error, setError] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [toleranciasMap, setToleranciasMap] = useState<Record<string, { tolerancia: string; unidad: string }>>({})
+
+  useEffect(() => {
+    const currentMags = formData.Magnitud ? formData.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+    setToleranciasMap(prev => {
+      const next = { ...prev }
+      currentMags.forEach(m => {
+        if (!next[m]) {
+          next[m] = { tolerancia: '', unidad: '' }
+        }
+      })
+      Object.keys(next).forEach(key => {
+        if (!currentMags.includes(key)) {
+          delete next[key]
+        }
+      })
+      return next
+    })
+  }, [formData.Magnitud])
 
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -117,6 +136,18 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
       }
 
       const isOperativo = formData.Estado === 'OPERATIVO'
+      
+      let mainTolerancia = parseFloat(formData.Tolerancia_Aceptable) || 0
+      let mainUnidad = formData.Unidad_Tolerancia || null
+      if (selectedMags.length > 0) {
+        const firstMag = selectedMags[0]
+        const firstVal = toleranciasMap[firstMag]
+        if (firstVal) {
+          mainTolerancia = parseFloat(firstVal.tolerancia) || 0
+          mainUnidad = firstVal.unidad || null
+        }
+      }
+
       const payload = {
         ...formData,
         Detalles_Estado: isOperativo ? null : formData.Detalles_Estado,
@@ -124,7 +155,9 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
         Requiere_Seguimiento: isOperativo ? false : formData.Requiere_Seguimiento,
         Codigo_Interno: formData.ID_Equipo.trim(),
         Magnitud: finalMagnitud.join(', '),
-        Tolerancia_Aceptable: parseFloat(formData.Tolerancia_Aceptable) || 0,
+        Tolerancia_Aceptable: mainTolerancia,
+        Unidad_Tolerancia: mainUnidad,
+        Tolerancias_Multimagnitud: selectedMags.length > 1 ? JSON.stringify(toleranciasMap) : null,
         Periodicidad_Meses: parseInt(formData.Periodicidad_Meses) || 12,
         Fecha_Ultima_Verificacion: formData.Fecha_Ultima_Verificacion ? new Date(formData.Fecha_Ultima_Verificacion).toISOString() : null,
         Fecha_Proximo_Control: formData.Fecha_Proximo_Control ? new Date(formData.Fecha_Proximo_Control).toISOString() : null,
@@ -353,16 +386,57 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
                 </div>
               </div>
 
-              <div className="grid-3">
-                <div className="form-group">
-                  <label className="form-label">Tolerancia Aceptable</label>
-                  <input className="form-control" type="number" step="any" value={formData.Tolerancia_Aceptable} onChange={e => setFormData({...formData, Tolerancia_Aceptable: e.target.value})} placeholder="Ej: 0.05" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Unidad de Medida</label>
-                  <input className="form-control" value={formData.Unidad_Tolerancia} onChange={e => setFormData({...formData, Unidad_Tolerancia: e.target.value})} placeholder="Ej: V, mm, °C" />
-                </div>
-                <div className="form-group">
+              <div className="grid-3" style={{ gridTemplateColumns: selectedMags.length > 1 ? '1fr' : 'repeat(3, 1fr)' }}>
+                {selectedMags.length > 1 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, gridColumn: 'span 3', background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      📐 Tolerancias y Unidades por Magnitud
+                    </div>
+                    {selectedMags.map(mag => (
+                      <div key={mag} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: 12, alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{mag}</span>
+                        <input
+                          className="form-control"
+                          type="number"
+                          step="any"
+                          placeholder="Tolerancia"
+                          value={toleranciasMap[mag]?.tolerancia ?? ''}
+                          onChange={e => setToleranciasMap(prev => ({ ...prev, [mag]: { ...prev[mag], tolerancia: e.target.value } }))}
+                          required
+                        />
+                        <input
+                          className="form-control"
+                          placeholder="Unidad (Ej: °C, %)"
+                          value={toleranciasMap[mag]?.unidad ?? ''}
+                          onChange={e => setToleranciasMap(prev => ({ ...prev, [mag]: { ...prev[mag], unidad: e.target.value } }))}
+                          required
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Tolerancia Aceptable</label>
+                      <input className="form-control" type="number" step="any" value={formData.Tolerancia_Aceptable} onChange={e => {
+                        const val = e.target.value
+                        setFormData({...formData, Tolerancia_Aceptable: val})
+                        const first = selectedMags[0] || 'TEMPERATURA'
+                        setToleranciasMap(prev => ({ ...prev, [first]: { ...prev[first], tolerancia: val } }))
+                      }} placeholder="Ej: 0.05" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Unidad de Medida</label>
+                      <input className="form-control" value={formData.Unidad_Tolerancia} onChange={e => {
+                        const val = e.target.value
+                        setFormData({...formData, Unidad_Tolerancia: val})
+                        const first = selectedMags[0] || 'TEMPERATURA'
+                        setToleranciasMap(prev => ({ ...prev, [first]: { ...prev[first], unidad: val } }))
+                      }} placeholder="Ej: V, mm, °C" />
+                    </div>
+                  </>
+                )}
+                <div className="form-group" style={{ gridColumn: selectedMags.length > 1 ? 'span 3' : 'auto', marginTop: selectedMags.length > 1 ? 12 : 0 }}>
                   <label className="form-label">Periodicidad (Meses)</label>
                   <input className="form-control" type="number" value={formData.Periodicidad_Meses} onChange={e => setFormData({...formData, Periodicidad_Meses: e.target.value})} />
                 </div>

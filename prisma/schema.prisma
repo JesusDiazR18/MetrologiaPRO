@@ -42,6 +42,7 @@ model InstrumentoEquipo {
   N_Certificado                 String?
   Proveedor_Servicio            String?
   Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA (permite múltiples separadas por coma)
+  Tolerancias_Multimagnitud     String?               // Guarda JSON con tolerancias y unidades separadas por magnitud
   Accesorios                    String?
   Insumos                       String?
 
@@ -92,6 +93,7 @@ model HistorialVerificacion {
   Tipo_Verificacion       String?   @default("CALIBRACION") // OPERATIVIDAD | CALIBRACION
   Acciones_Pendientes     String?
   Estado_Seguimiento      String?                       // PENDIENTE | COMPLETADO | N/A
+  Magnitud_Controlada     String?               // La magnitud específica controlada en esta entrada (ej. TEMPERATURA o HUMEDAD)
 
   equipo   InstrumentoEquipo  @relation(fields: [FK_ID_Equipo], references: [ID_Equipo])
   patron   PatronReferencia?  @relation(fields: [FK_ID_Patron_Usado], references: [ID_Patron])
