@@ -233,7 +233,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
   useEffect(() => {
     fetch('/api/patrones')
       .then(r => r.json())
-      .then(data => setPatrones(data.filter((p: Patron) => p.Estado_Vigencia === 'VIGENTE')))
+      .then(data => setPatrones(data)) // Histórico: permite patrones de cualquier estado (vigente, vencido, obsoleto)
   }, [])
 
   const varNum = (tipoVerif === 'CALIBRACION' && medidaPatron && medidaInstrumento)
@@ -556,7 +556,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
                           <SearchableSelect
                             options={patronesAMostrar.map(p => ({
                               value: p.ID_Patron,
-                              label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
+                              label: `${p.Codigo || p.ID_Patron} - ${p.Nombre_Patron} (${p.Magnitud || 'General'})${p.Estado_Vigencia !== 'VIGENTE' ? ` ⚠️ ${p.Estado_Vigencia}` : ''}`
                             }))}
                             value={item.FK_ID_Patron_Usado}
                             onChange={val => setMultimagnitudData(prev => ({
@@ -634,7 +634,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
                       <SearchableSelect 
                         options={patronesAMostrar.map(p => ({
                           value: p.ID_Patron,
-                          label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
+                          label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})${p.Estado_Vigencia !== 'VIGENTE' ? ` ⚠️ ${p.Estado_Vigencia}` : ''}`
                         }))}
                         value={selectedPatronId}
                         onChange={val => setSelectedPatronId(val)}
