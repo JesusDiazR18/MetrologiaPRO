@@ -776,7 +776,7 @@ export async function generatePatronSheetPDF(patron: any) {
 /**
  * Genera un Reporte Ejecutivo Mensual consolidado del Dashboard.
  */
-export async function generateExecutiveSummaryPDF(stats: any) {
+export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tipo?: string | null, fechaDesde?: string, fechaHasta?: string, status?: string | null }) {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -865,6 +865,35 @@ export async function generateExecutiveSummaryPDF(stats: any) {
 
   let currY = 52;
 
+  // --- Filtros Aplicados ---
+  let filterText = 'Filtros aplicados: Ninguno (Vista Global)';
+  if (filterInfo) {
+    const parts = [];
+    if (filterInfo.tipo) {
+      parts.push(`Tipo: ${filterInfo.tipo === 'PATRON' ? 'Patrón' : filterInfo.tipo === 'EQUIPO' ? 'Equipo' : 'Instrumento'}`);
+    }
+    if (filterInfo.status) {
+      parts.push(`Estado: ${filterInfo.status === 'VERDE' ? 'Al Día' : filterInfo.status === 'AMARILLO' ? 'Por Vencer' : 'Crítico'}`);
+    }
+    if (filterInfo.fechaDesde || filterInfo.fechaHasta) {
+      const desde = filterInfo.fechaDesde ? formatFecha(filterInfo.fechaDesde) : 'Inicio';
+      const hasta = filterInfo.fechaHasta ? formatFecha(filterInfo.fechaHasta) : 'Fin';
+      parts.push(`Rango: ${desde} a ${hasta}`);
+    }
+    if (parts.length > 0) {
+      filterText = `Filtros aplicados: ${parts.join(' | ')}`;
+    }
+  }
+
+  doc.setFillColor(241, 245, 249); // Slate 100 background
+  doc.rect(margin, currY, printableWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105); // Slate 600
+  doc.text(filterText, margin + 4, currY + 4.8);
+
+  currY += 12;
+
   currY = renderSectionTitle(doc, '1. Resumen Global de Indicadores (KPIs)', currY, [59, 130, 246]);
 
   const kpis = [
@@ -905,25 +934,65 @@ export async function generateExecutiveSummaryPDF(stats: any) {
   currY += 16;
 
   if (stats.alertasCriticas && stats.alertasCriticas.length > 0) {
-    currY = renderSectionTitle(doc, '3. Alertas Críticas de Atención Inmediata', currY, [239, 68, 68]);
+    currY = renderSectionTitle(doc, '3. Alertas Críticas de Atención Inmediata (Requieren Calibración)', currY, [239, 68, 68]);
 
-    stats.alertasCriticas.slice(0, 6).forEach((a: any) => {
-      doc.setFillColor(254, 242, 242); // Red 50
-      doc.rect(margin, currY, printableWidth, 10, 'F');
-      doc.setDrawColor(254, 202, 202); // Red 200
-      doc.rect(margin, currY, printableWidth, 10, 'S');
+    // Tabla de Alertas
+    doc.setFillColor(185, 28, 28); // Rojo oscuro
+    doc.rect(margin, currY, printableWidth, 8, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text('CÓDIGO', margin + 4, currY + 5.5);
+    doc.text('NOMBRE DEL ACTIVO', margin + 32, currY + 5.5);
+    doc.text('MOTIVO / ESTADO', margin + 120, currY + 5.5);
+
+    currY += 8;
+
+    stats.alertasCriticas.slice(0, 12).forEach((a: any, idx: number) => {
+      const nombreText = a.nombre || 'Sin nombre';
+      const splitNombre = doc.splitTextToSize(nombreText, 83); // 83mm para el nombre
+      const rowHeight = Math.max(8, splitNombre.length * 4.5 + 2);
+
+      if (currY + rowHeight > 275) {
+        doc.addPage();
+        currY = 20;
+        
+        // Repetir cabecera
+        doc.setFillColor(185, 28, 28);
+        doc.rect(margin, currY, printableWidth, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text('CÓDIGO', margin + 4, currY + 5.5);
+        doc.text('NOMBRE DEL ACTIVO', margin + 32, currY + 5.5);
+        doc.text('MOTIVO / ESTADO', margin + 120, currY + 5.5);
+        currY += 8;
+      }
+
+      const bg = idx % 2 === 0 ? 255 : 250;
+      doc.setFillColor(bg, bg, bg);
+      doc.rect(margin, currY, printableWidth, rowHeight, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, currY + rowHeight, margin + printableWidth, currY + rowHeight);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(185, 28, 28);
-      doc.text(`[!] ${a.codigo} - ${a.nombre}`, margin + 4, currY + 6);
+      doc.setFontSize(8);
+      doc.setTextColor(30, 41, 59);
+      doc.text(a.codigo || '', margin + 4, currY + 5);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(127, 29, 29);
-      doc.text(`Motivo: ${a.status === 'ROJO' ? 'Control Vencido / Requiere Calibración' : 'Estado NO APTO'}`, margin + 110, currY + 6);
-      
-      currY += 12;
+      doc.setTextColor(71, 85, 105);
+      splitNombre.forEach((line: string, lineIdx: number) => {
+        doc.text(line, margin + 32, currY + 5 + (lineIdx * 4.5));
+      });
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(185, 28, 28);
+      const motivoText = a.status === 'ROJO' ? 'Control Vencido / Calibración Pendiente' : 'Estado NO APTO';
+      doc.text(motivoText, margin + 120, currY + 5);
+
+      currY += rowHeight;
     });
   }
 

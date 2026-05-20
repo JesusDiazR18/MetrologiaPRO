@@ -36,7 +36,8 @@ interface Stats {
     Resultado_Status: string
     Variacion_Calculada: number | null
     Tecnico_Ejecutor: string
-    equipo: { Nombre_Equipo: string; Codigo_Interno: string }
+    FK_ID_Patron_Usado: string | null
+    equipo: { Nombre_Equipo: string; Codigo_Interno: string; Tipo: string }
   }[]
   patronesVigentes: number
   patronesVencidos: number
@@ -128,8 +129,8 @@ export default function DashboardPage() {
     return list
   }, [equipos, patrones])
 
-  // Filtrar activos según criterios de búsqueda y selección del gráfico
-  const filteredAssets = useMemo(() => {
+  // Filtrar activos sin aplicar filtro de estado para usar en el gráfico circular
+  const filteredAssetsForChart = useMemo(() => {
     return allAssets.filter(asset => {
       const q = searchQuery.toLowerCase().trim()
       const matchesSearch = !q ? true : (
@@ -140,25 +141,120 @@ export default function DashboardPage() {
         asset.Modelo?.toLowerCase().includes(q)
       )
 
-      const matchesStatus = !statusFilter ? true : asset.status === statusFilter
-      
       const matchesTipo = !tipoFilter ? true : (
         tipoFilter === 'PATRON' ? asset.categoria === 'patron' : asset.tipoActivo === tipoFilter
       )
 
-      return matchesSearch && matchesStatus && matchesTipo
-    })
-  }, [allAssets, searchQuery, statusFilter, tipoFilter])
+      let matchesDate = true
+      if (fechaDesdeFilter || fechaHastaFilter) {
+        const dateVal = asset.categoria === 'patron'
+          ? asset.Fecha_Vencimiento_Certificado
+          : asset.Fecha_Proximo_Control
+        if (dateVal) {
+          const dateMs = new Date(dateVal).getTime()
+          if (fechaDesdeFilter && dateMs < new Date(fechaDesdeFilter).getTime()) {
+            matchesDate = false
+          }
+          if (fechaHastaFilter && dateMs > new Date(fechaHastaFilter).getTime() + 86400000) {
+            matchesDate = false
+          }
+        } else {
+          matchesDate = false
+        }
+      }
 
-  // Datos para gráfico circular interactivo
+      return matchesSearch && matchesTipo && matchesDate
+    })
+  }, [allAssets, searchQuery, tipoFilter, fechaDesdeFilter, fechaHastaFilter])
+
+  // Filtrar activos aplicando TODOS los filtros (búsqueda, tipo, fecha y estado)
+  const filteredAssets = useMemo(() => {
+    return filteredAssetsForChart.filter(asset => {
+      return !statusFilter ? true : asset.status === statusFilter
+    })
+  }, [filteredAssetsForChart, statusFilter])
+
+  // Cumplimiento global dinámico
+  const complianceGlobalDynamic = useMemo(() => {
+    const total = filteredAssetsForChart.length
+    if (total === 0) return 100
+    const alDia = filteredAssetsForChart.filter(a => a.status === 'VERDE').length
+    return Math.round((alDia / total) * 100)
+  }, [filteredAssetsForChart])
+
+  // Datos para gráfico circular interactivo calculados dinámicamente
   const pieData = useMemo(() => {
-    if (!stats) return []
+    const alDia = filteredAssetsForChart.filter(a => a.status === 'VERDE').length
+    const proximos = filteredAssetsForChart.filter(a => a.status === 'AMARILLO').length
+    const criticos = filteredAssetsForChart.filter(a => a.status === 'ROJO').length
     return [
-      { name: 'Al día', value: stats.alDia || 0, color: 'var(--success)', status: 'VERDE' },
-      { name: 'Advertencia', value: stats.proximos || 0, color: 'var(--warning)', status: 'AMARILLO' },
-      { name: 'Crítico', value: (stats.vencidos || 0) + (stats.noAptos || 0) + (stats.patronesVencidos || 0), color: 'var(--danger)', status: 'ROJO' }
+      { name: 'Al día', value: alDia, color: 'var(--success)', status: 'VERDE' },
+      { name: 'Advertencia', value: proximos, color: 'var(--warning)', status: 'AMARILLO' },
+      { name: 'Crítico', value: criticos, color: 'var(--danger)', status: 'ROJO' }
     ]
-  }, [stats])
+  }, [filteredAssetsForChart])
+
+  // Historial de movimientos filtrado dinámicamente
+  const filteredVerificaciones = useMemo(() => {
+    if (!stats?.ultimasVerificaciones) return []
+    return stats.ultimasVerificaciones.filter(log => {
+      // Filtrar por Tipo
+      if (tipoFilter) {
+        if (tipoFilter === 'PATRON') {
+          if (!log.FK_ID_Patron_Usado) return false
+        } else {
+          if (log.equipo?.Tipo !== tipoFilter) return false
+        }
+      }
+
+      // Filtrar por Fecha
+      if (fechaDesdeFilter) {
+        const executionTime = new Date(log.Fecha_Ejecucion).getTime()
+        if (executionTime < new Date(fechaDesdeFilter).getTime()) return false
+      }
+      if (fechaHastaFilter) {
+        const executionTime = new Date(log.Fecha_Ejecucion).getTime()
+        if (executionTime > new Date(fechaHastaFilter).getTime() + 86400000) return false
+      }
+
+      return true
+    })
+  }, [stats?.ultimasVerificaciones, tipoFilter, fechaDesdeFilter, fechaHastaFilter])
+
+  // Estadísticas consolidadas dinámicamente según filtros para el PDF y KPIs
+  const dynamicStats = useMemo(() => {
+    if (!stats) return null
+    const totalActivos = filteredAssetsForChart.length
+    const alDia = filteredAssetsForChart.filter(a => a.status === 'VERDE').length
+    const proximos = filteredAssetsForChart.filter(a => a.status === 'AMARILLO').length
+    const vencidos = filteredAssetsForChart.filter(a => a.status === 'ROJO').length
+    const totalEquipos = filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length
+    const totalInstrumentos = filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length
+    const totalPatrones = filteredAssetsForChart.filter(a => a.categoria === 'patron').length
+
+    // Alertas críticas basadas en activos críticos filtrados
+    const alertasCriticas = filteredAssetsForChart
+      .filter(a => a.status === 'ROJO')
+      .map(a => ({
+        id: a.id,
+        codigo: a.codigo,
+        nombre: a.nombre,
+        area: a.Area_Asignada || '',
+        status: 'ROJO'
+      }))
+
+    return {
+      ...stats,
+      complianceGlobal: complianceGlobalDynamic,
+      totalActivos,
+      alDia,
+      proximos,
+      vencidos,
+      totalEquipos: totalEquipos + totalInstrumentos,
+      totalPatrones,
+      alertasCriticas
+    }
+  }, [stats, filteredAssetsForChart, complianceGlobalDynamic])
 
   const handleDownloadPDF = async (asset: any) => {
     setPdfLoadingId(asset.id)
@@ -201,14 +297,14 @@ export default function DashboardPage() {
       {/* 1. KPIs Ribbon (Ultra-Compacto & Premium) */}
       <div className="kpi-glass-bar">
         {/* KPI 1 */}
-        <div className="kpi-bar-item clickable" onClick={() => { setTipoFilter(null); setStatusFilter(null); }}>
+        <div className="kpi-bar-item clickable" onClick={() => { setTipoFilter(null); setStatusFilter(null); setFechaDesdeFilter(''); setFechaHastaFilter(''); }}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-blue" />
             <span className="kpi-bar-label">Activos Totales</span>
           </div>
           <div className="kpi-bar-value-row">
-            <span className="kpi-bar-val">{stats.totalActivos}</span>
-            <span className="kpi-bar-sub">Eq: {equipos.filter(e => e.Tipo === 'EQUIPO').length} · Ins: {equipos.filter(e => e.Tipo === 'INSTRUMENTO').length} · Pat: {patrones.length}</span>
+            <span className="kpi-bar-val">{dynamicStats?.totalActivos ?? 0}</span>
+            <span className="kpi-bar-sub">Eq: {filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length} · Ins: {filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length} · Pat: {filteredAssetsForChart.filter(a => a.categoria === 'patron').length}</span>
           </div>
         </div>
 
@@ -221,7 +317,7 @@ export default function DashboardPage() {
             <span className="kpi-bar-label">Vigencia Global</span>
           </div>
           <div className="kpi-bar-value-row">
-            <span className="kpi-bar-val">{stats.complianceGlobal}%</span>
+            <span className="kpi-bar-val">{complianceGlobalDynamic}%</span>
             <span className="kpi-bar-sub">Conformidad ISO 9001</span>
           </div>
         </div>
@@ -232,11 +328,11 @@ export default function DashboardPage() {
         <div className="kpi-bar-item clickable" onClick={() => setStatusFilter('ROJO')}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-red blinking" />
-            <span className="kpi-bar-label" style={{ color: (stats.vencidos + stats.noAptos + stats.patronesVencidos) > 0 ? 'var(--danger)' : 'inherit' }}>Alertas Críticas</span>
+            <span className="kpi-bar-label" style={{ color: (dynamicStats?.vencidos ?? 0) > 0 ? 'var(--danger)' : 'inherit' }}>Alertas Críticas</span>
           </div>
           <div className="kpi-bar-value-row">
-            <span className="kpi-bar-val" style={{ color: (stats.vencidos + stats.noAptos + stats.patronesVencidos) > 0 ? 'var(--danger)' : 'inherit' }}>
-              {(stats.vencidos || 0) + (stats.noAptos || 0) + (stats.patronesVencidos || 0)}
+            <span className="kpi-bar-val" style={{ color: (dynamicStats?.vencidos ?? 0) > 0 ? 'var(--danger)' : 'inherit' }}>
+              {dynamicStats?.vencidos ?? 0}
             </span>
             <span className="kpi-bar-sub">Requieren acción inmediata</span>
           </div>
@@ -251,7 +347,7 @@ export default function DashboardPage() {
             <span className="kpi-bar-label">Por Vencer</span>
           </div>
           <div className="kpi-bar-value-row">
-            <span className="kpi-bar-val">{stats.proximos || 0}</span>
+            <span className="kpi-bar-val">{dynamicStats?.proximos ?? 0}</span>
             <span className="kpi-bar-sub">Control sig. 30 días</span>
           </div>
         </div>
@@ -271,8 +367,8 @@ export default function DashboardPage() {
               <div className="header-actions">
                 <button 
                   className="btn-compact-pdf" 
-                  onClick={() => generateExecutiveSummaryPDF(stats)}
-                  title="Generar Reporte Ejecutivo General en PDF"
+                  onClick={() => generateExecutiveSummaryPDF(dynamicStats, { tipo: tipoFilter, fechaDesde: fechaDesdeFilter, fechaHasta: fechaHastaFilter, status: statusFilter })}
+                  title="Generar Reporte Ejecutivo General en PDF según filtros"
                 >
                   <Download size={13} />
                   <span>Reporte Ejecutivo PDF</span>
@@ -308,6 +404,25 @@ export default function DashboardPage() {
                   <option value="PATRON">Patrones de Referencia</option>
                 </select>
               </div>
+
+              {/* Rango de Fechas */}
+              <div className="filter-date-range">
+                <input 
+                  type="date" 
+                  value={fechaDesdeFilter} 
+                  onChange={(e) => setFechaDesdeFilter(e.target.value)}
+                  className="filter-date-input"
+                  title="Fecha Desde (Vencimiento/Próximo Control)"
+                />
+                <span className="filter-date-to-separator">a</span>
+                <input 
+                  type="date" 
+                  value={fechaHastaFilter} 
+                  onChange={(e) => setFechaHastaFilter(e.target.value)}
+                  className="filter-date-input"
+                  title="Fecha Hasta (Vencimiento/Próximo Control)"
+                />
+              </div>
             </div>
 
             {/* Filtros Rápidos por Color / Semáforo */}
@@ -337,9 +452,9 @@ export default function DashboardPage() {
                 <span className="dot" /> Críticos
               </button>
 
-              {(statusFilter || searchQuery || tipoFilter) && (
+              {(statusFilter || searchQuery || tipoFilter || fechaDesdeFilter || fechaHastaFilter) && (
                 <button 
-                  onClick={() => { setStatusFilter(null); setSearchQuery(''); setTipoFilter(null); }} 
+                  onClick={() => { setStatusFilter(null); setSearchQuery(''); setTipoFilter(null); setFechaDesdeFilter(''); setFechaHastaFilter(''); }} 
                   className="btn-clear-filters"
                 >
                   <RotateCcw size={10} /> Restablecer filtros
@@ -462,7 +577,7 @@ export default function DashboardPage() {
                   
                   {/* Cumplimiento en el centro del Donut */}
                   <div className="donut-center-info">
-                    <span className="donut-pct">{stats.complianceGlobal}%</span>
+                    <span className="donut-pct">{complianceGlobalDynamic}%</span>
                     <span className="donut-lbl">Vigente</span>
                   </div>
 
@@ -501,37 +616,43 @@ export default function DashboardPage() {
             </div>
 
             <div className="activity-timeline-compact">
-              {stats.ultimasVerificaciones?.slice(0, 4).map((log) => {
-                const statusColor = log.Resultado_Status === 'APTO' ? 'var(--success)' : 'var(--danger)'
-                
-                return (
-                  <div key={log.ID_Log} className="timeline-row-compact" onClick={() => setSelectedLog(log)}>
-                    <div className="timeline-left-icon">
-                      <div className={`icon-pill ${log.Resultado_Status === 'APTO' ? 'status-badge-vigente' : 'status-badge-vencido'}`} style={{ border: 'none', padding: 0 }}>
-                        {log.Resultado_Status === 'APTO' ? <CheckCircle size={10} /> : <XCircle size={10} />}
+              {filteredVerificaciones.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-soft)', fontSize: '11.5px' }}>
+                  Sin movimientos registrados para los filtros actuales.
+                </div>
+              ) : (
+                filteredVerificaciones.slice(0, 4).map((log) => {
+                  const statusColor = log.Resultado_Status === 'APTO' ? 'var(--success)' : 'var(--danger)'
+                  
+                  return (
+                    <div key={log.ID_Log} className="timeline-row-compact" onClick={() => setSelectedLog(log)}>
+                      <div className="timeline-left-icon">
+                        <div className={`icon-pill ${log.Resultado_Status === 'APTO' ? 'status-badge-vigente' : 'status-badge-vencido'}`} style={{ border: 'none', padding: 0 }}>
+                          {log.Resultado_Status === 'APTO' ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                        </div>
+                        <div className="timeline-connector" />
                       </div>
-                      <div className="timeline-connector" />
-                    </div>
 
-                    <div className="timeline-info-block">
-                      <div className="timeline-header-line">
-                        <span className="timeline-title-code">{log.equipo.Codigo_Interno}</span>
-                        <span className="timeline-date">{formatFecha(log.Fecha_Ejecucion)}</span>
-                      </div>
-                      <div className="timeline-desc-name">{log.equipo.Nombre_Equipo}</div>
-                      <div className="timeline-footer-line">
-                        <span>Tec: {log.Tecnico_Ejecutor.split(' ')[0]}</span>
-                        {log.Variacion_Calculada !== null && (
-                          <span className="var-val">Var: {log.Variacion_Calculada.toFixed(3)}</span>
-                        )}
-                        <span className="timeline-status-badge" style={{ color: statusColor }}>
-                          {log.Resultado_Status}
-                        </span>
+                      <div className="timeline-info-block">
+                        <div className="timeline-header-line">
+                          <span className="timeline-title-code">{log.equipo.Codigo_Interno}</span>
+                          <span className="timeline-date">{formatFecha(log.Fecha_Ejecucion)}</span>
+                        </div>
+                        <div className="timeline-desc-name">{log.equipo.Nombre_Equipo}</div>
+                        <div className="timeline-footer-line">
+                          <span>Tec: {log.Tecnico_Ejecutor.split(' ')[0]}</span>
+                          {log.Variacion_Calculada !== null && (
+                            <span className="var-val">Var: {log.Variacion_Calculada.toFixed(3)}</span>
+                          )}
+                          <span className="timeline-status-badge" style={{ color: statusColor }}>
+                            {log.Resultado_Status}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
           </div>
         </div>
@@ -939,11 +1060,13 @@ export default function DashboardPage() {
           gap: 10px;
           margin-bottom: 12px;
           align-items: center;
+          flex-wrap: wrap;
         }
 
         .search-bar-wrapper {
           position: relative;
           flex: 1;
+          min-width: 200px;
         }
 
         .search-icon {
@@ -992,6 +1115,40 @@ export default function DashboardPage() {
           background: var(--card-bg);
           border-color: var(--accent);
           box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .filter-date-range {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+
+        .filter-date-input {
+          background: var(--alpha-02);
+          border: 1px solid var(--glass-border);
+          border-radius: 12px;
+          padding: 8px 10px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-dim);
+          outline: none;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: inherit;
+        }
+
+        .filter-date-input:focus {
+          background: var(--card-bg);
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .filter-date-to-separator {
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--text-soft);
+          text-transform: uppercase;
         }
 
         /* Pills de estado */

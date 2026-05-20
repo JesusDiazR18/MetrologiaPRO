@@ -31,7 +31,7 @@ export async function GET() {
         orderBy: { Fecha_Ejecucion: 'desc' },
         take: 15,
         include: {
-          equipo: { select: { Nombre_Equipo: true, Codigo_Interno: true } },
+          equipo: { select: { Nombre_Equipo: true, Codigo_Interno: true, Tipo: true } },
         }
       })
     ])
