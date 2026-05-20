@@ -38,12 +38,16 @@ export async function POST(request: Request) {
         data: {
           FK_ID_Equipo: body.FK_ID_Equipo,
           Fecha_Ejecucion: body.Fecha_Ejecucion ? new Date(body.Fecha_Ejecucion) : new Date(),
-          Variacion_Calculada: body.Variacion_Calculada !== undefined ? parseFloat(body.Variacion_Calculada) : null,
+          FK_ID_Patron_Usado: body.FK_ID_Patron_Usado || null,
+          Medida_Patron: body.Medida_Patron !== undefined && body.Medida_Patron !== null ? parseFloat(body.Medida_Patron) : null,
+          Medida_Instrumento: body.Medida_Instrumento !== undefined && body.Medida_Instrumento !== null ? parseFloat(body.Medida_Instrumento) : null,
+          Variacion_Calculada: body.Variacion_Calculada !== undefined && body.Variacion_Calculada !== null ? parseFloat(body.Variacion_Calculada) : null,
           Resultado_Status: body.Resultado_Status || 'APTO',
           Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
           Observaciones: body.Observaciones || 'Registro Histórico / Anterior',
           Tipo_Verificacion: body.Tipo_Verificacion || 'CALIBRACION',
-          Estado_Seguimiento: 'N/A',
+          Acciones_Pendientes: body.Acciones_Pendientes || null,
+          Estado_Seguimiento: body.Acciones_Pendientes && body.Acciones_Pendientes.trim().length > 0 ? 'PENDIENTE' : 'N/A',
           Evidencia_Foto: body.Evidencia_Foto ?? null
         }
       })

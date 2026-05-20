@@ -164,6 +164,7 @@ interface Equipo {
   Tolerancia_Aceptable: number
   Unidad_Tolerancia: string | null
   Magnitud?: string | null
+  Tipo?: string | null
 }
 
 interface Patron {
@@ -218,6 +219,9 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const statusCalc = varNum != null && selectedEquipo
     ? calcularStatus(varNum, selectedEquipo.Tolerancia_Aceptable)
     : null
+
+  const isInstrument = selectedEquipo?.Tipo === 'INSTRUMENTO'
+  const tab2Label = isInstrument ? '2. Verificación' : '2. Calibración / Verificación'
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
@@ -346,7 +350,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
               }}
             >
               <Calculator size={16} color={tipoVerif === 'CALIBRACION' ? '#0ea5e9' : '#64748b'} />
-              2. Calibración
+              {tab2Label}
             </button>
           </div>
         </div>

@@ -693,11 +693,7 @@ function EquiposContent() {
       )}
       {modalHistorical && (
         <HistoricalVerificationModal
-          equipo={{
-            ID_Equipo: modalHistorical.ID_Equipo,
-            Nombre_Equipo: modalHistorical.Nombre_Equipo,
-            Codigo_Interno: modalHistorical.ID_Equipo
-          }}
+          equipo={modalHistorical}
           onClose={() => setModalHistorical(null)}
           onSaved={() => { setModalHistorical(null); load(q, tipo) }}
         />
