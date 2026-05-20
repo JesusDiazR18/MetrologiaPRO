@@ -790,15 +790,15 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   const logoBase64 = await getBase64FromUrl('/logo.png');
 
   // --- Encabezado Moderno con Fondo Azul Marino ---
-  doc.setFillColor(30, 58, 138); // Azul marino profundo (Blue 900)
+  doc.setFillColor(15, 23, 42); // Slate 900
   doc.rect(16, 15, 178, 30, 'F');
   
   // Línea de acento celeste
-  doc.setFillColor(96, 165, 250);
+  doc.setFillColor(0, 229, 255); // Cyan
   doc.rect(16, 45, 178, 1.5, 'F');
 
   // Separadores verticales sutiles en el encabezado
-  doc.setDrawColor(29, 78, 216); // Blue 700
+  doc.setDrawColor(51, 65, 85); // Slate 700
   doc.setLineWidth(0.3);
   doc.line(60, 17, 60, 43);
   doc.line(146, 17, 146, 43);
@@ -825,7 +825,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12.5);
   doc.setTextColor(255, 255, 255);
   doc.text('REPORTE EJECUTIVO METROLÓGICO', 103, 26, { align: 'center' });
   
@@ -833,13 +833,13 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(96, 165, 250); // Celeste
+  doc.setTextColor(0, 229, 255); // Cyan
   doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(191, 219, 254); // Celeste claro
+  doc.setTextColor(148, 163, 184); // Slate 400
   doc.text('PERIODO:', 148, 23);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
@@ -848,7 +848,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   doc.line(148, 26, 192, 26);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(191, 219, 254);
+  doc.setTextColor(148, 163, 184);
   doc.text('EMISIÓN:', 148, 31);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
@@ -857,7 +857,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   doc.line(148, 34, 192, 34);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(191, 219, 254);
+  doc.setTextColor(148, 163, 184);
   doc.text('TIPO:', 148, 39);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
@@ -885,7 +885,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
     }
   }
 
-  doc.setFillColor(241, 245, 249); // Slate 100 background
+  doc.setFillColor(241, 245, 249); // Slate 100
   doc.rect(margin, currY, printableWidth, 7, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
@@ -894,50 +894,184 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
 
   currY += 12;
 
-  currY = renderSectionTitle(doc, '1. Resumen Global de Indicadores (KPIs)', currY, [59, 130, 246]);
+  // Sección 1: KPIs Ejecutivos (Grid Layout)
+  currY = renderSectionTitle(doc, '1. Resumen Global de Indicadores (KPIs)', currY, [0, 229, 255]);
 
-  const kpis = [
-    { label: 'Cumplimiento Global del Sistema:', value: `${stats.complianceGlobal}%` },
-    { label: 'Total Activos en Inventario:', value: stats.totalActivos },
-    { label: 'Activos en Estado Óptimo (Verde):', value: stats.alDia },
-    { label: 'Activos con Vencimiento Próximo (Amarillo):', value: stats.proximos },
-    { label: 'Activos fuera de Vigencia (Rojo):', value: stats.vencidos }
-  ];
+  // Cuadrícula Row 1 (X: 16 -> 103, X: 107 -> 194)
+  const cardH = 18;
+  const colW1 = 86.5;
 
-  kpis.forEach(kpi => {
-    doc.setFillColor(248, 250, 252);
-    doc.rect(margin, currY, printableWidth, 9, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.rect(margin, currY, printableWidth, 9, 'S');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.setTextColor(30, 41, 59);
-    doc.text(kpi.label, margin + 4, currY + 6);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    const color = getStatusColor(kpi.label);
-    doc.setTextColor(color[0], color[1], color[2]);
-    doc.text(String(kpi.value), margin + printableWidth - 6, currY + 6, { align: 'right' });
-    currY += 11;
-  });
-
-  currY += 6;
-  currY = renderSectionTitle(doc, '2. Distribución de Inventario Activo', currY, [59, 130, 246]);
+  // Card 1: Cumplimiento Global
+  doc.setFillColor(250, 250, 250);
+  doc.rect(margin, currY, colW1, cardH, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(margin, currY, colW1, cardH, 'S');
   
+  // Línea izquierda del color de cumplimiento
+  const compliance = stats.complianceGlobal ?? 100;
+  const compColor = compliance >= 90 ? [16, 185, 129] : compliance >= 70 ? [245, 158, 11] : [239, 68, 68];
+  doc.setFillColor(compColor[0], compColor[1], compColor[2]);
+  doc.rect(margin, currY, 2.5, cardH, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text('CUMPLIMIENTO GLOBAL', margin + 6, currY + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${compliance}%`, margin + 6, currY + 12);
+
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(51, 65, 85);
-  doc.text(`El sistema gestiona de forma centralizada ${stats.totalEquipos} equipos e instrumentos de medición y ${stats.totalPatrones} patrones de referencia certificados y vinculados a los planes de calibración.`, margin, currY + 4, { maxWidth: printableWidth });
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Conformidad del plan metrológico', margin + 6, currY + 16);
 
-  currY += 16;
+  // Card 2: Total Activos
+  doc.setFillColor(250, 250, 250);
+  doc.rect(margin + colW1 + 5, currY, colW1, cardH, 'F');
+  doc.rect(margin + colW1 + 5, currY, colW1, cardH, 'S');
+  
+  doc.setFillColor(59, 130, 246); // Azul
+  doc.rect(margin + colW1 + 5, currY, 2.5, cardH, 'F');
 
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text('ACTIVOS EN INVENTARIO', margin + colW1 + 11, currY + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${stats.totalActivos ?? 0}`, margin + colW1 + 11, currY + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Equipos: ${stats.totalEquipos ?? 0}  ·  Patrones: ${stats.totalPatrones ?? 0}`, margin + colW1 + 11, currY + 16);
+
+  currY += cardH + 4;
+
+  // Cuadrícula Row 2 (3 Columnas: 55.6mm cada una, gap 4.5mm)
+  const colW2 = 56.3;
+  const gap2 = 4.5;
+
+  // Card 3: Al Día (Verde)
+  doc.setFillColor(250, 250, 250);
+  doc.rect(margin, currY, colW2, cardH, 'F');
+  doc.rect(margin, currY, colW2, cardH, 'S');
+  doc.setFillColor(16, 185, 129); // Verde
+  doc.rect(margin, currY, 2.5, cardH, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(16, 185, 129);
+  doc.text('AL DÍA', margin + 6, currY + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${stats.alDia ?? 0}`, margin + 6, currY + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Operación conforme', margin + 6, currY + 16);
+
+  // Card 4: Por Vencer (Amarillo)
+  const xCard4 = margin + colW2 + gap2;
+  doc.setFillColor(250, 250, 250);
+  doc.rect(xCard4, currY, colW2, cardH, 'F');
+  doc.rect(xCard4, currY, colW2, cardH, 'S');
+  doc.setFillColor(245, 158, 11); // Amarillo
+  doc.rect(xCard4, currY, 2.5, cardH, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(245, 158, 11);
+  doc.text('POR VENCER', xCard4 + 6, currY + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${stats.proximos ?? 0}`, xCard4 + 6, currY + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Control < 30 días', xCard4 + 6, currY + 16);
+
+  // Card 5: Críticos (Rojo)
+  const xCard5 = margin + (colW2 * 2) + (gap2 * 2);
+  doc.setFillColor(250, 250, 250);
+  doc.rect(xCard5, currY, colW2, cardH, 'F');
+  doc.rect(xCard5, currY, colW2, cardH, 'S');
+  doc.setFillColor(239, 68, 68); // Rojo
+  doc.rect(xCard5, currY, 2.5, cardH, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(239, 68, 68);
+  doc.text('CRÍTICOS', xCard5 + 6, currY + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${stats.vencidos ?? 0}`, xCard5 + 6, currY + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Calibración urgente', xCard5 + 6, currY + 16);
+
+  currY += cardH + 10;
+
+  // Sección 2: Distribución de Inventario Activo
+  currY = renderSectionTitle(doc, '2. Distribución de Inventario Activo', currY, [0, 229, 255]);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  const descText = `El parque de activos consta de equipos e instrumentos de medición junto con patrones certificados de referencia metrológica. La composición porcentual se detalla a continuación:`;
+  doc.text(descText, margin, currY + 1);
+
+  // Proporción Visual Bar
+  const barY = currY + 6;
+  const totalActivosVal = (stats.totalEquipos ?? 0) + (stats.totalPatrones ?? 0);
+  const eqPct = totalActivosVal > 0 ? (stats.totalEquipos ?? 0) / totalActivosVal : 0.5;
+  const patPct = totalActivosVal > 0 ? (stats.totalPatrones ?? 0) / totalActivosVal : 0.5;
+
+  const eqW = printableWidth * eqPct;
+  const patW = printableWidth * patPct;
+
+  // Dibuja la barra de equipos (Azul)
+  doc.setFillColor(59, 130, 246);
+  doc.rect(margin, barY, eqW, 4, 'F');
+
+  // Dibuja la barra de patrones (Celeste)
+  doc.setFillColor(147, 197, 253);
+  doc.rect(margin + eqW, barY, patW, 4, 'F');
+
+  // Leyenda bajo la barra
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(59, 130, 246);
+  doc.text(`Equipos / Instrumentos: ${stats.totalEquipos ?? 0} (${Math.round(eqPct * 100)}%)`, margin, barY + 8);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(29, 78, 216);
+  doc.text(`Patrones de Referencia: ${stats.totalPatrones ?? 0} (${Math.round(patPct * 100)}%)`, margin + printableWidth, barY + 8, { align: 'right' });
+
+  currY += 22;
+
+  // Sección 3: Alertas Críticas de Atención Inmediata
   if (stats.alertasCriticas && stats.alertasCriticas.length > 0) {
     currY = renderSectionTitle(doc, '3. Alertas Críticas de Atención Inmediata (Requieren Calibración)', currY, [239, 68, 68]);
 
     // Tabla de Alertas
-    doc.setFillColor(185, 28, 28); // Rojo oscuro
+    doc.setFillColor(15, 23, 42); // Slate 900
     doc.rect(margin, currY, printableWidth, 8, 'F');
     
     doc.setFont('helvetica', 'bold');
@@ -959,7 +1093,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
         currY = 20;
         
         // Repetir cabecera
-        doc.setFillColor(185, 28, 28);
+        doc.setFillColor(15, 23, 42);
         doc.rect(margin, currY, printableWidth, 8, 'F');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);

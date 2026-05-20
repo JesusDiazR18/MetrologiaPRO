@@ -66,6 +66,7 @@ export default function DashboardPage() {
 
   // Descarga individual loading states
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null)
+  const [hoveredData, setHoveredData] = useState<any | null>(null)
 
   // AUDITORÍA Y OPTIMIZACIÓN: Solo hacemos 1 fetch consolidado en lugar de 3 para reducir latencia y carga de DB.
   async function loadAllData() {
@@ -560,6 +561,14 @@ export default function DashboardPage() {
                         outerRadius={55}
                         paddingAngle={3}
                         dataKey="value"
+                        onMouseEnter={(data: any) => {
+                          if (data && data.payload) {
+                            setHoveredData(data.payload)
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredData(null)
+                        }}
                         onClick={(data: any) => {
                           if (data && data.status) {
                             setStatusFilter(data.status)
@@ -571,14 +580,23 @@ export default function DashboardPage() {
                           <Cell key={`cell-${index}`} fill={entry.color} style={{ outline: 'none' }} />
                         ))}
                       </Pie>
-                      <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
                   
-                  {/* Cumplimiento en el centro del Donut */}
-                  <div className="donut-center-info">
-                    <span className="donut-pct">{complianceGlobalDynamic}%</span>
-                    <span className="donut-lbl">Vigente</span>
+                  {/* Cumplimiento en el centro del Donut (Interactivo con hover) */}
+                  <div className="donut-center-info" style={{ pointerEvents: 'none' }}>
+                    <span 
+                      className="donut-pct" 
+                      style={{ 
+                        color: hoveredData ? hoveredData.color : 'var(--text-main)',
+                        transition: 'color 0.2s ease-in-out'
+                      }}
+                    >
+                      {hoveredData ? hoveredData.value : `${complianceGlobalDynamic}%`}
+                    </span>
+                    <span className="donut-lbl">
+                      {hoveredData ? hoveredData.name : 'Vigente'}
+                    </span>
                   </div>
 
                   {statusFilter && (
