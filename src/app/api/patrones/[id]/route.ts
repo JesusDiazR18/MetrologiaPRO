@@ -10,7 +10,7 @@ export async function PUT(
     const body = await request.json()
     const {
       Codigo, Nombre_Patron, Fecha_Calibracion_Externa, Fecha_Vencimiento_Certificado,
-      N_Certificado, Proveedor_Laboratorio, PDF_Certificado, Estado_Vigencia, Foto_Patron
+      N_Certificado, Proveedor_Laboratorio, PDF_Certificado, Estado_Vigencia, Foto_Patron, Magnitud
     } = body
 
     const existing = await prisma.patronReferencia.findUnique({
@@ -44,6 +44,7 @@ export async function PUT(
         Proveedor_Laboratorio: Proveedor_Laboratorio !== undefined ? Proveedor_Laboratorio : existing.Proveedor_Laboratorio,
         PDF_Certificado: resolvedPdf,
         Estado_Vigencia: finalEstado,
+        Magnitud: Magnitud !== undefined ? Magnitud : existing.Magnitud,
         Foto_Patron: Foto_Patron !== undefined ? Foto_Patron : existing.Foto_Patron
       }
     })
