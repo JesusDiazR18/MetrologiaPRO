@@ -525,7 +525,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     equipo.historiales.slice(0, 10).forEach((h: any, idx: number) => {
       // Build notes text combining observations and acciones
       const obsText = h.Observaciones ? h.Observaciones.trim() : '';
-      const accionText = h.Acciones_Pendientes ? `⚠ Acciones: ${h.Acciones_Pendientes.trim()}` : '';
+      const accionText = h.Acciones_Pendientes ? `⚠ Acciones Necesarias: ${h.Acciones_Pendientes.trim()}` : '';
       const fullNotes = [obsText, accionText].filter(Boolean).join(' | ') || '—';
 
       // Determine result label

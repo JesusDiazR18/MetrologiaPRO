@@ -67,12 +67,12 @@ export default function CalendarioPage() {
       if (filter !== 'ALL' && e.Tipo !== filter) return false
       // Check if this day is a follow-up day based on the last verification date
       const baseDate = e.Fecha_Ultima_Verificacion ? new Date(e.Fecha_Ultima_Verificacion) : new Date()
-      const dayNum = day.getTime()
-      const baseNum = baseDate.getTime()
-      const periodMs = e.Periodicidad_Seguimiento * 24 * 60 * 60 * 1000
-      const diff = dayNum - baseNum
-      if (diff <= 0) return false
-      return Math.round(diff / periodMs) === diff / periodMs
+      const d1 = new Date(day.getFullYear(), day.getMonth(), day.getDate())
+      const d2 = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate())
+      const diffTime = d1.getTime() - d2.getTime()
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+      if (diffDays <= 0) return false
+      return diffDays % e.Periodicidad_Seguimiento === 0
     })
   }
 

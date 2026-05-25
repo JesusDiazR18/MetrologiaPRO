@@ -474,12 +474,12 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                     style={{ fontWeight: 700, color: resultadoStatusOperatividad === 'OPERATIVO' ? '#10b981' : '#f59e0b' }}
                   >
                     <option value="OPERATIVO">OPERATIVO / APTO PARA USO</option>
-                    <option value="ACCION_PENDIENTE">REQUIERE ACCIÓN PENDIENTE / SEGUIMIENTO</option>
+                    <option value="ACCION_PENDIENTE">REQUIERE ACCIÓN / SEGUIMIENTO</option>
                   </select>
                 </div>
 
                 <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                  <label><ClipboardList size={14} /> Acciones Pendientes por Realizar (Seguimiento)</label>
+                  <label><ClipboardList size={14} /> Acciones que se necesitan (Seguimiento)</label>
                   <textarea 
                     value={accionesPendientes} 
                     onChange={e => {
@@ -492,7 +492,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                     rows={2} 
                   />
                   <span style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
-                    💡 Ingresar acciones pendientes cambiará automáticamente el estado a seguimiento.
+                    💡 Ingresar las acciones que se necesitan cambiará automáticamente el estado a seguimiento.
                   </span>
                 </div>
               </div>

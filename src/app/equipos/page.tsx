@@ -577,7 +577,7 @@ function EquiposContent() {
                                           {h.Observaciones && <div>{h.Observaciones}</div>}
                                           {h.Acciones_Pendientes && (
                                             <div style={{ marginTop: h.Observaciones ? 4 : 0, color: '#f59e0b', fontWeight: 600 }}>
-                                              ⚠️ Acciones: {h.Acciones_Pendientes}
+                                              ⚠️ Acciones Necesarias: {h.Acciones_Pendientes}
                                             </div>
                                           )}
                                           {!h.Observaciones && !h.Acciones_Pendientes && '—'}
