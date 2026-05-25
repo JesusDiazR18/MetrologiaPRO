@@ -259,6 +259,7 @@ body {
 /* ─── MAIN CONTENT ───────────────────────────────────────────── */
 .main-content {
   margin-left: var(--sidebar-w);
+  max-width: calc(100% - var(--sidebar-w));
   flex: 1;
   display: flex; flex-direction: column;
   min-height: 100vh;
