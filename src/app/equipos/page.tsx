@@ -539,7 +539,7 @@ function EquiposContent() {
                                       <th>Patrón</th>
                                       <th>Variación</th>
                                       <th>Resultado</th>
-                                      <th>Técnico</th>
+                                      <th>Responsable</th>
                                       <th>Observaciones</th>
                                       <th style={{ textAlign: 'center' }}>Evidencia</th>
                                       <th style={{ textAlign: 'center' }}>Acción</th>

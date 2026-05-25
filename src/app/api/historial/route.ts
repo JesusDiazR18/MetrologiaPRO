@@ -113,6 +113,11 @@ export async function POST(request: Request) {
         let variacion = body.Variacion_Calculada !== undefined && body.Variacion_Calculada !== null ? parseFloat(body.Variacion_Calculada) : null
         let status = body.Resultado_Status || 'APTO'
         
+        let magControlada = body.Magnitud_Controlada
+        if (!magControlada && equipo.Magnitud && !equipo.Magnitud.includes(',')) {
+          magControlada = equipo.Magnitud
+        }
+
         createdLog = await prisma.historialVerificacion.create({
           data: {
             FK_ID_Equipo: body.FK_ID_Equipo,
@@ -128,7 +133,7 @@ export async function POST(request: Request) {
             Acciones_Pendientes: body.Acciones_Pendientes || null,
             Estado_Seguimiento: body.Acciones_Pendientes && body.Acciones_Pendientes.trim().length > 0 ? 'PENDIENTE' : 'N/A',
             Evidencia_Foto: body.Evidencia_Foto ?? null,
-            Magnitud_Controlada: body.Magnitud_Controlada || null
+            Magnitud_Controlada: magControlada || null
           }
         })
         overallStatus = status
@@ -154,6 +159,11 @@ export async function POST(request: Request) {
           }
         }
 
+        let magControlada = body.Magnitud_Controlada
+        if (!magControlada && equipo.Magnitud && !equipo.Magnitud.includes(',')) {
+          magControlada = equipo.Magnitud
+        }
+
         createdLog = await prisma.historialVerificacion.create({
           data: {
             FK_ID_Equipo: body.FK_ID_Equipo,
@@ -169,7 +179,7 @@ export async function POST(request: Request) {
             Acciones_Pendientes: accionesPendientes,
             Estado_Seguimiento: estadoSeguimiento,
             Evidencia_Foto: body.Evidencia_Foto ?? null,
-            Magnitud_Controlada: body.Magnitud_Controlada || null
+            Magnitud_Controlada: magControlada || null
           }
         })
         overallStatus = status

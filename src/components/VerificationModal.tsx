@@ -670,7 +670,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             )}
 
             <div className="form-group-modern" style={{ marginTop: 20 }}>
-              <label><User size={14} /> Técnico responsable / Inspector *</label>
+              <label><User size={14} /> Responsable / Inspector *</label>
               <input value={tecnico} onChange={e => setTecnico(e.target.value)} placeholder="Ingrese su nombre o apellido" required />
             </div>
 

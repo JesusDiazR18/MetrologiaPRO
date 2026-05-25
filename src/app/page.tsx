@@ -820,7 +820,7 @@ export default function DashboardPage() {
                   <span className="spec-val font-bold">{formatFecha(selectedLog.Fecha_Ejecucion)}</span>
                 </div>
                 <div className="specs-row">
-                  <span className="spec-lbl">Técnico Ejecutor</span>
+                  <span className="spec-lbl">Responsable</span>
                   <span className="spec-val">{selectedLog.Tecnico_Ejecutor}</span>
                 </div>
                 <div className="specs-row">
