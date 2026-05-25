@@ -39,6 +39,7 @@ interface Equipo {
   Detalles_Estado?: string | null
   Tiene_Solucion?: boolean | null
   Requiere_Seguimiento?: boolean | null
+  Periodicidad_Seguimiento?: number | null
   Magnitud?: string | null
   Accesorios?: string | null
   Insumos?: string | null
@@ -56,6 +57,8 @@ interface Equipo {
     Observaciones?: string | null
     Evidencia_Foto?: string | null
     Magnitud_Controlada?: string | null
+    Acciones_Pendientes?: string | null
+    Tipo_Verificacion?: string | null
     patron?: {
       Codigo: string
       Nombre_Patron: string
@@ -535,12 +538,13 @@ function EquiposContent() {
                                   <thead>
                                     <tr>
                                       <th>Fecha</th>
+                                      <th>Tipo</th>
                                       <th>Magnitud</th>
                                       <th>Patrón</th>
                                       <th>Variación</th>
                                       <th>Resultado</th>
                                       <th>Responsable</th>
-                                      <th>Observaciones</th>
+                                      <th>Observaciones / Acciones Req.</th>
                                       <th style={{ textAlign: 'center' }}>Evidencia</th>
                                       <th style={{ textAlign: 'center' }}>Acción</th>
                                     </tr>
@@ -548,7 +552,12 @@ function EquiposContent() {
                                   <tbody>
                                     {e.historiales.map((h, index) => (
                                       <tr key={h.ID_Log}>
-                                        <td>{formatFecha(h.Fecha_Ejecucion)}</td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(h.Fecha_Ejecucion)}</td>
+                                        <td>
+                                          <span style={{ fontSize: 10, background: h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'rgba(245,158,11,0.12)' : 'rgba(0,229,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: h.Tipo_Verificacion === 'OPERATIVIDAD' ? '#f59e0b' : 'var(--accent)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                            {h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Calibración'}
+                                          </span>
+                                        </td>
                                         <td>
                                           <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.06)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase' }}>
                                             {h.Magnitud_Controlada || '—'}
@@ -559,12 +568,20 @@ function EquiposContent() {
                                         </td>
                                         <td style={{ fontFamily: 'var(--font-mono)' }}>{h.Variacion_Calculada?.toFixed(4) ?? '—'}</td>
                                         <td>
-                                          <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' || h.Resultado_Status === 'OPERATIVO' || h.Resultado_Status === 'ACCION_PENDIENTE' ? 'var(--success)' : 'var(--danger)' }}>
-                                            {h.Resultado_Status}
+                                          <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' || h.Resultado_Status === 'OPERATIVO' ? 'var(--success)' : h.Resultado_Status === 'ACCION_PENDIENTE' ? '#f59e0b' : 'var(--danger)' }}>
+                                            {h.Resultado_Status === 'ACCION_PENDIENTE' ? 'ACCIÓN REQUERIDA' : h.Resultado_Status}
                                           </span>
                                         </td>
                                         <td>{h.Tecnico_Ejecutor}</td>
-                                        <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 200, whiteSpace: 'normal' }}>{h.Observaciones || '—'}</td>
+                                        <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 220, whiteSpace: 'normal' }}>
+                                          {h.Observaciones && <div>{h.Observaciones}</div>}
+                                          {h.Acciones_Pendientes && (
+                                            <div style={{ marginTop: h.Observaciones ? 4 : 0, color: '#f59e0b', fontWeight: 600 }}>
+                                              ⚠️ Acciones: {h.Acciones_Pendientes}
+                                            </div>
+                                          )}
+                                          {!h.Observaciones && !h.Acciones_Pendientes && '—'}
+                                        </td>
                                         <td style={{ textAlign: 'center' }}>
                                           {h.Evidencia_Foto ? (
                                             <button 
@@ -605,7 +622,7 @@ function EquiposContent() {
                                     ))}
                                     {e.historiales.length === 0 && (
                                       <tr>
-                                        <td colSpan={9} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
+                                        <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
                                           No hay verificaciones registradas para este activo.
                                         </td>
                                       </tr>

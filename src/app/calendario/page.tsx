@@ -18,8 +18,11 @@ interface Equipo {
   Tipo: string
   Responsable: string | null
   Fecha_Proximo_Control: string | null
+  Fecha_Ultima_Verificacion: string | null
   Estado: string
   Area_Asignada: string | null
+  Requiere_Seguimiento?: boolean | null
+  Periodicidad_Seguimiento?: number | null
 }
 
 export default function CalendarioPage() {
@@ -51,12 +54,30 @@ export default function CalendarioPage() {
     return equipos.filter(e => {
       const matchDate = e.Fecha_Proximo_Control && isSameDay(new Date(e.Fecha_Proximo_Control), day)
       const matchFilter = filter === 'ALL' || e.Tipo === filter
-      const active = e.Estado !== 'OBSOLETO' && e.Estado !== 'FUERA_DE_SERVICIO'
+      const active = e.Estado !== 'OBSOLETO' && e.Estado !== 'FUERA_DE_SERVICIO' && e.Estado !== 'DE_BAJA_OBSOLETO'
       return matchDate && matchFilter && active
     })
   }
 
+  // Generate seguimiento events based on Periodicidad_Seguimiento
+  function seguimientoForDay(day: Date) {
+    return equipos.filter(e => {
+      if (!e.Requiere_Seguimiento || !e.Periodicidad_Seguimiento) return false
+      if (e.Estado === 'OBSOLETO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO') return false
+      if (filter !== 'ALL' && e.Tipo !== filter) return false
+      // Check if this day is a follow-up day based on the last verification date
+      const baseDate = e.Fecha_Ultima_Verificacion ? new Date(e.Fecha_Ultima_Verificacion) : new Date()
+      const dayNum = day.getTime()
+      const baseNum = baseDate.getTime()
+      const periodMs = e.Periodicidad_Seguimiento * 24 * 60 * 60 * 1000
+      const diff = dayNum - baseNum
+      if (diff <= 0) return false
+      return Math.round(diff / periodMs) === diff / periodMs
+    })
+  }
+
   const selectedEquipos = selected ? equiposForDay(selected) : []
+  const selectedSeguimiento = selected ? seguimientoForDay(selected) : []
   
   const todayDate = new Date()
   todayDate.setHours(0,0,0,0)
@@ -151,6 +172,10 @@ export default function CalendarioPage() {
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb' }} />
                   <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>VER</span>
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>SEG</span>
+                </div>
               </div>
               <div style={{ display: 'flex', background: '#f8fafc', padding: 3, borderRadius: 10 }}>
                 {(['ALL', 'EQUIPO', 'INSTRUMENTO'] as const).map(f => (
@@ -237,6 +262,19 @@ export default function CalendarioPage() {
                           borderRadius: '50%', 
                           background: e.Tipo === 'EQUIPO' ? '#2563eb' : '#00e5ff',
                           boxShadow: `0 0 8px ${e.Tipo === 'EQUIPO' ? 'rgba(37, 99, 235, 0.4)' : 'rgba(0, 229, 255, 0.4)'}`
+                        }} 
+                      />
+                    ))}
+                    {seguimientoForDay(day).map(e => (
+                      <div 
+                        key={`seg-${e.ID_Equipo}`} 
+                        title={`Seguimiento: ${e.Nombre_Equipo}`}
+                        style={{ 
+                          width: 6, 
+                          height: 6, 
+                          borderRadius: '50%', 
+                          background: '#f59e0b',
+                          boxShadow: '0 0 8px rgba(245,158,11,0.5)'
                         }} 
                       />
                     ))}

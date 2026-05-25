@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       include: {
         historiales: {
           orderBy: { Fecha_Ejecucion: 'desc' },
-          take: 5,
+          take: 15,
           include: {
             patron: {
               select: {

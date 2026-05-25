@@ -34,6 +34,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
     Detalles_Estado: equipo.Detalles_Estado || '',
     Tiene_Solucion: equipo.Tiene_Solucion ?? true,
     Requiere_Seguimiento: equipo.Requiere_Seguimiento ?? false,
+    Periodicidad_Seguimiento: equipo.Periodicidad_Seguimiento ? String(equipo.Periodicidad_Seguimiento) : '7',
     N_Certificado: equipo.N_Certificado || '',
     Proveedor_Servicio: equipo.Proveedor_Servicio || '',
     Fecha_Vencimiento_Certificado: equipo.Fecha_Vencimiento_Certificado ? new Date(equipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : '',
@@ -159,6 +160,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
         Detalles_Estado: isOperativo ? null : formData.Detalles_Estado,
         Tiene_Solucion: isOperativo ? true : formData.Tiene_Solucion,
         Requiere_Seguimiento: isOperativo ? false : formData.Requiere_Seguimiento,
+        Periodicidad_Seguimiento: (!isOperativo && formData.Requiere_Seguimiento) ? (parseInt(String(formData.Periodicidad_Seguimiento)) || 7) : null,
         Codigo_Interno: equipo.ID_Equipo,
         Magnitud: finalMagnitud.join(', '),
         Tolerancia_Aceptable: mainTolerancia,
@@ -298,6 +300,36 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                       />
                       <span>Hacer Seguimiento Activo</span>
                     </label>
+                    {formData.Requiere_Seguimiento && (
+                      <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(245,158,11,0.08)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.25)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b' }}>⏱ Frecuencia del Seguimiento</label>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {[{label: 'Diario', val: '1'}, {label: 'Semanal', val: '7'}, {label: 'Quincenal', val: '15'}, {label: 'Mensual', val: '30'}].map(opt => (
+                            <button
+                              key={opt.val}
+                              type="button"
+                              onClick={() => setFormData({...formData, Periodicidad_Seguimiento: opt.val})}
+                              style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: String(formData.Periodicidad_Seguimiento) === opt.val ? '1px solid #f59e0b' : '1px solid var(--snow-3)', background: String(formData.Periodicidad_Seguimiento) === opt.val ? 'rgba(245,158,11,0.15)' : 'transparent', color: String(formData.Periodicidad_Seguimiento) === opt.val ? '#f59e0b' : 'var(--text-dim)' }}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            className="form-control"
+                            style={{ width: 80, padding: '6px 10px' }}
+                            value={formData.Periodicidad_Seguimiento}
+                            onChange={e => setFormData({...formData, Periodicidad_Seguimiento: e.target.value})}
+                          />
+                          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>días entre revisiones de seguimiento</span>
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>Se mostrará en el calendario y en las notificaciones automáticas</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -37,6 +37,7 @@ model InstrumentoEquipo {
   Detalles_Estado           String?
   Tiene_Solucion            Boolean?  @default(true)
   Requiere_Seguimiento      Boolean?  @default(false)
+  Periodicidad_Seguimiento  Int?                          // Periodicidad en días del seguimiento activo
   PDF_Certificado               String?
   Fecha_Vencimiento_Certificado DateTime?
   N_Certificado                 String?

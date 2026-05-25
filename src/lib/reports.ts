@@ -492,50 +492,109 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     if (currY + 40 > 275) { doc.addPage(); currY = 20; }
     currY = renderSectionTitle(doc, '4. Historial de Controles y Verificaciones Metrológicas', currY);
 
-    // Cabecera
+    // Column layout - tighter to fit more info
+    // F.Control | Tipo | Magnitud | Patrón | Variación | Resultado | Observaciones / Acciones
+    const colX = {
+      fecha:     margin + 2,
+      tipo:      margin + 20,
+      magnitud:  margin + 40,
+      patron:    margin + 58,
+      variacion: margin + 86,
+      resultado: margin + 108,
+      notas:     margin + 133
+    }
+    const colWidths = {
+      notas: printableWidth - (133 - 2)  // remaining width for notes column
+    }
+
+    // Header
     doc.setFillColor(15, 23, 42);
     doc.rect(margin, currY, printableWidth, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.text('F. Control', margin + 2, currY + 5.5);
-    doc.text('Magnitud', margin + 20, currY + 5.5);
-    doc.text('Patrón', margin + 44, currY + 5.5);
-    doc.text('Responsable', margin + 59, currY + 5.5);
-    doc.text('Variación', margin + 93, currY + 5.5);
-    doc.text('Resultado', margin + 115, currY + 5.5);
-    doc.text('Observaciones', margin + 135, currY + 5.5);
-
+    doc.setFontSize(7.5);
+    doc.text('F. Control', colX.fecha, currY + 5.5);
+    doc.text('Tipo', colX.tipo, currY + 5.5);
+    doc.text('Magnitud', colX.magnitud, currY + 5.5);
+    doc.text('Patrón', colX.patron, currY + 5.5);
+    doc.text('Variación', colX.variacion, currY + 5.5);
+    doc.text('Resultado', colX.resultado, currY + 5.5);
+    doc.text('Observaciones / Acciones Requeridas', colX.notas, currY + 5.5);
     currY += 8;
 
-    equipo.historiales.slice(0, 8).forEach((h: any, idx: number) => {
-      if (currY + 10 > 275) { doc.addPage(); currY = 20; }
-      
+    equipo.historiales.slice(0, 10).forEach((h: any, idx: number) => {
+      // Build notes text combining observations and acciones
+      const obsText = h.Observaciones ? h.Observaciones.trim() : '';
+      const accionText = h.Acciones_Pendientes ? `⚠ Acciones: ${h.Acciones_Pendientes.trim()}` : '';
+      const fullNotes = [obsText, accionText].filter(Boolean).join(' | ') || '—';
+
+      // Determine result label
+      let resultLabel = h.Resultado_Status;
+      if (h.Resultado_Status === 'ACCION_PENDIENTE') resultLabel = 'ACCIÓN REQUERIDA';
+      else if (h.Resultado_Status === 'NO_APTO') resultLabel = 'NO APTO';
+
+      // Calculate needed text lines for the notes column (max width ~45mm)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      const notesMaxWidth = colWidths.notas - 2;
+      const notesLines = doc.splitTextToSize(fullNotes, notesMaxWidth);
+      const rowH = Math.max(8, notesLines.length * 4 + 3);
+
+      // Page break check
+      if (currY + rowH > 280) { doc.addPage(); currY = 20; }
+
+      // Row background
       const bg = idx % 2 === 0 ? 255 : 248;
       doc.setFillColor(bg, bg, bg);
-      doc.rect(margin, currY, printableWidth, 8, 'F');
+      doc.rect(margin, currY, printableWidth, rowH, 'F');
       doc.setDrawColor(226, 232, 240);
-      doc.line(margin, currY + 8, margin + printableWidth, currY + 8);
+      doc.line(margin, currY + rowH, margin + printableWidth, currY + rowH);
 
+      const midY = currY + rowH / 2 + 2.5;
+
+      // Date
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(formatFecha(h.Fecha_Ejecucion), margin + 2, currY + 5.5);
-      doc.text(h.Magnitud_Controlada || '—', margin + 20, currY + 5.5);
-      doc.text(h.patron?.Codigo || '—', margin + 44, currY + 5.5);
-      doc.text(h.Tecnico_Ejecutor.substring(0, 16), margin + 59, currY + 5.5);
-      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', margin + 93, currY + 5.5);
+      doc.text(formatFecha(h.Fecha_Ejecucion), colX.fecha, midY);
 
+      // Tipo badge text
+      const tipoLabel = h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operativ.' : 'Calibrac.';
+      doc.setTextColor(h.Tipo_Verificacion === 'OPERATIVIDAD' ? 180 : 14, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 120 : 165, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 0 : 233);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.text(tipoLabel, colX.tipo, midY);
+
+      // Magnitud
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text((h.Magnitud_Controlada || '—').substring(0, 10), colX.magnitud, midY);
+
+      // Patron
+      doc.text((h.patron?.Codigo || '—').substring(0, 10), colX.patron, midY);
+
+      // Variacion
+      doc.setTextColor(100, 116, 139);
+      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', colX.variacion, midY);
+
+      // Resultado - color coded
       const colorStatus = getStatusColor(h.Resultado_Status);
       doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text(h.Resultado_Status, margin + 115, currY + 5.5);
+      doc.setFontSize(6.5);
+      doc.text(resultLabel, colX.resultado, midY);
 
+      // Notes - wrapped, multi-line
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139);
-      doc.text((h.Observaciones || '—').substring(0, 22), margin + 135, currY + 5.5);
+      doc.setFontSize(7);
+      doc.setTextColor(80, 100, 120);
+      const notesStartY = currY + 4;
+      notesLines.forEach((line: string, lineIdx: number) => {
+        doc.text(line, colX.notas, notesStartY + lineIdx * 4);
+      });
 
-      currY += 8;
+      currY += rowH;
     });
   }
 

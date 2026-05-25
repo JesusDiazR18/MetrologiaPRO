@@ -39,11 +39,16 @@ export async function GET(request: Request) {
       return remaining <= 45; // Los patrones suelen requerir más margen (45 días)
     });
 
-    if (equiposProximos.length === 0 && patronesProximos.length === 0) {
-      return NextResponse.json({ message: 'No hay elementos próximos a vencer. No se envió correo.' });
+    // 3. Filtrar equipos con seguimiento activo (Requiere_Seguimiento = true)
+    const equiposSeguimiento = equipos.filter((e: any) => 
+      e.Requiere_Seguimiento === true
+    );
+
+    if (equiposProximos.length === 0 && patronesProximos.length === 0 && equiposSeguimiento.length === 0) {
+      return NextResponse.json({ message: 'No hay elementos próximos a vencer ni en seguimiento. No se envió correo.' });
     }
 
-    // 3. Generar HTML del correo
+    // 4. Generar HTML del correo
     let emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <h2 style="color: #0f172a; border-bottom: 2px solid #00e5ff; padding-bottom: 10px;">
@@ -105,6 +110,43 @@ export async function GET(request: Request) {
       </div>
     `;
 
+    // Add seguimiento section before footer if there are seguimiento items
+    if (equiposSeguimiento.length > 0) {
+      const seguimientoHtml = `
+        <h3 style="color: #b45309; margin-top: 30px;">🔄 Equipos con Seguimiento Activo</h3>
+        <p style="color: #475569; font-size: 13px;">Los siguientes equipos tienen seguimiento activo configurado. Asegúrese de realizar las revisiones periódicas según la frecuencia indicada.</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #fffbeb; text-align: left;">
+              <th style="padding: 10px; border-bottom: 2px solid #fde68a; color: #92400e;">Código</th>
+              <th style="padding: 10px; border-bottom: 2px solid #fde68a; color: #92400e;">Equipo</th>
+              <th style="padding: 10px; border-bottom: 2px solid #fde68a; color: #92400e;">Responsable</th>
+              <th style="padding: 10px; border-bottom: 2px solid #fde68a; color: #92400e;">Frecuencia Seguimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${equiposSeguimiento.map((e: any) => {
+              const periodo = e.Periodicidad_Seguimiento;
+              const frecLabel = !periodo ? 'No especificada' : periodo === 1 ? 'Diario' : periodo === 7 ? 'Semanal' : periodo === 15 ? 'Quincenal' : periodo === 30 ? 'Mensual' : `Cada ${periodo} días`;
+              return `
+              <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #fef3c7; color: #334155;">${e.Codigo_Interno}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #fef3c7; color: #334155;">${e.Nombre_Equipo}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #fef3c7; color: #334155;">${e.Responsable || 'Sin asignar'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #fef3c7; color: #b45309; font-weight: bold;">${frecLabel}</td>
+              </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      // Insert seguimiento section before footer
+      emailHtml = emailHtml.replace(
+        '<p style="color: #64748b; font-size: 12px; margin-top: 30px;',
+        seguimientoHtml + '<p style="color: #64748b; font-size: 12px; margin-top: 30px;'
+      );
+    }
+
     // 4. Configurar Nodemailer y Enviar
     // Requiere configurar SMTP_HOST, SMTP_USER y SMTP_PASS en Vercel para el emisario.
     const smtpHost = process.env.SMTP_HOST || '';
@@ -140,7 +182,7 @@ export async function GET(request: Request) {
       from: `"Sistema Metrología" <${smtpUser}>`,
       to: targetEmails,
       cc: ccEmails,
-      subject: `🛑 Alertas Semanales de Metrología: ${patronesProximos.length + equiposProximos.length} elementos requieren atención`,
+      subject: `🛑 Alertas Semanales de Metrología: ${patronesProximos.length + equiposProximos.length} vencimientos${equiposSeguimiento.length > 0 ? ` | ${equiposSeguimiento.length} en seguimiento` : ''}`,
       html: emailHtml,
     });
 
