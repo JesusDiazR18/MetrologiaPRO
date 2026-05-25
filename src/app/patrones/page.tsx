@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { FlaskConical, Plus, CheckCircle, XCircle, AlertCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit } from 'lucide-react'
+import { FlaskConical, Plus, CheckCircle, XCircle, AlertCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit, History } from 'lucide-react'
 import { formatFecha, getScanUrl } from '@/lib/metrologia'
 import { generatePatronSheetPDF } from '@/lib/reports'
 import { QRCodeSVG } from 'qrcode.react'
@@ -8,6 +8,7 @@ import CreatePatronModal from '@/components/CreatePatronModal'
 import EditPatronModal from '@/components/EditPatronModal'
 import RenewCertModal from '@/components/RenewCertModal'
 import QRLabelModal from '@/components/QRLabelModal'
+import PatronCalibrationHistoryModal from '@/components/PatronCalibrationHistoryModal'
 import { toast } from 'react-hot-toast'
 
 interface Patron {
@@ -35,6 +36,7 @@ export default function PatronesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [qrLabelAsset, setQrLabelAsset] = useState<any | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [historialPatron, setHistorialPatron] = useState<Patron | null>(null)
 
   useEffect(() => {
     loadPatrones()
@@ -297,7 +299,10 @@ export default function PatronesPage() {
                           <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 12 }}>
                               <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>Especificaciones y Trazabilidad</h4>
-                              <div style={{ display: 'flex', gap: 8 }}>
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(p) }}>
+                                  <History size={12} style={{ display: 'inline', marginRight: 4 }} /> Historial Cal.
+                                </button>
                                 <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)' }} onClick={(ev) => { ev.stopPropagation(); setEditPatron(p) }}>
                                   <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Patrón
                                 </button>
@@ -385,6 +390,13 @@ export default function PatronesPage() {
           }}
           onClose={() => setRenewPatron(null)}
           onSaved={() => { setRenewPatron(null); loadPatrones() }}
+        />
+      )}
+      {historialPatron && (
+        <PatronCalibrationHistoryModal
+          patron={historialPatron}
+          onClose={() => setHistorialPatron(null)}
+          onSaved={() => { setHistorialPatron(null); loadPatrones() }}
         />
       )}
       {qrLabelAsset && (

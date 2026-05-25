@@ -69,8 +69,31 @@ model PatronReferencia {
   Magnitud                      String?               // TEMPERATURA | MASA | LONGITUD | PRESION | TIEMPO | ELECTRICA | VOLUMEN | OTRA
 
   historiales                   HistorialVerificacion[]
+  calibraciones                 HistorialCalibracionPatron[]
 
   @@index([Codigo])
+}
+
+// ─────────────────────────────────────────────
+//  HISTORIAL DE CALIBRACIONES DE PATRONES
+// ─────────────────────────────────────────────
+model HistorialCalibracionPatron {
+  ID_Calibracion            String    @id @default(uuid())
+  FK_ID_Patron              String
+  Fecha_Calibracion         DateTime
+  Fecha_Vencimiento         DateTime?
+  N_Certificado             String?
+  Laboratorio               String?
+  PDF_Certificado           String?
+  Resultado                 String    // APROBADO | RECHAZADO | CONDICIONAL
+  Observaciones             String?
+  Responsable               String?
+  Creado_En                 DateTime  @default(now())
+
+  patron  PatronReferencia  @relation(fields: [FK_ID_Patron], references: [ID_Patron])
+
+  @@index([FK_ID_Patron])
+  @@index([Fecha_Calibracion])
 }
 
 // ─────────────────────────────────────────────
