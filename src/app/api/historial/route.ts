@@ -96,7 +96,7 @@ export async function POST(request: Request) {
             Variacion_Calculada: variacion,
             Resultado_Status: status,
             Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
-            Observaciones: body.Observaciones ?? null,
+            Observaciones: item.Observaciones || body.Observaciones || null,
             Firma_Digital: body.Firma_Digital ?? null,
             Tipo_Verificacion: tipoVerif,
             Acciones_Pendientes: accionesPendientes,

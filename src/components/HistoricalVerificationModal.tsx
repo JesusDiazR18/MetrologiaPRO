@@ -220,17 +220,19 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
     FK_ID_Patron_Usado: string;
     Medida_Instrumento: string;
     Medida_Patron: string;
+    Observaciones: string;
   }>>({})
 
   useEffect(() => {
     if (selectedEquipo && !logToEdit) {
       const mags = selectedEquipo.Magnitud ? selectedEquipo.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
-      const init: Record<string, { FK_ID_Patron_Usado: string; Medida_Instrumento: string; Medida_Patron: string }> = {}
+      const init: Record<string, { FK_ID_Patron_Usado: string; Medida_Instrumento: string; Medida_Patron: string; Observaciones: string }> = {}
       mags.forEach((m: string) => {
         init[m] = {
           FK_ID_Patron_Usado: '',
           Medida_Instrumento: '',
-          Medida_Patron: ''
+          Medida_Patron: '',
+          Observaciones: ''
         }
       })
       setMultimagnitudData(init)
@@ -379,7 +381,8 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
               Medida_Instrumento: parseFloat(item.Medida_Instrumento),
               Medida_Patron: parseFloat(item.Medida_Patron),
               Resultado_Status: calcs?.status ?? 'APTO',
-              Variacion_Calculada: calcs?.varNum ?? 0
+              Variacion_Calculada: calcs?.varNum ?? 0,
+              Observaciones: item.Observaciones || null
             }
           })
           
@@ -669,6 +672,31 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                               required
                             />
                           </div>
+                        </div>
+
+                        <div className="form-group-modern" style={{ marginBottom: 0 }}>
+                          <label><ClipboardList size={12} /> Observaciones para {mag}</label>
+                          <textarea
+                            value={item.Observaciones || ''}
+                            onChange={e => setMultimagnitudData(prev => ({
+                              ...prev,
+                              [mag]: { ...prev[mag], Observaciones: e.target.value }
+                            }))}
+                            placeholder={`Observaciones específicas para la magnitud ${mag}...`}
+                            rows={2}
+                            style={{ 
+                              width: '100%', 
+                              fontSize: '13px', 
+                              padding: '10px 14px', 
+                              borderRadius: '10px', 
+                              border: '2px solid var(--glass-border)', 
+                              background: 'var(--page-bg-soft)', 
+                              outline: 'none', 
+                              color: 'var(--text-main)',
+                              fontFamily: 'inherit',
+                              resize: 'vertical'
+                            }}
+                          />
                         </div>
 
                         {calcs && (

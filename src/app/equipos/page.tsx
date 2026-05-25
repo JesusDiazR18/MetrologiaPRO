@@ -283,7 +283,8 @@ function EquiposContent() {
           </div>
         ) : (
           <div className="card-body" style={{ padding: 0 }}>
-            <table className="data-table" style={{ width: '100%' }}>
+            <div className="table-wrap">
+              <table className="data-table" style={{ width: '100%' }}>
               <thead>
                 <tr>
                   <th style={{ width: '5%' }}></th>
@@ -640,8 +641,9 @@ function EquiposContent() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
 
       <style jsx>{`
         .spec-row {
