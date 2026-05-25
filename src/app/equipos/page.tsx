@@ -368,7 +368,7 @@ function EquiposContent() {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
+                          <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)', maxWidth: 0 }}>
                             <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${statusColor}` }}>
                               {(e.Detalles_Estado || e.Requiere_Seguimiento || e.Tiene_Solucion === false) && (
                                 <div style={{ 
@@ -535,7 +535,8 @@ function EquiposContent() {
                                     ➕ Agregar Verificación Anterior
                                   </button>
                                 </div>
-                                <table className="data-table">
+                                <div className="table-wrap">
+                                  <table className="data-table">
                                   <thead>
                                     <tr>
                                       <th>Fecha</th>
@@ -630,6 +631,7 @@ function EquiposContent() {
                                     )}
                                   </tbody>
                                 </table>
+                                </div>
                               </div>
                             </div>
                           </td>

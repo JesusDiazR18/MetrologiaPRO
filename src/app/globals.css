@@ -475,7 +475,12 @@ body {
 }
 
 /* ─── TABLES ─────────────────────────────────────────────────── */
-.table-wrap { overflow-x: auto; }
+.table-wrap { 
+  overflow-x: auto; 
+  width: 100%;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
 
 table {
   width: 100%; border-collapse: collapse;
