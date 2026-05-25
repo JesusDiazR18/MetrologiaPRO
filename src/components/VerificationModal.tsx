@@ -334,6 +334,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
         Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : finalStatus,
         Evidencia_Foto: photoBase64 || null,
+        Magnitud_Controlada: equipoMags.length <= 1 ? (selectedEquipo?.Magnitud || null) : null,
         multimagnitudData: multimagnitudPayload
       }
 

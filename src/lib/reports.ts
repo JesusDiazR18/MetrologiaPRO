@@ -498,11 +498,13 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text('Fecha Control', margin + 4, currY + 5.5);
-    doc.text('Técnico Responsable', margin + 32, currY + 5.5);
-    doc.text('Variación', margin + 85, currY + 5.5);
+    doc.text('Fecha Control', margin + 2, currY + 5.5);
+    doc.text('Magnitud', margin + 22, currY + 5.5);
+    doc.text('Patrón', margin + 46, currY + 5.5);
+    doc.text('Técnico Responsable', margin + 64, currY + 5.5);
+    doc.text('Variación', margin + 94, currY + 5.5);
     doc.text('Resultado', margin + 112, currY + 5.5);
-    doc.text('Observaciones / Notas', margin + 136, currY + 5.5);
+    doc.text('Observaciones / Notas', margin + 131, currY + 5.5);
 
     currY += 8;
 
@@ -516,11 +518,13 @@ export async function generateTechnicalSheetPDF(equipo: any) {
       doc.line(margin, currY + 8, margin + printableWidth, currY + 8);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(formatFecha(h.Fecha_Ejecucion), margin + 4, currY + 5.5);
-      doc.text(h.Tecnico_Ejecutor.substring(0, 24), margin + 32, currY + 5.5);
-      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', margin + 85, currY + 5.5);
+      doc.text(formatFecha(h.Fecha_Ejecucion), margin + 2, currY + 5.5);
+      doc.text(h.Magnitud_Controlada || '—', margin + 22, currY + 5.5);
+      doc.text(h.patron?.Codigo || '—', margin + 46, currY + 5.5);
+      doc.text(h.Tecnico_Ejecutor.substring(0, 15), margin + 64, currY + 5.5);
+      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', margin + 94, currY + 5.5);
 
       const colorStatus = getStatusColor(h.Resultado_Status);
       doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
@@ -529,7 +533,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      doc.text((h.Observaciones || '—').substring(0, 30), margin + 136, currY + 5.5);
+      doc.text((h.Observaciones || '—').substring(0, 26), margin + 131, currY + 5.5);
 
       currY += 8;
     });

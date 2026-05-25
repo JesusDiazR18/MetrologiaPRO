@@ -401,6 +401,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
           Tipo_Verificacion: tipoVerif,
           Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
           Evidencia_Foto: photoBase64 || null,
+          Magnitud_Controlada: equipoMags.length <= 1 ? (selectedEquipo?.Magnitud || null) : null,
           multimagnitudData: multimagnitudPayload
         }
 
