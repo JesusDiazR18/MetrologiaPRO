@@ -498,13 +498,13 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text('Fecha Control', margin + 2, currY + 5.5);
-    doc.text('Magnitud', margin + 22, currY + 5.5);
-    doc.text('Patrón', margin + 46, currY + 5.5);
-    doc.text('Técnico Responsable', margin + 64, currY + 5.5);
-    doc.text('Variación', margin + 94, currY + 5.5);
-    doc.text('Resultado', margin + 112, currY + 5.5);
-    doc.text('Observaciones / Notas', margin + 131, currY + 5.5);
+    doc.text('F. Control', margin + 2, currY + 5.5);
+    doc.text('Magnitud', margin + 20, currY + 5.5);
+    doc.text('Patrón', margin + 44, currY + 5.5);
+    doc.text('Responsable', margin + 59, currY + 5.5);
+    doc.text('Variación', margin + 93, currY + 5.5);
+    doc.text('Resultado', margin + 115, currY + 5.5);
+    doc.text('Observaciones', margin + 135, currY + 5.5);
 
     currY += 8;
 
@@ -521,19 +521,19 @@ export async function generateTechnicalSheetPDF(equipo: any) {
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
       doc.text(formatFecha(h.Fecha_Ejecucion), margin + 2, currY + 5.5);
-      doc.text(h.Magnitud_Controlada || '—', margin + 22, currY + 5.5);
-      doc.text(h.patron?.Codigo || '—', margin + 46, currY + 5.5);
-      doc.text(h.Tecnico_Ejecutor.substring(0, 15), margin + 64, currY + 5.5);
-      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', margin + 94, currY + 5.5);
+      doc.text(h.Magnitud_Controlada || '—', margin + 20, currY + 5.5);
+      doc.text(h.patron?.Codigo || '—', margin + 44, currY + 5.5);
+      doc.text(h.Tecnico_Ejecutor.substring(0, 16), margin + 59, currY + 5.5);
+      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', margin + 93, currY + 5.5);
 
       const colorStatus = getStatusColor(h.Resultado_Status);
       doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text(h.Resultado_Status, margin + 112, currY + 5.5);
+      doc.text(h.Resultado_Status, margin + 115, currY + 5.5);
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      doc.text((h.Observaciones || '—').substring(0, 26), margin + 131, currY + 5.5);
+      doc.text((h.Observaciones || '—').substring(0, 22), margin + 135, currY + 5.5);
 
       currY += 8;
     });
