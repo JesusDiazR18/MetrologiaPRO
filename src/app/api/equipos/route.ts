@@ -50,6 +50,14 @@ export async function GET(request: Request) {
         historiales: {
           orderBy: { Fecha_Ejecucion: 'desc' },
           take: 5,
+          include: {
+            patron: {
+              select: {
+                Codigo: true,
+                Nombre_Patron: true
+              }
+            }
+          }
         }
       }
     })

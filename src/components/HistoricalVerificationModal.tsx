@@ -179,27 +179,43 @@ interface Patron {
 interface Props {
   equipo: Equipo | null
   equipos?: Equipo[]
+  logToEdit?: any | null
   onClose: () => void
   onSaved: () => void
 }
 
-export default function HistoricalVerificationModal({ equipo, equipos = [], onClose, onSaved }: Props) {
-  const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo || '')
+export default function HistoricalVerificationModal({ equipo, equipos = [], logToEdit, onClose, onSaved }: Props) {
+  const [selectedId, setSelectedId] = useState(logToEdit?.FK_ID_Equipo || equipo?.ID_Equipo || '')
   const selectedEquipo = equipos.find(e => e.ID_Equipo === selectedId) ?? equipo
 
-  const [fechaEjecucion, setFechaEjecucion] = useState(new Date().toISOString().split('T')[0])
-  const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
-  const [medidaPatron, setMedidaPatron] = useState('')
-  const [medidaInstrumento, setMedidaInstrumento] = useState('')
-  const [tecnico, setTecnico] = useState('')
-  const [obs, setObs] = useState('')
-  const [accionesPendientes, setAccionesPendientes] = useState('')
-  const [resultadoStatusOperatividad, setResultadoStatusOperatividad] = useState('OPERATIVO')
+  const [fechaEjecucion, setFechaEjecucion] = useState(
+    logToEdit?.Fecha_Ejecucion 
+      ? new Date(logToEdit.Fecha_Ejecucion).toISOString().split('T')[0] 
+      : new Date().toISOString().split('T')[0]
+  )
+  const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>(
+    logToEdit?.Tipo_Verificacion === 'OPERATIVIDAD' || logToEdit?.Tipo_Verificacion === 'CALIBRACION' 
+      ? logToEdit.Tipo_Verificacion 
+      : 'OPERATIVIDAD'
+  )
+  const [medidaPatron, setMedidaPatron] = useState(
+    logToEdit?.Medida_Patron !== null && logToEdit?.Medida_Patron !== undefined ? String(logToEdit.Medida_Patron) : ''
+  )
+  const [medidaInstrumento, setMedidaInstrumento] = useState(
+    logToEdit?.Medida_Instrumento !== null && logToEdit?.Medida_Instrumento !== undefined ? String(logToEdit.Medida_Instrumento) : ''
+  )
+  const [tecnico, setTecnico] = useState(logToEdit?.Tecnico_Ejecutor || '')
+  const [obs, setObs] = useState(logToEdit?.Observaciones || '')
+  const [accionesPendientes, setAccionesPendientes] = useState(logToEdit?.Acciones_Pendientes || '')
+  const [resultadoStatusOperatividad, setResultadoStatusOperatividad] = useState(
+    logToEdit?.Tipo_Verificacion === 'OPERATIVIDAD' ? logToEdit.Resultado_Status : 'OPERATIVO'
+  )
   const [patrones, setPatrones] = useState<Patron[]>([])
-  const [selectedPatronId, setSelectedPatronId] = useState('')
+  const [selectedPatronId, setSelectedPatronId] = useState(logToEdit?.FK_ID_Patron_Usado || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
   const [multimagnitudData, setMultimagnitudData] = useState<Record<string, {
     FK_ID_Patron_Usado: string;
     Medida_Instrumento: string;
@@ -207,7 +223,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
   }>>({})
 
   useEffect(() => {
-    if (selectedEquipo) {
+    if (selectedEquipo && !logToEdit) {
       const mags = selectedEquipo.Magnitud ? selectedEquipo.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
       const init: Record<string, { FK_ID_Patron_Usado: string; Medida_Instrumento: string; Medida_Patron: string }> = {}
       mags.forEach((m: string) => {
@@ -219,7 +235,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
       })
       setMultimagnitudData(init)
     }
-  }, [selectedId, selectedEquipo])
+  }, [selectedId, selectedEquipo, logToEdit])
 
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -266,8 +282,10 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
     return { varNum, status, magTolerancia, magUnidad }
   }
 
-  // Filtrar patrones si el equipo tiene magnitud
-  const equipoMags = selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+  // Si editamos un registro, no usamos el formulario multimagnitud dividido (cada fila representa una magnitud individual)
+  const equipoMags = logToEdit 
+    ? [] 
+    : (selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : [])
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
@@ -301,55 +319,104 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
         photoBase64 = await fileToBase64(photoFile)
       }
 
-      let multimagnitudPayload = null
-      let finalStatus = statusCalc || 'APTO'
-
-      if (tipoVerif === 'CALIBRACION' && equipoMags.length > 1) {
-        multimagnitudPayload = equipoMags.map(mag => {
-          const item = multimagnitudData[mag]
-          const calcs = computeMagCalcs(mag)
-          return {
-            Magnitud_Controlada: mag,
-            FK_ID_Patron_Usado: item.FK_ID_Patron_Usado,
-            Medida_Instrumento: parseFloat(item.Medida_Instrumento),
-            Medida_Patron: parseFloat(item.Medida_Patron),
-            Resultado_Status: calcs?.status ?? 'APTO',
-            Variacion_Calculada: calcs?.varNum ?? 0
+      let r;
+      if (logToEdit) {
+        // Modo Edición
+        let finalStatus = 'APTO'
+        if (tipoVerif === 'CALIBRACION') {
+          if (medidaPatron && medidaInstrumento) {
+            const calcs = calcularVariacion(parseFloat(medidaInstrumento), parseFloat(medidaPatron))
+            let magTolerancia = selectedEquipo?.Tolerancia_Aceptable ?? 0
+            const checkMag = logToEdit.Magnitud_Controlada
+            if (selectedEquipo?.Tolerancias_Multimagnitud && checkMag) {
+              try {
+                const map = JSON.parse(selectedEquipo.Tolerancias_Multimagnitud)
+                if (map[checkMag]?.tolerancia) {
+                  magTolerancia = parseFloat(map[checkMag].tolerancia) || 0
+                }
+              } catch (e) {}
+            }
+            finalStatus = Math.abs(calcs) <= magTolerancia ? 'APTO' : 'NO_APTO'
           }
+        } else {
+          finalStatus = resultadoStatusOperatividad
+          if (accionesPendientes.trim().length > 0 && finalStatus === 'OPERATIVO') {
+            finalStatus = 'ACCION_PENDIENTE'
+          }
+        }
+
+        const payload = {
+          Fecha_Ejecucion: new Date(fechaEjecucion).toISOString(),
+          FK_ID_Patron_Usado: tipoVerif === 'CALIBRACION' ? selectedPatronId : null,
+          Medida_Patron: tipoVerif === 'CALIBRACION' ? parseFloat(medidaPatron) : null,
+          Medida_Instrumento: tipoVerif === 'CALIBRACION' ? parseFloat(medidaInstrumento) : null,
+          Resultado_Status: finalStatus,
+          Tecnico_Ejecutor: tecnico.trim(),
+          Observaciones: obs.trim() || 'Verificación editada.',
+          Tipo_Verificacion: tipoVerif,
+          Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
+          Evidencia_Foto: photoRemoved ? null : (photoBase64 || logToEdit.Evidencia_Foto || null),
+          Magnitud_Controlada: logToEdit.Magnitud_Controlada || null
+        }
+
+        r = await fetch(`/api/historial/${logToEdit.ID_Log}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         })
-        
-        const hasNoApto = multimagnitudPayload.some(item => item.Resultado_Status === 'NO_APTO')
-        finalStatus = hasNoApto ? 'NO_APTO' : 'APTO'
+      } else {
+        // Modo Creación estándar
+        let multimagnitudPayload = null
+        let finalStatus = statusCalc || 'APTO'
+
+        if (tipoVerif === 'CALIBRACION' && equipoMags.length > 1) {
+          multimagnitudPayload = equipoMags.map(mag => {
+            const item = multimagnitudData[mag]
+            const calcs = computeMagCalcs(mag)
+            return {
+              Magnitud_Controlada: mag,
+              FK_ID_Patron_Usado: item.FK_ID_Patron_Usado,
+              Medida_Instrumento: parseFloat(item.Medida_Instrumento),
+              Medida_Patron: parseFloat(item.Medida_Patron),
+              Resultado_Status: calcs?.status ?? 'APTO',
+              Variacion_Calculada: calcs?.varNum ?? 0
+            }
+          })
+          
+          const hasNoApto = multimagnitudPayload.some(item => item.Resultado_Status === 'NO_APTO')
+          finalStatus = hasNoApto ? 'NO_APTO' : 'APTO'
+        }
+
+        const payload = {
+          FK_ID_Equipo: selectedId,
+          isHistoricalLog: true,
+          Fecha_Ejecucion: new Date(fechaEjecucion).toISOString(),
+          FK_ID_Patron_Usado: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? selectedPatronId : null,
+          Medida_Patron: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaPatron) : null,
+          Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaInstrumento) : null,
+          Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? varNum : null,
+          Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : finalStatus,
+          Tecnico_Ejecutor: tecnico.trim(),
+          Observaciones: obs.trim() || 'Verificación histórica cargada manualmente.',
+          Tipo_Verificacion: tipoVerif,
+          Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
+          Evidencia_Foto: photoBase64 || null,
+          multimagnitudData: multimagnitudPayload
+        }
+
+        r = await fetch('/api/historial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
       }
 
-      const payload = {
-        FK_ID_Equipo: selectedId,
-        isHistoricalLog: true,
-        Fecha_Ejecucion: new Date(fechaEjecucion).toISOString(),
-        FK_ID_Patron_Usado: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? selectedPatronId : null,
-        Medida_Patron: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaPatron) : null,
-        Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaInstrumento) : null,
-        Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? varNum : null,
-        Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : finalStatus,
-        Tecnico_Ejecutor: tecnico.trim(),
-        Observaciones: obs.trim() || 'Verificación histórica cargada manualmente.',
-        Tipo_Verificacion: tipoVerif,
-        Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
-        Evidencia_Foto: photoBase64 || null,
-        multimagnitudData: multimagnitudPayload
-      }
-
-      const r = await fetch('/api/historial', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
       if (r.ok) { 
         onSaved() 
       }
       else { 
         const d = await r.json()
-        setError(d.error ?? 'Error al guardar la verificación histórica')
+        setError(d.error ?? 'Error al guardar la verificación')
         setSaving(false) 
       }
     } catch (err) {
@@ -377,9 +444,13 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
               <Settings2 size={20} color="#fff" />
             </div>
             <div>
-              <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>Agregar Verificación Anterior</h2>
+              <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>
+                {logToEdit ? 'Editar Verificación' : 'Agregar Verificación Anterior'}
+              </h2>
               <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                {selectedEquipo ? `Carga de historial metrológico previo para ${selectedEquipo.Codigo_Interno}` : 'Carga de historial metrológico previo'}
+                {logToEdit 
+                  ? `Modificando registro de control para ${selectedEquipo?.Codigo_Interno}` 
+                  : (selectedEquipo ? `Carga de historial metrológico previo para ${selectedEquipo.Codigo_Interno}` : 'Carga de historial metrológico previo')}
               </p>
             </div>
           </div>
@@ -703,13 +774,15 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
 
             <div className="form-group-modern" style={{ marginTop: 20, marginBottom: 0 }}>
               <label style={{ marginBottom: 4, display: 'block' }}>📸 Evidencia Fotográfica (Opcional)</label>
-              {photoFile ? (
+              {photoFile || (logToEdit?.Evidencia_Foto && !photoRemoved) ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f1f5f9', border: '1px solid #0ea5e9', borderRadius: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 36, height: 36, background: '#e0f2fe', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{photoFile.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                      {photoFile ? photoFile.name : 'Imagen Guardada'}
+                    </span>
                   </div>
-                  <button type="button" onClick={() => setPhotoFile(null)} style={{ background: '#fee2e2', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar</button>
+                  <button type="button" onClick={() => { setPhotoFile(null); setPhotoRemoved(true); }} style={{ background: '#fee2e2', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar</button>
                 </div>
               ) : (
                 <label 
@@ -746,7 +819,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], onCl
           <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-save-premium" disabled={saving}>
-              {saving ? 'Guardando...' : <><CheckCircle2 size={18} /> Guardar Histórico</>}
+              {saving ? 'Guardando...' : <><CheckCircle2 size={18} /> {logToEdit ? 'Guardar Cambios' : 'Guardar Histórico'}</>}
             </button>
           </div>
         </form>

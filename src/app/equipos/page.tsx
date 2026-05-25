@@ -55,6 +55,11 @@ interface Equipo {
     Tecnico_Ejecutor: string
     Observaciones?: string | null
     Evidencia_Foto?: string | null
+    Magnitud_Controlada?: string | null
+    patron?: {
+      Codigo: string
+      Nombre_Patron: string
+    } | null
   }[]
 }
 
@@ -80,6 +85,7 @@ function EquiposContent() {
   const [modalHistorical, setModalHistorical] = useState<Equipo | null>(null)
   const [showHistoricalModal, setShowHistoricalModal] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [editLog, setEditLog] = useState<any | null>(null)
   const searchParams = useSearchParams()
 
   const load = useCallback(async (query = '', tipoF = '') => {
@@ -529,6 +535,8 @@ function EquiposContent() {
                                   <thead>
                                     <tr>
                                       <th>Fecha</th>
+                                      <th>Magnitud</th>
+                                      <th>Patrón</th>
                                       <th>Variación</th>
                                       <th>Resultado</th>
                                       <th>Técnico</th>
@@ -538,12 +546,20 @@ function EquiposContent() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {e.historiales.map(h => (
+                                    {e.historiales.map((h, index) => (
                                       <tr key={h.ID_Log}>
                                         <td>{formatFecha(h.Fecha_Ejecucion)}</td>
+                                        <td>
+                                          <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.06)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase' }}>
+                                            {h.Magnitud_Controlada || '—'}
+                                          </span>
+                                        </td>
+                                        <td title={h.patron?.Nombre_Patron || ''} style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                                          {h.patron?.Codigo || '—'}
+                                        </td>
                                         <td style={{ fontFamily: 'var(--font-mono)' }}>{h.Variacion_Calculada?.toFixed(4) ?? '—'}</td>
                                         <td>
-                                          <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' ? 'var(--success)' : 'var(--danger)' }}>
+                                          <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' || h.Resultado_Status === 'OPERATIVO' || h.Resultado_Status === 'ACCION_PENDIENTE' ? 'var(--success)' : 'var(--danger)' }}>
                                             {h.Resultado_Status}
                                           </span>
                                         </td>
@@ -564,20 +580,32 @@ function EquiposContent() {
                                           )}
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
-                                          <button 
-                                            className="btn btn-ghost btn-xs" 
-                                            style={{ color: 'var(--danger)', padding: '4px' }}
-                                            onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, e.Nombre_Equipo) }}
-                                            title="Eliminar este registro"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                            {index === 0 && (
+                                              <button 
+                                                className="btn btn-ghost btn-xs" 
+                                                style={{ color: 'var(--accent)', padding: '4px' }}
+                                                onClick={(ev) => { ev.stopPropagation(); setEditLog({ ...h, FK_ID_Equipo: e.ID_Equipo }) }}
+                                                title="Editar la última verificación"
+                                              >
+                                                <Edit size={14} />
+                                              </button>
+                                            )}
+                                            <button 
+                                              className="btn btn-ghost btn-xs" 
+                                              style={{ color: 'var(--danger)', padding: '4px' }}
+                                              onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, e.Nombre_Equipo) }}
+                                              title="Eliminar este registro"
+                                            >
+                                              <Trash2 size={14} />
+                                            </button>
+                                          </div>
                                         </td>
                                       </tr>
                                     ))}
                                     {e.historiales.length === 0 && (
                                       <tr>
-                                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
+                                        <td colSpan={9} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
                                           No hay verificaciones registradas para este activo.
                                         </td>
                                       </tr>
@@ -709,6 +737,15 @@ function EquiposContent() {
           equipos={equipos}
           onClose={() => setShowHistoricalModal(false)}
           onSaved={() => { setShowHistoricalModal(false); load(q, tipo) }}
+        />
+      )}
+      {editLog && (
+        <HistoricalVerificationModal
+          equipo={null}
+          equipos={equipos}
+          logToEdit={editLog}
+          onClose={() => setEditLog(null)}
+          onSaved={() => { setEditLog(null); load(q, tipo) }}
         />
       )}
       {qrLabelEquipo && (
