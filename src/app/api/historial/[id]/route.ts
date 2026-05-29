@@ -28,7 +28,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       Tipo_Verificacion,
       Acciones_Pendientes,
       Evidencia_Foto,
-      Magnitud_Controlada
+      Magnitud_Controlada,
+      Mediciones_Puntos
     } = body
 
     // Calcular variación y estatus si es calibración y vienen las medidas
@@ -82,7 +83,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         Acciones_Pendientes: Acciones_Pendientes !== undefined ? Acciones_Pendientes : undefined,
         Estado_Seguimiento: estadoSeguimiento,
         Evidencia_Foto: Evidencia_Foto !== undefined ? Evidencia_Foto : undefined,
-        Magnitud_Controlada: Magnitud_Controlada !== undefined ? Magnitud_Controlada : undefined
+        Magnitud_Controlada: Magnitud_Controlada !== undefined ? Magnitud_Controlada : undefined,
+        Mediciones_Puntos: Mediciones_Puntos !== undefined ? Mediciones_Puntos : undefined
       }
     })
 

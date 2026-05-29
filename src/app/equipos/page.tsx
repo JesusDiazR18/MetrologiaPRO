@@ -59,6 +59,7 @@ interface Equipo {
     Magnitud_Controlada?: string | null
     Acciones_Pendientes?: string | null
     Tipo_Verificacion?: string | null
+    Mediciones_Puntos?: string | null
     patron?: {
       Codigo: string
       Nombre_Patron: string
@@ -576,13 +577,38 @@ function EquiposContent() {
                                         </td>
                                         <td>{h.Tecnico_Ejecutor}</td>
                                         <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 220, whiteSpace: 'normal' }}>
+                                          {h.Mediciones_Puntos && (() => {
+                                            try {
+                                              const pts = JSON.parse(h.Mediciones_Puntos)
+                                              if (Array.isArray(pts) && pts.length > 0) {
+                                                return (
+                                                  <div style={{ marginBottom: 6, padding: '6px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                    <div style={{ fontWeight: 700, fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Mediciones:</div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                      {pts.map((p: any, idx: number) => {
+                                                        const diff = (p.patron !== null && p.instrumento !== null) ? (p.instrumento - p.patron) : null
+                                                        const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(4))}` : '—'
+                                                        return (
+                                                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontFamily: 'var(--font-mono)' }}>
+                                                            <span>P{idx+1}: P:{p.patron ?? '—'} / I:{p.instrumento ?? '—'}</span>
+                                                            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Var: {diffStr}</span>
+                                                          </div>
+                                                        )
+                                                      })}
+                                                    </div>
+                                                  </div>
+                                                )
+                                              }
+                                            } catch (err) {}
+                                            return null
+                                          })()}
                                           {h.Observaciones && <div>{h.Observaciones}</div>}
                                           {h.Acciones_Pendientes && (
-                                            <div style={{ marginTop: h.Observaciones ? 4 : 0, color: '#f59e0b', fontWeight: 600 }}>
+                                            <div style={{ marginTop: h.Observaciones || h.Mediciones_Puntos ? 4 : 0, color: '#f59e0b', fontWeight: 600 }}>
                                               ⚠️ Acciones Necesarias: {h.Acciones_Pendientes}
                                             </div>
                                           )}
-                                          {!h.Observaciones && !h.Acciones_Pendientes && '—'}
+                                          {!h.Observaciones && !h.Acciones_Pendientes && !h.Mediciones_Puntos && '—'}
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
                                           {h.Evidencia_Foto ? (

@@ -102,7 +102,8 @@ export async function POST(request: Request) {
             Acciones_Pendientes: accionesPendientes,
             Estado_Seguimiento: estadoSeguimiento,
             Evidencia_Foto: body.Evidencia_Foto ?? null,
-            Magnitud_Controlada: item.Magnitud_Controlada
+            Magnitud_Controlada: item.Magnitud_Controlada,
+            Mediciones_Puntos: item.Mediciones_Puntos || null
           }
         })
         createdLogs.push(newLog)
@@ -133,7 +134,8 @@ export async function POST(request: Request) {
             Acciones_Pendientes: body.Acciones_Pendientes || null,
             Estado_Seguimiento: body.Acciones_Pendientes && body.Acciones_Pendientes.trim().length > 0 ? 'PENDIENTE' : 'N/A',
             Evidencia_Foto: body.Evidencia_Foto ?? null,
-            Magnitud_Controlada: magControlada || null
+            Magnitud_Controlada: magControlada || null,
+            Mediciones_Puntos: body.Mediciones_Puntos || null
           }
         })
         overallStatus = status
@@ -179,7 +181,8 @@ export async function POST(request: Request) {
             Acciones_Pendientes: accionesPendientes,
             Estado_Seguimiento: estadoSeguimiento,
             Evidencia_Foto: body.Evidencia_Foto ?? null,
-            Magnitud_Controlada: magControlada || null
+            Magnitud_Controlada: magControlada || null,
+            Mediciones_Puntos: body.Mediciones_Puntos || null
           }
         })
         overallStatus = status

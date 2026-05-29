@@ -523,10 +523,25 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     currY += 8;
 
     equipo.historiales.slice(0, 10).forEach((h: any, idx: number) => {
+      let ptsString = ''
+      if (h.Mediciones_Puntos) {
+        try {
+          const pts = JSON.parse(h.Mediciones_Puntos)
+          if (Array.isArray(pts) && pts.length > 0) {
+            const formattedPts = pts.map((p: any, i: number) => {
+              const diff = (p.patron !== null && p.instrumento !== null) ? (p.instrumento - p.patron) : null
+              const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(3))}` : '—'
+              return `P${i+1}(${diffStr})`
+            }).join(', ')
+            ptsString = `Pts: ${formattedPts}`
+          }
+        } catch (e) {}
+      }
+
       // Build notes text combining observations and acciones
       const obsText = h.Observaciones ? h.Observaciones.trim() : '';
       const accionText = h.Acciones_Pendientes ? `⚠ Acciones Necesarias: ${h.Acciones_Pendientes.trim()}` : '';
-      const fullNotes = [obsText, accionText].filter(Boolean).join(' | ') || '—';
+      const fullNotes = [ptsString, obsText, accionText].filter(Boolean).join(' | ') || '—';
 
       // Determine result label
       let resultLabel = h.Resultado_Status;

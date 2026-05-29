@@ -186,8 +186,9 @@ interface Props {
 export default function VerificationModal({ equipo, equipos, onClose, onSaved }: Props) {
   const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
   const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo ?? '')
-  const [medidaPatron, setMedidaPatron] = useState('')
-  const [medidaInstrumento, setMedidaInstrumento] = useState('')
+  const [mediciones, setMediciones] = useState<{ patron: string, instrumento: string }[]>([
+    { patron: '', instrumento: '' }
+  ])
   const [tecnico, setTecnico] = useState('')
   const [obs, setObs] = useState('')
   const [accionesPendientes, setAccionesPendientes] = useState('')
@@ -199,8 +200,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [multimagnitudData, setMultimagnitudData] = useState<Record<string, {
     FK_ID_Patron_Usado: string;
-    Medida_Instrumento: string;
-    Medida_Patron: string;
+    Mediciones: { patron: string, instrumento: string }[];
     Observaciones: string;
   }>>({})
 
@@ -209,12 +209,11 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   useEffect(() => {
     if (selectedEquipo) {
       const mags = selectedEquipo.Magnitud ? selectedEquipo.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : []
-      const init: Record<string, { FK_ID_Patron_Usado: string; Medida_Instrumento: string; Medida_Patron: string; Observaciones: string }> = {}
+      const init: Record<string, { FK_ID_Patron_Usado: string; Mediciones: { patron: string, instrumento: string }[]; Observaciones: string }> = {}
       mags.forEach((m: string) => {
         init[m] = {
           FK_ID_Patron_Usado: '',
-          Medida_Instrumento: '',
-          Medida_Patron: '',
+          Mediciones: [{ patron: '', instrumento: '' }],
           Observaciones: ''
         }
       })
@@ -237,20 +236,66 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       .then(data => setPatrones(data.filter((p: Patron) => p.Estado_Vigencia === 'VIGENTE')))
   }, [])
 
-  const varNum = (tipoVerif === 'CALIBRACION' && medidaPatron && medidaInstrumento)
-    ? calcularVariacion(parseFloat(medidaInstrumento), parseFloat(medidaPatron))
+  const calculateMultipointCalcs = (
+    meds: { patron: string, instrumento: string }[],
+    tolerance: number
+  ) => {
+    let maxAbsVar = 0
+    let worstVar: number | null = null
+    let worstPatron: number | null = null
+    let worstInstrumento: number | null = null
+    let allValid = true
+    let hasValues = false
+
+    const points: { patron: number | null; instrumento: number | null; variacion: number | null }[] = []
+
+    for (const m of meds) {
+      if (!m.patron || !m.instrumento) {
+        allValid = false
+        points.push({ patron: null, instrumento: null, variacion: null })
+        continue
+      }
+      const pVal = parseFloat(m.patron)
+      const iVal = parseFloat(m.instrumento)
+      if (isNaN(pVal) || isNaN(iVal)) {
+        allValid = false
+        points.push({ patron: null, instrumento: null, variacion: null })
+        continue
+      }
+      hasValues = true
+      const v = parseFloat((iVal - pVal).toFixed(6))
+      if (worstVar === null || Math.abs(v) >= maxAbsVar) {
+        maxAbsVar = Math.abs(v)
+        worstVar = v
+        worstPatron = pVal
+        worstInstrumento = iVal
+      }
+      points.push({ patron: pVal, instrumento: iVal, variacion: v })
+    }
+
+    if (!hasValues || worstVar === null) return null
+
+    const status = Math.abs(worstVar) <= tolerance ? 'APTO' : 'NO_APTO'
+    return {
+      points: points as { patron: number; instrumento: number; variacion: number }[],
+      worstVar: worstVar as number,
+      worstPatron: worstPatron as number,
+      worstInstrumento: worstInstrumento as number,
+      status,
+      allValid
+    }
+  }
+
+  const singleCalcs = selectedEquipo
+    ? calculateMultipointCalcs(mediciones, selectedEquipo.Tolerancia_Aceptable)
     : null
-  const statusCalc = varNum != null && selectedEquipo
-    ? calcularStatus(varNum, selectedEquipo.Tolerancia_Aceptable)
-    : null
+
+  const varNum = singleCalcs?.worstVar ?? null
+  const statusCalc = singleCalcs?.status ?? null
 
   const computeMagCalcs = (magName: string) => {
     const item = multimagnitudData[magName]
-    if (!item || !item.Medida_Patron || !item.Medida_Instrumento) return null
-    const instr = parseFloat(item.Medida_Instrumento)
-    const patr = parseFloat(item.Medida_Patron)
-    if (isNaN(instr) || isNaN(patr)) return null
-    const varNum = calcularVariacion(instr, patr)
+    if (!item || !item.Mediciones) return null
     
     let magTolerancia = selectedEquipo?.Tolerancia_Aceptable ?? 0
     let magUnidad = selectedEquipo?.Unidad_Tolerancia ?? ''
@@ -263,8 +308,20 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         }
       } catch(e) {}
     }
-    const status = calcularStatus(varNum, magTolerancia)
-    return { varNum, status, magTolerancia, magUnidad }
+
+    const calcs = calculateMultipointCalcs(item.Mediciones, magTolerancia)
+    if (!calcs) return null
+
+    return {
+      points: calcs.points,
+      varNum: calcs.worstVar,
+      worstPatron: calcs.worstPatron,
+      worstInstrumento: calcs.worstInstrumento,
+      status: calcs.status,
+      allValid: calcs.allValid,
+      magTolerancia,
+      magUnidad
+    }
   }
 
   const isInstrument = selectedEquipo?.Tipo === 'INSTRUMENTO'
@@ -286,14 +343,29 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             setError(`Selecciona el patrón utilizado para la magnitud ${mag}`);
             return;
           }
-          if (!item.Medida_Patron || !item.Medida_Instrumento) {
-            setError(`Completa las medidas del patrón e instrumento para la magnitud ${mag}`);
+          const hasMeasurements = item.Mediciones && item.Mediciones.some(m => m.patron || m.instrumento);
+          if (!hasMeasurements) {
+            setError(`Agrega al menos una medición para la magnitud ${mag}`);
+            return;
+          }
+          const allFilled = item.Mediciones.every(m => m.patron && m.instrumento);
+          if (!allFilled) {
+            setError(`Completa todas las mediciones agregadas para la magnitud ${mag}`);
             return;
           }
         }
       } else {
         if (!selectedPatronId) { setError('Selecciona el patrón utilizado'); return }
-        if (!medidaPatron || !medidaInstrumento) { setError('Completa las medidas del patrón e instrumento'); return }
+        const hasMeasurements = mediciones.some(m => m.patron || m.instrumento);
+        if (!hasMeasurements) {
+          setError('Agrega al menos una medición');
+          return;
+        }
+        const allFilled = mediciones.every(m => m.patron && m.instrumento);
+        if (!allFilled) {
+          setError('Completa todas las mediciones agregadas');
+          return;
+        }
       }
     }
     
@@ -314,11 +386,12 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
           return {
             Magnitud_Controlada: mag,
             FK_ID_Patron_Usado: item.FK_ID_Patron_Usado,
-            Medida_Instrumento: parseFloat(item.Medida_Instrumento),
-            Medida_Patron: parseFloat(item.Medida_Patron),
+            Medida_Instrumento: calcs?.worstInstrumento ?? null,
+            Medida_Patron: calcs?.worstPatron ?? null,
             Resultado_Status: calcs?.status ?? 'APTO',
             Variacion_Calculada: calcs?.varNum ?? 0,
-            Observaciones: item.Observaciones || null
+            Observaciones: item.Observaciones || null,
+            Mediciones_Puntos: calcs?.points ? JSON.stringify(calcs.points) : null
           }
         })
         
@@ -329,8 +402,9 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       const payload = {
         FK_ID_Equipo: selectedId,
         FK_ID_Patron_Usado: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? selectedPatronId : null,
-        Medida_Patron: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaPatron) : null,
-        Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? parseFloat(medidaInstrumento) : null,
+        Medida_Patron: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstPatron : null,
+        Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstInstrumento : null,
+        Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstVar : null,
         Tecnico_Ejecutor: tecnico,
         Observaciones: obs || null,
         Tipo_Verificacion: tipoVerif,
@@ -338,7 +412,8 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : finalStatus,
         Evidencia_Foto: photoBase64 || null,
         Magnitud_Controlada: equipoMags.length <= 1 ? (selectedEquipo?.Magnitud || null) : null,
-        multimagnitudData: multimagnitudPayload
+        multimagnitudData: multimagnitudPayload,
+        Mediciones_Puntos: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? JSON.stringify(singleCalcs.points) : null
       }
 
       const r = await fetch('/api/historial', {
@@ -549,35 +624,83 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                           />
                         </div>
 
-                        <div className="metrology-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                          <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                            <label><Calculator size={12} /> Medida Patrón *</label>
-                            <input
-                              type="number"
-                              step="any"
-                              value={item.Medida_Patron}
-                              onChange={e => setMultimagnitudData(prev => ({
-                                ...prev,
-                                [mag]: { ...prev[mag], Medida_Patron: e.target.value }
-                              }))}
-                              placeholder="0.00"
-                              required
-                            />
-                          </div>
-                          <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                            <label><Calculator size={12} /> Medida Instrumento *</label>
-                            <input
-                              type="number"
-                              step="any"
-                              value={item.Medida_Instrumento}
-                              onChange={e => setMultimagnitudData(prev => ({
-                                ...prev,
-                                [mag]: { ...prev[mag], Medida_Instrumento: e.target.value }
-                              }))}
-                              placeholder="0.00"
-                              required
-                            />
-                          </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Puntos de Medición</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newMeds = [...(item.Mediciones || [])];
+                                newMeds.push({ patron: '', instrumento: '' });
+                                setMultimagnitudData(prev => ({
+                                  ...prev,
+                                  [mag]: { ...prev[mag], Mediciones: newMeds }
+                                }));
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(14, 165, 233, 0.1)', color: 'var(--accent)', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                              ➕ Añadir Medida (1+)
+                            </button>
+                          </label>
+
+                          {(item.Mediciones || []).map((med, index) => {
+                            const pVal = parseFloat(med.patron)
+                            const iVal = parseFloat(med.instrumento)
+                            const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
+                            return (
+                              <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 40px', gap: 8, alignItems: 'center' }}>
+                                <input
+                                  type="number"
+                                  step="any"
+                                  placeholder="Medida Patrón"
+                                  value={med.patron}
+                                  onChange={e => {
+                                    const newMeds = [...item.Mediciones]
+                                    newMeds[index] = { ...newMeds[index], patron: e.target.value }
+                                    setMultimagnitudData(prev => ({
+                                      ...prev,
+                                      [mag]: { ...prev[mag], Mediciones: newMeds }
+                                    }))
+                                  }}
+                                  style={{ padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)' }}
+                                  required
+                                />
+                                <input
+                                  type="number"
+                                  step="any"
+                                  placeholder="Medida Instr."
+                                  value={med.instrumento}
+                                  onChange={e => {
+                                    const newMeds = [...item.Mediciones]
+                                    newMeds[index] = { ...newMeds[index], instrumento: e.target.value }
+                                    setMultimagnitudData(prev => ({
+                                      ...prev,
+                                      [mag]: { ...prev[mag], Mediciones: newMeds }
+                                    }))
+                                  }}
+                                  style={{ padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)' }}
+                                  required
+                                />
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '8px 4px', borderRadius: 8 }}>
+                                  {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={item.Mediciones.length <= 1}
+                                  onClick={() => {
+                                    const newMeds = item.Mediciones.filter((_, i) => i !== index)
+                                    setMultimagnitudData(prev => ({
+                                      ...prev,
+                                      [mag]: { ...prev[mag], Mediciones: newMeds }
+                                    }))
+                                  }}
+                                  style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: 8, height: 35, display: 'grid', placeItems: 'center', cursor: item.Mediciones.length > 1 ? 'pointer' : 'not-allowed', opacity: item.Mediciones.length > 1 ? 1 : 0.4 }}
+                                >
+                                  ❌
+                                </button>
+                              </div>
+                            )
+                          })}
                         </div>
 
                         <div className="form-group-modern" style={{ marginBottom: 0 }}>
@@ -654,15 +777,107 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                       )}
                     </div>
 
-                    <div className="metrology-grid">
-                      <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                        <label><Calculator size={14} /> Medida Patrón *</label>
-                        <input type="number" step="any" value={medidaPatron} onChange={e => setMedidaPatron(e.target.value)} placeholder="0.00" required />
-                      </div>
-                      <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                        <label><Calculator size={14} /> Medida Instrumento *</label>
-                        <input type="number" step="any" value={medidaInstrumento} onChange={e => setMedidaInstrumento(e.target.value)} placeholder="0.00" required />
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Puntos de Medición</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMediciones(prev => [...prev, { patron: '', instrumento: '' }])
+                          }}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 4, 
+                            background: 'rgba(14, 165, 233, 0.1)', 
+                            color: '#0ea5e9', 
+                            border: 'none', 
+                            padding: '4px 10px', 
+                            borderRadius: 6, 
+                            fontSize: 11, 
+                            cursor: 'pointer', 
+                            fontWeight: 'bold' 
+                          }}
+                        >
+                          ➕ Añadir Medida (1+)
+                        </button>
+                      </label>
+
+                      {mediciones.map((med, index) => {
+                        const pVal = parseFloat(med.patron)
+                        const iVal = parseFloat(med.instrumento)
+                        const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
+                        return (
+                          <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 40px', gap: 8, alignItems: 'center' }}>
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="Medida Patrón"
+                              value={med.patron}
+                              onChange={e => {
+                                const newMeds = [...mediciones]
+                                newMeds[index] = { ...newMeds[index], patron: e.target.value }
+                                setMediciones(newMeds)
+                              }}
+                              style={{ 
+                                padding: '10px 14px', 
+                                fontSize: 13, 
+                                borderRadius: 10, 
+                                border: '2px solid #f1f5f9', 
+                                background: '#f8fafc', 
+                                color: '#1e293b',
+                                outline: 'none'
+                              }}
+                              required
+                            />
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="Medida Instr."
+                              value={med.instrumento}
+                              onChange={e => {
+                                const newMeds = [...mediciones]
+                                newMeds[index] = { ...newMeds[index], instrumento: e.target.value }
+                                setMediciones(newMeds)
+                              }}
+                              style={{ 
+                                padding: '10px 14px', 
+                                fontSize: 13, 
+                                borderRadius: 10, 
+                                border: '2px solid #f1f5f9', 
+                                background: '#f8fafc', 
+                                color: '#1e293b',
+                                outline: 'none'
+                              }}
+                              required
+                            />
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textAlign: 'center', background: '#f1f5f9', padding: '10px 4px', borderRadius: 10 }}>
+                              {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
+                            </div>
+                            <button
+                              type="button"
+                              disabled={mediciones.length <= 1}
+                              onClick={() => {
+                                const newMeds = mediciones.filter((_, i) => i !== index)
+                                setMediciones(newMeds)
+                              }}
+                              style={{ 
+                                background: 'rgba(239, 68, 68, 0.1)', 
+                                color: '#ef4444', 
+                                border: 'none', 
+                                borderRadius: 10, 
+                                height: 38, 
+                                display: 'grid', 
+                                placeItems: 'center', 
+                                cursor: mediciones.length > 1 ? 'pointer' : 'not-allowed', 
+                                opacity: mediciones.length > 1 ? 1 : 0.4 
+                              }}
+                            >
+                              ❌
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
 
                     {varNum != null && selectedEquipo && (

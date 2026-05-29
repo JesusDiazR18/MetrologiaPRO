@@ -118,6 +118,7 @@ model HistorialVerificacion {
   Acciones_Pendientes     String?
   Estado_Seguimiento      String?                       // PENDIENTE | COMPLETADO | N/A
   Magnitud_Controlada     String?               // La magnitud específica controlada en esta entrada (ej. TEMPERATURA o HUMEDAD)
+  Mediciones_Puntos       String?               // JSON de mediciones multipunto: [{patron: Float, instrumento: Float, variacion: Float}]
 
   equipo   InstrumentoEquipo  @relation(fields: [FK_ID_Equipo], references: [ID_Equipo])
   patron   PatronReferencia?  @relation(fields: [FK_ID_Patron_Usado], references: [ID_Patron])

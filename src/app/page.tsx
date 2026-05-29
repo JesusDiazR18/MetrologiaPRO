@@ -551,7 +551,7 @@ export default function DashboardPage() {
             <div className="chart-wrapper">
               {mounted && pieData.length > 0 && (
                 <div style={{ width: '100%', height: 140, position: 'relative' }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={pieData}
