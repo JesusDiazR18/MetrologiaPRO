@@ -670,7 +670,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                             const iVal = parseFloat(med.instrumento)
                             const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
                             return (
-                              <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 40px', gap: 8, alignItems: 'center' }}>
+                              <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 75px 36px', gap: 8, alignItems: 'center' }}>
                                 <input
                                   type="number"
                                   step="any"
@@ -684,7 +684,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                       [mag]: { ...prev[mag], Mediciones: newMeds }
                                     }))
                                   }}
-                                  style={{ padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)' }}
+                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                                   required
                                 />
                                 <input
@@ -700,10 +700,10 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                       [mag]: { ...prev[mag], Mediciones: newMeds }
                                     }))
                                   }}
-                                  style={{ padding: '8px 12px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)' }}
+                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                                   required
                                 />
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '8px 4px', borderRadius: 8 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '8px 2px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
                                 </div>
                                 <button
@@ -716,7 +716,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                       [mag]: { ...prev[mag], Mediciones: newMeds }
                                     }))
                                   }}
-                                  style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: 8, height: 35, display: 'grid', placeItems: 'center', cursor: item.Mediciones.length > 1 ? 'pointer' : 'not-allowed', opacity: item.Mediciones.length > 1 ? 1 : 0.4 }}
+                                  style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: 8, height: 35, width: '100%', display: 'grid', placeItems: 'center', cursor: item.Mediciones.length > 1 ? 'pointer' : 'not-allowed', opacity: item.Mediciones.length > 1 ? 1 : 0.4 }}
                                 >
                                   ❌
                                 </button>
@@ -830,7 +830,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                         const iVal = parseFloat(med.instrumento)
                         const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
                         return (
-                          <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 40px', gap: 8, alignItems: 'center' }}>
+                          <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 75px 36px', gap: 8, alignItems: 'center' }}>
                             <input
                               type="number"
                               step="any"
@@ -842,13 +842,16 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                 setMediciones(newMeds)
                               }}
                               style={{ 
-                                padding: '10px 14px', 
+                                padding: '10px 10px', 
                                 fontSize: 13, 
                                 borderRadius: 10, 
                                 border: '2px solid #f1f5f9', 
                                 background: '#f8fafc', 
                                 color: '#1e293b',
-                                outline: 'none'
+                                outline: 'none',
+                                width: '100%',
+                                minWidth: 0,
+                                boxSizing: 'border-box'
                               }}
                               required
                             />
@@ -863,17 +866,20 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                 setMediciones(newMeds)
                               }}
                               style={{ 
-                                padding: '10px 14px', 
+                                padding: '10px 10px', 
                                 fontSize: 13, 
                                 borderRadius: 10, 
                                 border: '2px solid #f1f5f9', 
                                 background: '#f8fafc', 
                                 color: '#1e293b',
-                                outline: 'none'
+                                outline: 'none',
+                                width: '100%',
+                                minWidth: 0,
+                                boxSizing: 'border-box'
                               }}
                               required
                             />
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textAlign: 'center', background: '#f1f5f9', padding: '10px 4px', borderRadius: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textAlign: 'center', background: '#f1f5f9', padding: '10px 2px', borderRadius: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
                             </div>
                             <button
@@ -889,6 +895,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                 border: 'none', 
                                 borderRadius: 10, 
                                 height: 38, 
+                                width: '100%',
                                 display: 'grid', 
                                 placeItems: 'center', 
                                 cursor: mediciones.length > 1 ? 'pointer' : 'not-allowed', 
