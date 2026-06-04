@@ -1884,20 +1884,21 @@ export default function DashboardPage() {
         }
 
         .modal-btn-secondary {
-          background: var(--card-bg);
+          background: rgba(15, 23, 42, 0.03);
           border: 1px solid rgba(15, 23, 42, 0.08);
-          color: var(--accent);
+          color: var(--text-main);
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
           text-decoration: none;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .modal-btn-secondary:hover {
-          background: var(--alpha-02);
+          background: rgba(15, 23, 42, 0.07);
           border-color: rgba(15, 23, 42, 0.15);
-          color: var(--accent-hover);
+          color: var(--accent);
         }
 
         /* Responsive */
