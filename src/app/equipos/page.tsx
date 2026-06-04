@@ -90,7 +90,46 @@ function EquiposContent() {
   const [showHistoricalModal, setShowHistoricalModal] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [editLog, setEditLog] = useState<any | null>(null)
+  const [sortBy, setSortBy] = useState<string>('code-desc')
   const searchParams = useSearchParams()
+
+  // Helper de ordenamiento natural (Excel-like) para códigos internos
+  const naturalSort = (a: string, b: string, desc: boolean) => {
+    const regex = /^([a-zA-Z-]+)(\d+)$/
+    const matchA = String(a).match(regex)
+    const matchB = String(b).match(regex)
+    
+    if (matchA && matchB) {
+      const prefixA = matchA[1]
+      const prefixB = matchB[1]
+      
+      if (prefixA !== prefixB) {
+        return desc ? prefixB.localeCompare(prefixA) : prefixA.localeCompare(prefixB)
+      }
+      
+      const numA = parseInt(matchA[2], 10)
+      const numB = parseInt(matchB[2], 10)
+      return desc ? numB - numA : numA - numB
+    }
+    
+    return desc ? String(b).localeCompare(String(a)) : String(a).localeCompare(String(b))
+  }
+
+  const sortedEquipos = React.useMemo(() => {
+    const list = [...equipos]
+    if (sortBy === 'code-desc') {
+      list.sort((a, b) => naturalSort(a.Codigo_Interno, b.Codigo_Interno, true))
+    } else if (sortBy === 'code-asc') {
+      list.sort((a, b) => naturalSort(a.Codigo_Interno, b.Codigo_Interno, false))
+    } else if (sortBy === 'deadline') {
+      list.sort((a, b) => {
+        if (!a.Fecha_Proximo_Control) return 1
+        if (!b.Fecha_Proximo_Control) return -1
+        return new Date(a.Fecha_Proximo_Control).getTime() - new Date(b.Fecha_Proximo_Control).getTime()
+      })
+    }
+    return list
+  }, [equipos, sortBy])
 
   const load = useCallback(async (query = '', tipoF = '') => {
     setLoading(true)
@@ -265,6 +304,20 @@ function EquiposContent() {
                 <option value="INSTRUMENTO">Instrumentos</option>
               </select>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <SlidersHorizontal size={14} /> Ordenar:
+              </span>
+              <select 
+                style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                value={sortBy} 
+                onChange={e => setSortBy(e.target.value)}
+              >
+                <option value="code-desc">Primero los últimos (Código Z-A)</option>
+                <option value="code-asc">Primero los más antiguos (Código A-Z)</option>
+                <option value="deadline">Plazos de verificación (Próximos primero)</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -276,7 +329,7 @@ function EquiposContent() {
             <div className="spinner" style={{ margin: '0 auto 16px' }} />
             <p style={{ color: 'var(--text-dim)' }}>Sincronizando base de datos metrológica...</p>
           </div>
-        ) : equipos.length === 0 ? (
+        ) : sortedEquipos.length === 0 ? (
           <div className="card-body" style={{ textAlign: 'center', padding: 80 }}>
             <ClipboardList size={48} opacity={0.2} style={{ margin: '0 auto 20px' }} />
             <p style={{ fontSize: 18, fontWeight: 600 }}>No se encontraron registros</p>
@@ -297,7 +350,7 @@ function EquiposContent() {
                 </tr>
               </thead>
               <tbody>
-                {equipos.map((e) => {
+                {sortedEquipos.map((e) => {
                   const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
                   const isExpanded = expanded === e.ID_Equipo
                   const statusColor = semaforoHex(semaforo)
