@@ -337,22 +337,36 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
     if (tipoVerif === 'CALIBRACION') {
       if (equipoMags.length > 1) {
+        let hasAtLeastOneActive = false
         for (const mag of equipoMags) {
           const item = multimagnitudData[mag]
-          if (!item || !item.FK_ID_Patron_Usado) {
-            setError(`Selecciona el patrón utilizado para la magnitud ${mag}`);
-            return;
+          if (!item) continue
+
+          const hasPattern = !!item.FK_ID_Patron_Usado
+          const hasMeds = item.Mediciones && item.Mediciones.some(m => m.patron.trim() !== '' || m.instrumento.trim() !== '')
+          const isActive = hasPattern || hasMeds
+
+          if (isActive) {
+            hasAtLeastOneActive = true
+            if (!item.FK_ID_Patron_Usado) {
+              setError(`Selecciona el patrón utilizado para la magnitud ${mag}`)
+              return
+            }
+            const hasMeasurements = item.Mediciones && item.Mediciones.some(m => m.patron || m.instrumento)
+            if (!hasMeasurements) {
+              setError(`Agrega al menos una medición para la magnitud ${mag}`)
+              return
+            }
+            const allFilled = item.Mediciones.every(m => m.patron && m.instrumento)
+            if (!allFilled) {
+              setError(`Completa todas las mediciones agregadas para la magnitud ${mag}`)
+              return
+            }
           }
-          const hasMeasurements = item.Mediciones && item.Mediciones.some(m => m.patron || m.instrumento);
-          if (!hasMeasurements) {
-            setError(`Agrega al menos una medición para la magnitud ${mag}`);
-            return;
-          }
-          const allFilled = item.Mediciones.every(m => m.patron && m.instrumento);
-          if (!allFilled) {
-            setError(`Completa todas las mediciones agregadas para la magnitud ${mag}`);
-            return;
-          }
+        }
+        if (!hasAtLeastOneActive) {
+          setError('Debes verificar al menos una magnitud')
+          return
         }
       } else {
         if (!selectedPatronId) { setError('Selecciona el patrón utilizado'); return }
@@ -380,7 +394,15 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       let finalStatus = statusCalc || 'APTO'
 
       if (tipoVerif === 'CALIBRACION' && equipoMags.length > 1) {
-        multimagnitudPayload = equipoMags.map(mag => {
+        const activeMags = equipoMags.filter(mag => {
+          const item = multimagnitudData[mag]
+          if (!item) return false
+          const hasPattern = !!item.FK_ID_Patron_Usado
+          const hasMeds = item.Mediciones && item.Mediciones.some(m => m.patron.trim() !== '' || m.instrumento.trim() !== '')
+          return hasPattern || hasMeds
+        })
+
+        multimagnitudPayload = activeMags.map(mag => {
           const item = multimagnitudData[mag]
           const calcs = computeMagCalcs(mag)
           return {
