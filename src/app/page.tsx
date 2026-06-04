@@ -903,8 +903,9 @@ export default function DashboardPage() {
 
         .kpi-bar-item {
           display: flex;
-          align-items: center;
-          gap: 12px;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
           flex: 1;
           min-width: 0;
         }
@@ -952,6 +953,8 @@ export default function DashboardPage() {
           align-items: baseline;
           gap: 10px;
           margin-top: 2px;
+          min-width: 0;
+          width: 100%;
         }
 
         .kpi-bar-val {
@@ -972,7 +975,7 @@ export default function DashboardPage() {
 
         .kpi-bar-divider {
           width: 1px;
-          height: 28px;
+          height: 34px;
           background: var(--glass-border);
           flex-shrink: 0;
         }
