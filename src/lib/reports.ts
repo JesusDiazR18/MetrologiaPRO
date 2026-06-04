@@ -131,7 +131,7 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
     
     // Decidir si debe ocupar toda la fila
     const isName = item.isNameField || item.label.toLowerCase().includes('nombre') || item.label.toLowerCase().includes('responsable') || item.label.toLowerCase().includes('detalles') || item.label.toLowerCase().includes('proveedor');
-    const isLongVal = valStr.length > 35;
+    const isLongVal = valStr.length > 35 || valStr.includes('\n');
     const isFullWidth = isName || isLongVal || item.colSpan === 2;
     
     if (isFullWidth) {
@@ -409,8 +409,21 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   const semaforo = calcularSemaforo(equipo.Fecha_Proximo_Control, equipo.Estado);
   const estadoTxt = semaforoLabel(semaforo, equipo.Estado);
 
+  let tolValue = equipo.Tolerancia_Aceptable != null ? `+/- ${equipo.Tolerancia_Aceptable} ${equipo.Unidad_Tolerancia ?? ''}` : null;
+  if (equipo.Tolerancias_Multimagnitud) {
+    try {
+      const map = JSON.parse(equipo.Tolerancias_Multimagnitud);
+      const entries = Object.entries(map).map(([mag, info]: [string, any]) => {
+        return `${mag}: +/- ${info.tolerancia} ${info.unidad ?? ''}`;
+      });
+      if (entries.length > 0) {
+        tolValue = entries.join('\n');
+      }
+    } catch(e) {}
+  }
+
   const rawMetrologyItems = [
-    { label: 'Tolerancia Admitida:', value: equipo.Tolerancia_Aceptable != null ? `+/- ${equipo.Tolerancia_Aceptable} ${equipo.Unidad_Tolerancia ?? ''}` : null },
+    { label: 'Tolerancia Admitida:', value: tolValue },
     { label: 'Intervalo de Control:', value: equipo.Periodicidad_Meses ? `${equipo.Periodicidad_Meses} Meses` : null },
     { label: 'Fecha de Ingreso:', value: formatFecha(equipo.Fecha_Ingreso) },
     { label: 'Última Verificación:', value: formatFecha(equipo.Fecha_Ultima_Verificacion) },
@@ -493,7 +506,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     currY = renderSectionTitle(doc, '4. Historial de Controles y Verificaciones Metrológicas', currY);
 
     // Column layout - tighter to fit more info
-    // F.Control | Tipo | Magnitud | Patrón | Variación | Resultado | Observaciones / Acciones
+    // F.Control | Tipo | Magnitud | Patrón | Variación | Resultado | Observaciones
     const colX = {
       fecha:     margin + 2,
       tipo:      margin + 20,
@@ -519,7 +532,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     doc.text('Patrón', colX.patron, currY + 5.5);
     doc.text('Variación', colX.variacion, currY + 5.5);
     doc.text('Resultado', colX.resultado, currY + 5.5);
-    doc.text('Observaciones / Acciones Requeridas', colX.notas, currY + 5.5);
+    doc.text('Observaciones', colX.notas, currY + 5.5);
     currY += 8;
 
     equipo.historiales.slice(0, 10).forEach((h: any, idx: number) => {
@@ -540,8 +553,14 @@ export async function generateTechnicalSheetPDF(equipo: any) {
 
       // Build notes text combining observations and acciones
       const obsText = h.Observaciones ? h.Observaciones.trim() : '';
-      const accionText = h.Acciones_Pendientes ? `⚠ Acciones Necesarias: ${h.Acciones_Pendientes.trim()}` : '';
-      const fullNotes = [ptsString, obsText, accionText].filter(Boolean).join(' | ') || '—';
+      let accionText = h.Acciones_Pendientes ? h.Acciones_Pendientes.trim() : '';
+      
+      // Deduplicate if observations and actions are identical
+      if (accionText && obsText && accionText.toLowerCase() === obsText.toLowerCase()) {
+        accionText = '';
+      }
+      const accionPart = accionText ? `Acciones: ${accionText}` : '';
+      const fullNotes = [ptsString, obsText, accionPart].filter(Boolean).join(' | ') || '—';
 
       // Determine result label
       let resultLabel = h.Resultado_Status;
@@ -565,46 +584,46 @@ export async function generateTechnicalSheetPDF(equipo: any) {
       doc.setDrawColor(226, 232, 240);
       doc.line(margin, currY + rowH, margin + printableWidth, currY + rowH);
 
-      const midY = currY + rowH / 2 + 2.5;
+      const cellY = currY + 4.5;
 
       // Date
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(formatFecha(h.Fecha_Ejecucion), colX.fecha, midY);
+      doc.text(formatFecha(h.Fecha_Ejecucion), colX.fecha, cellY);
 
       // Tipo badge text
       const tipoLabel = h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operativ.' : 'Calibrac.';
       doc.setTextColor(h.Tipo_Verificacion === 'OPERATIVIDAD' ? 180 : 14, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 120 : 165, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 0 : 233);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
-      doc.text(tipoLabel, colX.tipo, midY);
+      doc.text(tipoLabel, colX.tipo, cellY);
 
       // Magnitud
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
-      doc.text((h.Magnitud_Controlada || '—').substring(0, 10), colX.magnitud, midY);
+      doc.text((h.Magnitud_Controlada || '—').substring(0, 10), colX.magnitud, cellY);
 
       // Patron
-      doc.text((h.patron?.Codigo || '—').substring(0, 10), colX.patron, midY);
+      doc.text((h.patron?.Codigo || '—').substring(0, 10), colX.patron, cellY);
 
       // Variacion
       doc.setTextColor(100, 116, 139);
-      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', colX.variacion, midY);
+      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', colX.variacion, cellY);
 
       // Resultado - color coded
       const colorStatus = getStatusColor(h.Resultado_Status);
       doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
-      doc.text(resultLabel, colX.resultado, midY);
+      doc.text(resultLabel, colX.resultado, cellY);
 
       // Notes - wrapped, multi-line
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(80, 100, 120);
-      const notesStartY = currY + 4;
+      const notesStartY = currY + 4.5;
       notesLines.forEach((line: string, lineIdx: number) => {
         doc.text(line, colX.notas, notesStartY + lineIdx * 4);
       });
