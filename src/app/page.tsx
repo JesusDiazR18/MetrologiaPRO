@@ -357,11 +357,11 @@ export default function DashboardPage() {
         <div className="kpi-bar-item clickable" onClick={() => setStatusFilter('AMARILLO')}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-yellow" />
-            <span className="kpi-bar-label">Por Vencer</span>
+            <span className="kpi-bar-label">Advertencia</span>
           </div>
           <div className="kpi-bar-value-row">
             <span className="kpi-bar-val">{dynamicStats?.proximos ?? 0}</span>
-            <span className="kpi-bar-sub">Control sig. 30 días</span>
+            <span className="kpi-bar-sub">Controles o detalles</span>
           </div>
         </div>
       </div>
@@ -456,7 +456,7 @@ export default function DashboardPage() {
                 onClick={() => setStatusFilter('AMARILLO')} 
                 className={`status-pill pill-yellow ${statusFilter === 'AMARILLO' ? 'active' : ''}`}
               >
-                <span className="dot" /> Por Vencer
+                <span className="dot" /> Advertencia
               </button>
               <button 
                 onClick={() => setStatusFilter('ROJO')} 
@@ -521,7 +521,7 @@ export default function DashboardPage() {
                             border: `1px solid ${semColor}18`
                           }}>
                             <span className="semaforo-dot" style={{ background: semColor }} />
-                            {asset.status === 'VERDE' ? 'Al día' : asset.status === 'AMARILLO' ? 'Por vencer' : 'Crítico'}
+                            {asset.status === 'VERDE' ? 'Al día' : asset.status === 'AMARILLO' ? 'Advertencia' : asset.status === 'GRIS' ? 'De Baja' : 'Crítico'}
                           </span>
 
                           <button 
@@ -778,10 +778,10 @@ export default function DashboardPage() {
                   <span className="spec-lbl">Estado Metrológico</span>
                   <span className="spec-val">
                     <span className="badge-status-fill" style={{
-                      background: selectedAsset.status === 'VERDE' ? 'rgba(16, 185, 129, 0.1)' : selectedAsset.status === 'AMARILLO' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      color: selectedAsset.status === 'VERDE' ? 'var(--success)' : selectedAsset.status === 'AMARILLO' ? 'var(--warning)' : 'var(--danger)',
+                      background: selectedAsset.status === 'VERDE' ? 'rgba(16, 185, 129, 0.1)' : selectedAsset.status === 'AMARILLO' ? 'rgba(245, 158, 11, 0.1)' : selectedAsset.status === 'GRIS' ? 'rgba(148, 163, 184, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      color: selectedAsset.status === 'VERDE' ? 'var(--success)' : selectedAsset.status === 'AMARILLO' ? 'var(--warning)' : selectedAsset.status === 'GRIS' ? '#64748b' : 'var(--danger)',
                     }}>
-                      {selectedAsset.status === 'VERDE' ? 'Operativo' : selectedAsset.status === 'AMARILLO' ? 'Por Vencer' : 'Crítico'}
+                      {selectedAsset.status === 'VERDE' ? 'Al día' : selectedAsset.status === 'AMARILLO' ? 'Advertencia' : selectedAsset.status === 'GRIS' ? 'De Baja' : 'Crítico'}
                     </span>
                   </span>
                 </div>
