@@ -1671,10 +1671,45 @@ export default function DashboardPage() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(15, 23, 42, 0.3);
+          background: rgba(15, 23, 42, 0.65);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .dashboard-modal-card {
+          background: var(--card-bg);
+          border-radius: 20px;
+          border: 1px solid var(--glass-border);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          width: 100%;
+          max-width: 440px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: modalScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dashboard-modal-card.mini {
+          max-width: 380px;
+        }
+
+        @keyframes modalScaleUp {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header-row {
+          display: flex;
+          align-items: center;
           gap: 12px;
-          padding: 14px 16px;
+          padding: 16px 20px;
           border-bottom: 1px solid var(--snow-2);
+          background: var(--card-bg);
         }
 
         .avatar-header {
@@ -1733,10 +1768,10 @@ export default function DashboardPage() {
 
         .modal-photo-section {
           width: 100%;
-          height: 130px;
-          background: var(--snow-1);
-          border-radius: 10px;
-          border: 1px dashed var(--snow-3);
+          height: 120px;
+          background: rgba(15, 23, 42, 0.02);
+          border-radius: 12px;
+          border: 1px dashed rgba(15, 23, 42, 0.08);
           overflow: hidden;
           display: grid;
           place-items: center;
@@ -1850,12 +1885,19 @@ export default function DashboardPage() {
 
         .modal-btn-secondary {
           background: var(--card-bg);
-          border: 1px solid var(--glass-border);
-          color: var(--text-main);
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          color: var(--accent);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          text-decoration: none;
         }
 
         .modal-btn-secondary:hover {
-          background: var(--alpha-04);
+          background: var(--alpha-02);
+          border-color: rgba(15, 23, 42, 0.15);
+          color: var(--accent-hover);
         }
 
         /* Responsive */

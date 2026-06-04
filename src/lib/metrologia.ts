@@ -91,9 +91,12 @@ export function calcularProximoControl(from: Date, meses: number): Date {
  */
 export function formatFecha(date: Date | string | null | undefined): string {
   if (!date) return '—'
-  return new Date(date).toLocaleDateString('es-CL', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  })
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '—'
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const year = d.getUTCFullYear()
+  return `${day}-${month}-${year}`
 }
 
 export function formatFechaLarga(date: Date | string | null | undefined): string {
