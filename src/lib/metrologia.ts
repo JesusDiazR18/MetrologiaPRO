@@ -6,14 +6,17 @@ export const THRESHOLDS = {
   CRITICAL_DAYS: 0   // Días para pasar a Rojo (Vencido)
 }
 
-export type SemaforoColor = 'VERDE' | 'AMARILLO' | 'ROJO'
+export type SemaforoColor = 'VERDE' | 'AMARILLO' | 'ROJO' | 'GRIS'
 
 /**
  * Calcula el color del semáforo basado en la fecha de próximo control y el estado actual.
  */
 export function calcularSemaforo(fechaProximo: Date | string | null | undefined, estado?: string): SemaforoColor {
-  // Prioridad 1: Estados críticos de gestión
-  if (estado === 'DE_BAJA_OBSOLETO' || estado === 'OBSOLETO' || estado === 'BAJA' || estado === 'FUERA_DE_SERVICIO' || estado === 'VENCIDO' || estado === 'NO_APTO') return 'ROJO'
+  // Prioridad 1: Estados de baja (Gris)
+  if (estado === 'DE_BAJA_OBSOLETO' || estado === 'OBSOLETO' || estado === 'BAJA') return 'GRIS'
+
+  // Prioridad 2: Estados críticos activos (Rojo)
+  if (estado === 'FUERA_DE_SERVICIO' || estado === 'VENCIDO' || estado === 'NO_APTO') return 'ROJO'
   if (estado === 'MANTENIMIENTO' || estado === 'OPERATIVO_CON_DETALLES') return 'AMARILLO'
   
   if (!fechaProximo) return 'ROJO'
@@ -43,6 +46,7 @@ export function semaforoHex(s: SemaforoColor): string {
     case 'VERDE': return '#10b981' // Success Emerald
     case 'AMARILLO': return '#f59e0b' // Warning Amber
     case 'ROJO': return '#ef4444' // Error Red
+    case 'GRIS': return '#94a3b8' // Slate / Gray
     default: return '#94a3b8'
   }
 }
@@ -118,17 +122,21 @@ export function diasRestantes(fecha: Date | string | null | undefined): string {
  */
 export function calcularEstadisticas(equipos: any[]) {
   const total = equipos.length
-  const operativos = equipos.filter(e => e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES').length
-  const noAptos = equipos.filter(e => e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'VENCIDO').length
-  const fueraDeServicio = equipos.filter(e => e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'BAJA' || e.Estado === 'OBSOLETO' || e.Estado === 'DE_BAJA_OBSOLETO').length
-  
-  const alDia = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'VERDE' && e.Estado !== 'DE_BAJA_OBSOLETO' && e.Estado !== 'OBSOLETO' && e.Estado !== 'BAJA').length
-  const vencidos = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'ROJO').length
-  const proximos = equipos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'AMARILLO').length
-  
-  const pctApto = total > 0 ? Math.round((operativos / total) * 100) : 0
+  const dadosDeBaja = equipos.filter(e => e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA').length
+  const activos = equipos.filter(e => e.Estado !== 'DE_BAJA_OBSOLETO' && e.Estado !== 'OBSOLETO' && e.Estado !== 'BAJA')
+  const totalActivos = activos.length
 
-  return { total, operativos, noAptos, fueraDeServicio, vencidos, proximos, alDia, pctApto }
+  const operativos = activos.filter(e => e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES').length
+  const noAptos = activos.filter(e => e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'VENCIDO').length
+  const fueraDeServicio = activos.filter(e => e.Estado === 'FUERA_DE_SERVICIO').length
+  
+  const alDia = activos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'VERDE').length
+  const vencidos = activos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'ROJO').length
+  const proximos = activos.filter(e => calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'AMARILLO').length
+  
+  const pctApto = totalActivos > 0 ? Math.round((operativos / totalActivos) * 100) : 0
+
+  return { total, totalActivos, dadosDeBaja, operativos, noAptos, fueraDeServicio, vencidos, proximos, alDia, pctApto }
 }
 
 /**
@@ -153,13 +161,13 @@ export function generateSystemReport(equipos: any[], patrones: any[]) {
 
   const patronesVencidos = totalPatrones - patronesVigentes
   
-  const complianceGlobal = Math.round(((stats.alDia + patronesVigentes) / (equipos.length + totalPatrones || 1)) * 100)
+  const complianceGlobal = Math.round(((stats.alDia + patronesVigentes) / (stats.totalActivos + totalPatrones || 1)) * 100)
 
   return {
     ...stats,
     patronesVigentes,
     patronesVencidos,
-    totalActivos: equipos.length + totalPatrones,
+    totalActivos: stats.totalActivos + totalPatrones,
     complianceGlobal
   }
 }

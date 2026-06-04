@@ -177,17 +177,19 @@ export default function DashboardPage() {
 
   // Cumplimiento global dinámico
   const complianceGlobalDynamic = useMemo(() => {
-    const total = filteredAssetsForChart.length
+    const activeAssets = filteredAssetsForChart.filter(a => a.status !== 'GRIS')
+    const total = activeAssets.length
     if (total === 0) return 100
-    const alDia = filteredAssetsForChart.filter(a => a.status === 'VERDE').length
+    const alDia = activeAssets.filter(a => a.status === 'VERDE').length
     return Math.round((alDia / total) * 100)
   }, [filteredAssetsForChart])
 
   // Datos para gráfico circular interactivo calculados dinámicamente
   const pieData = useMemo(() => {
-    const alDia = filteredAssetsForChart.filter(a => a.status === 'VERDE').length
-    const proximos = filteredAssetsForChart.filter(a => a.status === 'AMARILLO').length
-    const criticos = filteredAssetsForChart.filter(a => a.status === 'ROJO').length
+    const activeAssets = filteredAssetsForChart.filter(a => a.status !== 'GRIS')
+    const alDia = activeAssets.filter(a => a.status === 'VERDE').length
+    const proximos = activeAssets.filter(a => a.status === 'AMARILLO').length
+    const criticos = activeAssets.filter(a => a.status === 'ROJO').length
     return [
       { name: 'Al día', value: alDia, color: 'var(--success)', status: 'VERDE' },
       { name: 'Advertencia', value: proximos, color: 'var(--warning)', status: 'AMARILLO' },
@@ -225,16 +227,18 @@ export default function DashboardPage() {
   // Estadísticas consolidadas dinámicamente según filtros para el PDF y KPIs
   const dynamicStats = useMemo(() => {
     if (!stats) return null
-    const totalActivos = filteredAssetsForChart.length
-    const alDia = filteredAssetsForChart.filter(a => a.status === 'VERDE').length
-    const proximos = filteredAssetsForChart.filter(a => a.status === 'AMARILLO').length
-    const vencidos = filteredAssetsForChart.filter(a => a.status === 'ROJO').length
-    const totalEquipos = filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length
-    const totalInstrumentos = filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length
-    const totalPatrones = filteredAssetsForChart.filter(a => a.categoria === 'patron').length
+    const activeAssetsList = filteredAssetsForChart.filter(a => a.status !== 'GRIS')
+    const totalActivos = activeAssetsList.length
+    const alDia = activeAssetsList.filter(a => a.status === 'VERDE').length
+    const proximos = activeAssetsList.filter(a => a.status === 'AMARILLO').length
+    const vencidos = activeAssetsList.filter(a => a.status === 'ROJO').length
+    const totalEquipos = activeAssetsList.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length
+    const totalInstrumentos = activeAssetsList.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length
+    const totalPatrones = activeAssetsList.filter(a => a.categoria === 'patron').length
+    const dadosDeBaja = filteredAssetsForChart.filter(a => a.status === 'GRIS').length
 
     // Alertas críticas basadas en activos críticos filtrados
-    const alertasCriticas = filteredAssetsForChart
+    const alertasCriticas = activeAssetsList
       .filter(a => a.status === 'ROJO')
       .map(a => ({
         id: a.id,
@@ -253,6 +257,7 @@ export default function DashboardPage() {
       vencidos,
       totalEquipos: totalEquipos + totalInstrumentos,
       totalPatrones,
+      dadosDeBaja,
       alertasCriticas
     }
   }, [stats, filteredAssetsForChart, complianceGlobalDynamic])
@@ -301,11 +306,18 @@ export default function DashboardPage() {
         <div className="kpi-bar-item clickable" onClick={() => { setTipoFilter(null); setStatusFilter(null); setFechaDesdeFilter(''); setFechaHastaFilter(''); }}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-blue" />
-            <span className="kpi-bar-label">Activos Totales</span>
+            <span className="kpi-bar-label">Activos Operacionales</span>
           </div>
           <div className="kpi-bar-value-row">
             <span className="kpi-bar-val">{dynamicStats?.totalActivos ?? 0}</span>
-            <span className="kpi-bar-sub">Eq: {filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length} · Ins: {filteredAssetsForChart.filter(a => a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length} · Pat: {filteredAssetsForChart.filter(a => a.categoria === 'patron').length}</span>
+            <span className="kpi-bar-sub">
+              Eq: {filteredAssetsForChart.filter(a => a.status !== 'GRIS' && a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length} · 
+              Ins: {filteredAssetsForChart.filter(a => a.status !== 'GRIS' && a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length} · 
+              Pat: {filteredAssetsForChart.filter(a => a.status !== 'GRIS' && a.categoria === 'patron').length}
+              {dynamicStats?.dadosDeBaja && dynamicStats.dadosDeBaja > 0 ? (
+                <span style={{ color: '#94a3b8', marginLeft: 6, fontWeight: 700 }}>({dynamicStats.dadosDeBaja} de baja)</span>
+              ) : null}
+            </span>
           </div>
         </div>
 
@@ -451,6 +463,12 @@ export default function DashboardPage() {
                 className={`status-pill pill-red ${statusFilter === 'ROJO' ? 'active' : ''}`}
               >
                 <span className="dot" /> Críticos
+              </button>
+              <button 
+                onClick={() => setStatusFilter('GRIS')} 
+                className={`status-pill pill-grey ${statusFilter === 'GRIS' ? 'active' : ''}`}
+              >
+                <span className="dot" /> De Baja
               </button>
 
               {(statusFilter || searchQuery || tipoFilter || fechaDesdeFilter || fechaHastaFilter) && (
@@ -1213,10 +1231,12 @@ export default function DashboardPage() {
         .pill-green .dot { background: var(--success); }
         .pill-yellow .dot { background: var(--warning); }
         .pill-red .dot { background: var(--danger); }
+        .pill-grey .dot { background: #94a3b8; }
 
         .pill-green.active { background: var(--success); color: var(--card-bg); }
         .pill-yellow.active { background: var(--warning); color: var(--card-bg); }
         .pill-red.active { background: var(--danger); color: var(--card-bg); }
+        .pill-grey.active { background: #64748b; color: var(--card-bg); }
 
         .btn-clear-filters {
           background: var(--alpha-02);
@@ -1308,6 +1328,9 @@ export default function DashboardPage() {
         }
         .asset-list-row.status-rojo::before {
           background: var(--danger);
+        }
+        .asset-list-row.status-gris::before {
+          background: #94a3b8;
         }
 
         .asset-list-row:hover {

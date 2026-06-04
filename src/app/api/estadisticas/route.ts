@@ -53,9 +53,15 @@ export async function GET() {
     // Generar reporte integral usando el motor de reglas centralizado
     const report = generateSystemReport(equipos, processedPatrones)
 
-    // Identificar Alertas Críticas (Activos que requieren acción inmediata)
+    // Identificar Alertas Críticas (Activos activos que requieren acción inmediata)
     const alertasCriticas = equipos
-      .filter(e => (calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'ROJO') || e.Estado === 'NO_APTO')
+      .filter(e => {
+        // Excluir activos dados de baja
+        if (e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA') {
+          return false
+        }
+        return (calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === 'ROJO') || e.Estado === 'NO_APTO'
+      })
       .sort((a, b) => {
         return new Date(a.Fecha_Proximo_Control || 0).getTime() - new Date(b.Fecha_Proximo_Control || 0).getTime()
       })
@@ -68,9 +74,10 @@ export async function GET() {
         status: calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
       }))
 
+    const activeEquipos = equipos.filter(e => e.Estado !== 'DE_BAJA_OBSOLETO' && e.Estado !== 'OBSOLETO' && e.Estado !== 'BAJA')
     const equiposByTipo = [
-      { name: 'Equipos', value: equipos.filter(e => e.Tipo === 'EQUIPO').length },
-      { name: 'Instrumentos', value: equipos.filter(e => e.Tipo === 'INSTRUMENTO').length },
+      { name: 'Equipos', value: activeEquipos.filter(e => e.Tipo === 'EQUIPO').length },
+      { name: 'Instrumentos', value: activeEquipos.filter(e => e.Tipo === 'INSTRUMENTO').length },
     ]
 
     return NextResponse.json({
