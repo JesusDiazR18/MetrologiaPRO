@@ -656,7 +656,7 @@ function EquiposContent() {
                                             return null
                                           })()}
                                           {h.Observaciones && <div>{h.Observaciones}</div>}
-                                          {h.Acciones_Pendientes && (
+                                          {h.Acciones_Pendientes && h.Acciones_Pendientes.trim().toLowerCase() !== h.Observaciones?.trim().toLowerCase() && (
                                             <div style={{ marginTop: h.Observaciones || h.Mediciones_Puntos ? 4 : 0, color: '#f59e0b', fontWeight: 600 }}>
                                               ⚠️ Acciones Necesarias: {h.Acciones_Pendientes}
                                             </div>
