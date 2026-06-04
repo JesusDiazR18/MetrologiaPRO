@@ -1851,54 +1851,55 @@ export default function DashboardPage() {
           text-transform: uppercase;
         }
 
-        .modal-actions-footer {
-          background: var(--snow-1);
-          padding: 10px 16px;
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-          border-top: 1px solid var(--snow-2);
+        :global(.modal-actions-footer) {
+          background: rgba(15, 23, 42, 0.02) !important;
+          padding: 12px 16px !important;
+          display: flex !important;
+          gap: 12px !important;
+          border-top: 1px solid var(--snow-2) !important;
+          justify-content: space-between !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
         }
 
-        .modal-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          height: 32px;
-          padding: 0 12px;
-          font-size: 11px;
-          font-weight: 700;
-          border-radius: 8px;
-          cursor: pointer;
-          border: none;
-          text-decoration: none;
+        :global(.modal-btn) {
+          flex: 1 !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          height: 38px !important;
+          padding: 0 16px !important;
+          font-size: 11.5px !important;
+          font-weight: 700 !important;
+          border-radius: 10px !important;
+          cursor: pointer !important;
+          border: none !important;
+          text-decoration: none !important;
+          text-align: center !important;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          box-sizing: border-box !important;
         }
 
-        .modal-btn-primary {
-          background: var(--oxford-blue);
-          color: var(--card-bg);
+        :global(.modal-btn-primary) {
+          background: var(--oxford-blue) !important;
+          color: #fff !important;
         }
 
-        .modal-btn-primary:hover {
-          background: var(--oxford-blue-light);
+        :global(.modal-btn-primary:hover) {
+          background: var(--oxford-blue-light) !important;
         }
 
-        .modal-btn-secondary {
-          background: rgba(15, 23, 42, 0.03);
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          color: var(--text-main);
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          text-decoration: none;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        :global(.modal-btn-secondary) {
+          background: rgba(15, 23, 42, 0.03) !important;
+          border: 1px solid rgba(15, 23, 42, 0.08) !important;
+          color: var(--text-main) !important;
         }
 
-        .modal-btn-secondary:hover {
-          background: rgba(15, 23, 42, 0.07);
-          border-color: rgba(15, 23, 42, 0.15);
-          color: var(--accent);
+        :global(.modal-btn-secondary:hover) {
+          background: rgba(15, 23, 42, 0.07) !important;
+          border-color: rgba(15, 23, 42, 0.15) !important;
+          color: var(--accent) !important;
         }
 
         /* Responsive */
