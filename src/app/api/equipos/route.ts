@@ -31,37 +31,120 @@ export async function GET(request: Request) {
 
     console.log(`[API Equipos] GET q="${q}", tipo="${tipo}", estado="${estado}"`)
 
-    const equipos = await prisma.instrumentoEquipo.findMany({
-      where: {
-        AND: [
-          q ? {
-            OR: [
-              { Nombre_Equipo: { contains: q, mode: 'insensitive' as any } },
-              { Codigo_Interno: { contains: q, mode: 'insensitive' as any } },
-              { Responsable: { contains: q, mode: 'insensitive' as any } },
-            ]
-          } : {},
-          tipo ? { Tipo: tipo } : {},
-          estado ? { Estado: estado } : {},
-        ]
-      },
-      orderBy: { Codigo_Interno: 'asc' },
-      include: {
-        historiales: {
-          orderBy: { Fecha_Ejecucion: 'desc' },
-          take: 15,
-          include: {
-            patron: {
-              select: {
-                Codigo: true,
-                Nombre_Patron: true
+    const selectLightEquipo = {
+      ID_Equipo: true,
+      Tipo: true,
+      Codigo_Interno: true,
+      Nombre_Equipo: true,
+      Marca: true,
+      Modelo: true,
+      Serie: true,
+      Rango_Medida: true,
+      Resolucion: true,
+      Tolerancia_Aceptable: true,
+      Unidad_Tolerancia: true,
+      Area_Asignada: true,
+      Responsable: true,
+      Periodicidad_Meses: true,
+      Fecha_Ultima_Verificacion: true,
+      Fecha_Proximo_Control: true,
+      Fecha_Ingreso: true,
+      Estado: true,
+      Detalles_Estado: true,
+      Tiene_Solucion: true,
+      Requiere_Seguimiento: true,
+      Periodicidad_Seguimiento: true,
+      Fecha_Vencimiento_Certificado: true,
+      N_Certificado: true,
+      Proveedor_Servicio: true,
+      Magnitud: true,
+      Tolerancias_Multimagnitud: true,
+      Accesorios: true,
+      Insumos: true,
+    }
+
+    const selectLightHistorial = {
+      ID_Log: true,
+      FK_ID_Equipo: true,
+      Fecha_Ejecucion: true,
+      FK_ID_Patron_Usado: true,
+      Medida_Instrumento: true,
+      Medida_Patron: true,
+      Variacion_Calculada: true,
+      Resultado_Status: true,
+      Tecnico_Ejecutor: true,
+      Observaciones: true,
+      Tipo_Verificacion: true,
+      Acciones_Pendientes: true,
+      Estado_Seguimiento: true,
+      Magnitud_Controlada: true,
+      Mediciones_Puntos: true,
+    }
+
+    const [equipos, pdfCheck, histCheck] = await Promise.all([
+      prisma.instrumentoEquipo.findMany({
+        where: {
+          AND: [
+            q ? {
+              OR: [
+                { Nombre_Equipo: { contains: q, mode: 'insensitive' as any } },
+                { Codigo_Interno: { contains: q, mode: 'insensitive' as any } },
+                { Responsable: { contains: q, mode: 'insensitive' as any } },
+              ]
+            } : {},
+            tipo ? { Tipo: tipo } : {},
+            estado ? { Estado: estado } : {},
+          ]
+        },
+        orderBy: { Codigo_Interno: 'asc' },
+        select: {
+          ...selectLightEquipo,
+          historiales: {
+            select: {
+              ...selectLightHistorial,
+              patron: {
+                select: {
+                  Codigo: true,
+                  Nombre_Patron: true
+                }
               }
-            }
+            },
+            orderBy: { Fecha_Ejecucion: 'desc' },
+            take: 15
           }
         }
-      }
-    })
-    return NextResponse.json(equipos)
+      }),
+      prisma.$queryRaw<Array<{ ID_Equipo: string, Has_PDF: any, Has_Foto: any }>>`
+        SELECT "ID_Equipo", 
+               ("PDF_Certificado" IS NOT NULL AND "PDF_Certificado" <> '') AS "Has_PDF", 
+               ("Foto_Equipo" IS NOT NULL AND "Foto_Equipo" <> '') AS "Has_Foto" 
+        FROM "InstrumentoEquipo"
+      `,
+      prisma.$queryRaw<Array<{ ID_Log: string, Has_PDF: any, Has_Foto: any }>>`
+        SELECT "ID_Log", 
+               ("PDF_Certificado_interno" IS NOT NULL AND "PDF_Certificado_interno" <> '') AS "Has_PDF", 
+               ("Evidencia_Foto" IS NOT NULL AND "Evidencia_Foto" <> '') AS "Has_Foto" 
+        FROM "HistorialVerificacion"
+      `
+    ])
+
+    const eqPdfMap = new Map(pdfCheck.map(x => [x.ID_Equipo, !!x.Has_PDF]))
+    const eqFotoMap = new Map(pdfCheck.map(x => [x.ID_Equipo, !!x.Has_Foto]))
+    const histPdfMap = new Map(histCheck.map(x => [x.ID_Log, !!x.Has_PDF]))
+    const histFotoMap = new Map(histCheck.map(x => [x.ID_Log, !!x.Has_Foto]))
+
+    const processed = equipos.map(e => ({
+      ...e,
+      PDF_Certificado: eqPdfMap.get(e.ID_Equipo) ? 'dummy_exists' : null,
+      Foto_Equipo: eqFotoMap.get(e.ID_Equipo) ? 'dummy_exists' : null,
+      historiales: e.historiales.map(h => ({
+        ...h,
+        PDF_Certificado_interno: histPdfMap.get(h.ID_Log) ? 'dummy_exists' : null,
+        Evidencia_Foto: histFotoMap.get(h.ID_Log) ? 'dummy_exists' : null
+      }))
+    }))
+
+    return NextResponse.json(processed)
   } catch (error: any) {
     console.error('[API Equipos GET Error]:', error)
     // Devolvemos un array vacío para evitar que el frontend falle con .map()

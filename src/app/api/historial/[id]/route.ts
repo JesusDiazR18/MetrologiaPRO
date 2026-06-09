@@ -2,6 +2,29 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calcularProximoControl } from '@/lib/metrologia'
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const log = await prisma.historialVerificacion.findUnique({
+      where: { ID_Log: id },
+      include: {
+        equipo: { select: { Nombre_Equipo: true, Codigo_Interno: true, Tipo: true } },
+        patron: { select: { Nombre_Patron: true, Codigo: true } }
+      }
+    })
+    if (!log) {
+      return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 })
+    }
+    return NextResponse.json(log)
+  } catch (error: any) {
+    console.error('[API Historial GET ID Error]:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: logId } = await params

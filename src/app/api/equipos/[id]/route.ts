@@ -2,6 +2,38 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calcularProximoControl } from '@/lib/metrologia'
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const equipo = await prisma.instrumentoEquipo.findUnique({
+      where: { ID_Equipo: id },
+      include: {
+        historiales: {
+          orderBy: { Fecha_Ejecucion: 'desc' },
+          include: {
+            patron: {
+              select: {
+                Codigo: true,
+                Nombre_Patron: true
+              }
+            }
+          }
+        }
+      }
+    })
+    if (!equipo) {
+      return NextResponse.json({ error: 'Equipo no encontrado' }, { status: 404 })
+    }
+    return NextResponse.json(equipo)
+  } catch (error: any) {
+    console.error('[API Equipos GET ID Error]:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

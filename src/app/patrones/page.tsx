@@ -38,6 +38,87 @@ export default function PatronesPage() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [historialPatron, setHistorialPatron] = useState<Patron | null>(null)
 
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, Patron>>({})
+  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({})
+
+  const toggleExpand = async (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(id)
+    if (expandedDetails[id]) return
+
+    try {
+      setLoadingDetails(prev => ({ ...prev, [id]: true }))
+      const res = await fetch(`/api/patrones/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setExpandedDetails(prev => ({ ...prev, [id]: data }))
+      } else {
+        toast.error('Error al cargar detalles del patrón')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Error de red al cargar detalles')
+    } finally {
+      setLoadingDetails(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
+  const openModalWithFullDetails = async (patron: Patron, setModalState: (p: any) => void) => {
+    if (!patron || !patron.ID_Patron) {
+      setModalState(patron)
+      return
+    }
+    if (expandedDetails[patron.ID_Patron]) {
+      setModalState(expandedDetails[patron.ID_Patron])
+      return
+    }
+    let loadedPatron = patron
+    try {
+      toast.loading('Cargando datos completos del patrón...', { id: 'modal-loading-patron' })
+      const res = await fetch(`/api/patrones/${patron.ID_Patron}`)
+      if (res.ok) {
+        const data = await res.json()
+        setExpandedDetails(prev => ({ ...prev, [patron.ID_Patron]: data }))
+        loadedPatron = data
+        toast.success('Cargado', { id: 'modal-loading-patron' })
+      } else {
+        toast.error('Error al cargar detalles', { id: 'modal-loading-patron' })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al cargar detalles', { id: 'modal-loading-patron' })
+    }
+    setModalState(loadedPatron)
+  }
+
+  const handleOpenPdf = async (patronId: string, currentPdf: string) => {
+    if (currentPdf === 'dummy_exists') {
+      try {
+        toast.loading('Cargando certificado PDF...', { id: 'pdf-loading' })
+        const res = await fetch(`/api/patrones/${patronId}`)
+        if (res.ok) {
+          const data = await res.json()
+          toast.success('Cargado', { id: 'pdf-loading' })
+          if (data.PDF_Certificado) {
+            openPdf(data.PDF_Certificado)
+          } else {
+            toast.error('No se encontró archivo PDF')
+          }
+        } else {
+          toast.error('Error al descargar el certificado', { id: 'pdf-loading' })
+        }
+      } catch (err) {
+        console.error(err)
+        toast.error('Error de red al descargar el certificado', { id: 'pdf-loading' })
+      }
+    } else {
+      openPdf(currentPdf)
+    }
+  }
+
   useEffect(() => {
     loadPatrones()
   }, [])
@@ -168,7 +249,7 @@ export default function PatronesPage() {
                 {filteredPatrones.map(p => (
                   <React.Fragment key={p.ID_Patron}>
                   <tr 
-                    onClick={() => setExpandedId(expandedId === p.ID_Patron ? null : p.ID_Patron)}
+                    onClick={() => toggleExpand(p.ID_Patron)}
                     style={{ cursor: 'pointer' }}
                     className="mobile-card-row"
                   >
@@ -225,7 +306,7 @@ export default function PatronesPage() {
                         {p.PDF_Certificado && (
                           <button 
                             className="btn btn-ghost btn-xs" 
-                            onClick={(e) => { e.stopPropagation(); openPdf(p.PDF_Certificado!) }}
+                            onClick={(e) => { e.stopPropagation(); handleOpenPdf(p.ID_Patron, p.PDF_Certificado!) }}
                             title="Ver Certificado PDF"
                             style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)', padding: '6px 10px', fontSize: 11 }}
                           >
@@ -235,7 +316,7 @@ export default function PatronesPage() {
                         <button 
                           className="btn-scan" 
                           style={{ padding: '6px 12px', fontSize: 11, background: 'var(--success)', color: '#fff', fontWeight: 700, borderRadius: 8, border: 'none' }}
-                          onClick={(ev) => { ev.stopPropagation(); setRenewPatron(p) }}
+                          onClick={(ev) => { ev.stopPropagation(); openModalWithFullDetails(p, setRenewPatron) }}
                         >
                           <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> {p.PDF_Certificado ? 'Renovar' : 'Subir Cert'}
                         </button>
@@ -245,7 +326,16 @@ export default function PatronesPage() {
                   {expandedId === p.ID_Patron && (
                     <tr>
                       <td colSpan={5} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
-                        <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
+                        {loadingDetails[p.ID_Patron] ? (
+                          <div style={{ padding: 40, textAlign: 'center' }}>
+                            <div className="spinner" style={{ margin: '0 auto 16px' }} />
+                            <p style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 }}>Cargando especificaciones completas e historial...</p>
+                          </div>
+                        ) : (() => {
+                          const details = expandedDetails[p.ID_Patron] || p
+                          const detailsStatusColor = details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'
+                          return (
+                            <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
                           <div 
                             className="card" 
                             style={{ 
@@ -263,18 +353,18 @@ export default function PatronesPage() {
                               margin: '0 auto'
                             }}
                             onClick={ev => { ev.stopPropagation(); setQrLabelAsset({
-                              id: p.ID_Patron,
-                              code: p.Codigo,
-                              name: p.Nombre_Patron,
-                              status: p.Estado_Vigencia,
-                              statusLabel: p.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? 'SIN CERT' : 'VENCIDO',
-                              statusColor: p.Estado_Vigencia === 'VIGENTE' ? '#10b981' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : '#ef4444'
+                              id: details.ID_Patron,
+                              code: details.Codigo,
+                              name: details.Nombre_Patron,
+                              status: details.Estado_Vigencia,
+                              statusLabel: details.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? 'SIN CERT' : 'VENCIDO',
+                              statusColor: details.Estado_Vigencia === 'VIGENTE' ? '#10b981' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : '#ef4444'
                             })}}
                             title="Haz clic para ver e imprimir la etiqueta"
                           >
                             <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)' }}>
                               <QRCodeSVG
-                                value={getScanUrl(p.Codigo)}
+                                value={getScanUrl(details.Codigo)}
                                 size={120}
                                 bgColor="#ffffff"
                                 fgColor="#0f172a"
@@ -289,7 +379,7 @@ export default function PatronesPage() {
                                 <button 
                                   className="btn btn-ghost btn-sm" 
                                   style={{ fontSize: 10, padding: '4px 8px', border: '1px solid var(--cyan-dim)', color: 'var(--cyan)' }}
-                                  onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(p); }}
+                                  onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(details); }}
                                 >
                                   📄 Descargar Ficha PDF
                                 </button>
@@ -301,13 +391,13 @@ export default function PatronesPage() {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 12 }}>
                               <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>Especificaciones y Trazabilidad</h4>
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(p) }}>
+                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(details) }}>
                                   <History size={12} style={{ display: 'inline', marginRight: 4 }} /> Historial Cal.
                                 </button>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)' }} onClick={(ev) => { ev.stopPropagation(); setEditPatron(p) }}>
+                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)' }} onClick={(ev) => { ev.stopPropagation(); setEditPatron(details) }}>
                                   <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Patrón
                                 </button>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarPatron(p.ID_Patron, p.Nombre_Patron) }}>
+                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarPatron(details.ID_Patron, details.Nombre_Patron) }}>
                                   <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
                                 </button>
                               </div>
@@ -315,40 +405,42 @@ export default function PatronesPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                               <div className="spec-item">
                                 <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Magnitud Física</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cyan)' }}>{p.Magnitud || 'General'}</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cyan)' }}>{details.Magnitud || 'General'}</div>
                               </div>
                               <div className="spec-item">
                                 <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Laboratorio</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{p.Proveedor_Laboratorio || 'No especificado'}</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{details.Proveedor_Laboratorio || 'No especificado'}</div>
                               </div>
                               <div className="spec-item">
                                 <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Última Calibración</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{formatFecha(p.Fecha_Calibracion_Externa)}</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{formatFecha(details.Fecha_Calibracion_Externa)}</div>
                               </div>
                               <div className="spec-item">
                                 <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Vencimiento Certificado</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: p.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--text-main)' }}>
-                                  {formatFecha(p.Fecha_Vencimiento_Certificado)}
+                                <div style={{ fontSize: 13, fontWeight: 700, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--text-main)' }}>
+                                  {formatFecha(details.Fecha_Vencimiento_Certificado)}
                                 </div>
                               </div>
                             </div>
-                            {p.Foto_Patron && (
+                            {details.Foto_Patron && (
                               <div style={{ marginTop: 8 }}>
                                 <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>Fotografía del Patrón</label>
                                 <img 
-                                  src={p.Foto_Patron} 
-                                  alt={p.Nombre_Patron} 
+                                  src={details.Foto_Patron} 
+                                  alt={details.Nombre_Patron} 
                                   style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 12, border: '1px solid var(--snow-3)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'pointer' }} 
-                                  onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(p.Foto_Patron ?? null) }}
+                                  onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Patron ?? null) }}
                                   title="Clic para ampliar foto"
                                 />
                               </div>
                             )}
                           </div>
                         </div>
-                      </td>
-                    </tr>
-                  )}
+                      )
+                    })()}
+                  </td>
+                </tr>
+              )}
                   </React.Fragment>
                 ))}
               </tbody>

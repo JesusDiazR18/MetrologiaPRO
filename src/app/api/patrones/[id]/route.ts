@@ -1,6 +1,31 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const patron = await prisma.patronReferencia.findUnique({
+      where: { ID_Patron: id },
+      include: {
+        historiales: {
+          orderBy: { Fecha_Ejecucion: 'desc' },
+          take: 10
+        }
+      }
+    })
+    if (!patron) {
+      return NextResponse.json({ error: 'Patrón no encontrado' }, { status: 404 })
+    }
+    return NextResponse.json(patron)
+  } catch (error: any) {
+    console.error('[API Patrones GET ID Error]:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

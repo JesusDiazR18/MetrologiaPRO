@@ -93,6 +93,62 @@ function EquiposContent() {
   const [sortBy, setSortBy] = useState<string>('code-desc')
   const searchParams = useSearchParams()
 
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, Equipo>>({})
+  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({})
+
+  const toggleExpand = async (id: string) => {
+    if (expanded === id) {
+      setExpanded(null)
+      return
+    }
+    setExpanded(id)
+    if (expandedDetails[id]) return
+
+    try {
+      setLoadingDetails(prev => ({ ...prev, [id]: true }))
+      const res = await fetch(`/api/equipos/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setExpandedDetails(prev => ({ ...prev, [id]: data }))
+      } else {
+        toast.error('Error al cargar detalles del equipo')
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Error de red al cargar detalles')
+    } finally {
+      setLoadingDetails(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
+  const openModalWithFullDetails = async (eq: Equipo, setModalState: (eq: any) => void) => {
+    if (!eq || !eq.ID_Equipo) {
+      setModalState(eq)
+      return
+    }
+    if (expandedDetails[eq.ID_Equipo]) {
+      setModalState(expandedDetails[eq.ID_Equipo])
+      return
+    }
+    let loadedEq = eq
+    try {
+      toast.loading('Cargando ficha técnica completa...', { id: 'modal-loading' })
+      const res = await fetch(`/api/equipos/${eq.ID_Equipo}`)
+      if (res.ok) {
+        const data = await res.json()
+        setExpandedDetails(prev => ({ ...prev, [eq.ID_Equipo]: data }))
+        loadedEq = data
+        toast.success('Cargado', { id: 'modal-loading' })
+      } else {
+        toast.error('Error al cargar detalles', { id: 'modal-loading' })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al cargar detalles', { id: 'modal-loading' })
+    }
+    setModalState(loadedEq)
+  }
+
   // Helper de ordenamiento natural (Excel-like) para códigos internos
   const naturalSort = (a: string, b: string, desc: boolean) => {
     const regex = /^([a-zA-Z-]+)(\d+)$/
@@ -358,7 +414,7 @@ function EquiposContent() {
                   return (
                     <React.Fragment key={e.ID_Equipo}>
                       <tr 
-                        onClick={() => setExpanded(isExpanded ? null : e.ID_Equipo)}
+                        onClick={() => toggleExpand(e.ID_Equipo)}
                         style={{ cursor: 'pointer' }}
                         className="mobile-card-row"
                       >
@@ -412,7 +468,7 @@ function EquiposContent() {
                             <button 
                             className="btn-scan" 
                             style={{ padding: '6px 14px', fontSize: 11, background: 'var(--accent)', color: 'var(--oxford-blue-dark)', fontWeight: 800, borderRadius: 8, border: 'none', boxShadow: '0 4px 12px var(--accent-glow)' }}
-                            onClick={(ev) => { ev.stopPropagation(); setModalEquipo(e); }}
+                            onClick={(ev) => { ev.stopPropagation(); openModalWithFullDetails(e, setModalEquipo); }}
                             >Verificar</button>
                             <div style={{ color: 'var(--text-dim)', padding: '0 4px' }}>
                               {isExpanded ? <ChevronsUp size={18} /> : <ChevronsDown size={18} />}
@@ -423,11 +479,21 @@ function EquiposContent() {
                       {isExpanded && (
                         <tr>
                           <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)', maxWidth: 0 }}>
-                            <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${statusColor}` }}>
-                              {(e.Detalles_Estado || e.Requiere_Seguimiento || e.Tiene_Solucion === false) && (
+                            {loadingDetails[e.ID_Equipo] ? (
+                              <div style={{ padding: 40, textAlign: 'center' }}>
+                                <div className="spinner" style={{ margin: '0 auto 16px' }} />
+                                <p style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 }}>Cargando especificaciones completas e historial...</p>
+                              </div>
+                            ) : (() => {
+                              const details = expandedDetails[e.ID_Equipo] || e
+                              const detailsSemaforo = calcularSemaforo(details.Fecha_Proximo_Control, details.Estado)
+                              const detailsStatusColor = semaforoHex(detailsSemaforo)
+                              return (
+                                <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${detailsStatusColor}` }}>
+                              {(details.Detalles_Estado || details.Requiere_Seguimiento || details.Tiene_Solucion === false) && (
                                 <div style={{ 
-                                  background: e.Tiene_Solucion !== false ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
-                                  border: `1px solid ${e.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444'}`, 
+                                  background: details.Tiene_Solucion !== false ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                                  border: `1px solid ${details.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444'}`, 
                                   borderRadius: 12, 
                                   padding: '14px 20px', 
                                   marginBottom: 20, 
@@ -437,19 +503,19 @@ function EquiposContent() {
                                   flexWrap: 'wrap',
                                   animation: 'fadeIn 0.3s' 
                                 }}>
-                                  <div style={{ fontSize: 24 }}>{e.Tiene_Solucion !== false ? '⚠️' : '🚨'}</div>
+                                  <div style={{ fontSize: 24 }}>{details.Tiene_Solucion !== false ? '⚠️' : '🚨'}</div>
                                   <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: e.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                      <span>ESTADO: {semaforoLabel(semaforo, e.Estado).toUpperCase()}</span>
-                                      {e.Requiere_Seguimiento && (
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: details.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                      <span>ESTADO: {semaforoLabel(detailsSemaforo, details.Estado).toUpperCase()}</span>
+                                      {details.Requiere_Seguimiento && (
                                         <span style={{ background: '#f59e0b', color: '#000', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SEGUIMIENTO ACTIVO</span>
                                       )}
-                                      {e.Tiene_Solucion === false && (
+                                      {details.Tiene_Solucion === false && (
                                         <span style={{ background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SIN SOLUCIÓN TÉCNICA</span>
                                       )}
                                     </div>
                                     <div style={{ fontSize: 12, color: 'var(--text-color)', marginTop: 4 }}>
-                                      {e.Detalles_Estado || 'Sin detalles especificados.'}
+                                      {details.Detalles_Estado || 'Sin detalles especificados.'}
                                     </div>
                                   </div>
                                 </div>
@@ -459,12 +525,12 @@ function EquiposContent() {
                                 <div 
                                   className="card" 
                                   style={{ padding: 20, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.2s', minHeight: 180 }}
-                                  onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(e) }}
+                                  onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(details) }}
                                   title="Haz clic para ver e imprimir la etiqueta"
                                 >
                                   <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
                                     <QRCodeSVG
-                                      value={getScanUrl(e.ID_Equipo)}
+                                      value={getScanUrl(details.ID_Equipo)}
                                       size={84}
                                       bgColor="#ffffff"
                                       fgColor="#0f172a"
@@ -478,7 +544,7 @@ function EquiposContent() {
                                     <button 
                                       className="btn btn-ghost btn-xs" 
                                       style={{ fontSize: 10, color: 'var(--accent)', border: '1px solid var(--accent-dim)' }}
-                                      onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(e); }}
+                                      onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}
                                     >
                                       📄 Descargar Ficha PDF
                                     </button>
@@ -490,52 +556,52 @@ function EquiposContent() {
                                     <FileDigit size={16} color="var(--accent)" />
                                     <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
                                   </div>
-                                  {(e.Modelo || e.Serie) && (e.Modelo !== '—' || e.Serie !== '—') && (
+                                  {(details.Modelo || details.Serie) && (details.Modelo !== '—' || details.Serie !== '—') && (
                                     <div className="spec-row">
                                       <span className="spec-label">Modelo / Serie</span>
-                                      <span className="spec-value">{e.Modelo || '—'} / {e.Serie || '—'}</span>
+                                      <span className="spec-value">{details.Modelo || '—'} / {details.Serie || '—'}</span>
                                     </div>
                                   )}
-                                  {e.Tolerancia_Aceptable != null && (
+                                  {details.Tolerancia_Aceptable != null && (
                                     <div className="spec-row">
                                       <span className="spec-label">Tolerancia</span>
-                                      <span className="spec-value">±{e.Tolerancia_Aceptable} {e.Unidad_Tolerancia ?? 'un'}</span>
+                                      <span className="spec-value">±{details.Tolerancia_Aceptable} {details.Unidad_Tolerancia ?? 'un'}</span>
                                     </div>
                                   )}
-                                  {e.Fecha_Ingreso && (
+                                  {details.Fecha_Ingreso && (
                                     <div className="spec-row">
                                       <span className="spec-label">Fecha Ingreso</span>
-                                      <span className="spec-value">{formatFecha(e.Fecha_Ingreso)}</span>
+                                      <span className="spec-value">{formatFecha(details.Fecha_Ingreso)}</span>
                                     </div>
                                   )}
                                   <div className="spec-row">
                                     <span className="spec-label">Próxima Verif.</span>
-                                    <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(e.Fecha_Proximo_Control)}</span>
+                                    <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(details.Fecha_Proximo_Control)}</span>
                                   </div>
                                   <div className="spec-row" style={{ marginTop: -4 }}>
                                     <span className="spec-label">Intervalo</span>
-                                    <span className="spec-value">{e.Periodicidad_Meses} Meses</span>
+                                    <span className="spec-value">{details.Periodicidad_Meses} Meses</span>
                                   </div>
-                                  {e.Accesorios && e.Accesorios.trim() !== '' && e.Accesorios.trim() !== '—' && (
+                                  {details.Accesorios && details.Accesorios.trim() !== '' && details.Accesorios.trim() !== '—' && (
                                     <div className="spec-row" style={{ alignItems: 'flex-start' }}>
                                       <span className="spec-label" style={{ marginTop: 2 }}>Accesorios</span>
-                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{e.Accesorios}</span>
+                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{details.Accesorios}</span>
                                     </div>
                                   )}
-                                  {e.Insumos && e.Insumos.trim() !== '' && e.Insumos.trim() !== '—' && (
+                                  {details.Insumos && details.Insumos.trim() !== '' && details.Insumos.trim() !== '—' && (
                                     <div className="spec-row" style={{ alignItems: 'flex-start' }}>
                                       <span className="spec-label" style={{ marginTop: 2 }}>Insumos</span>
-                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{e.Insumos}</span>
+                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{details.Insumos}</span>
                                     </div>
                                   )}
-                                  {e.Foto_Equipo && (
+                                  {details.Foto_Equipo && (
                                     <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                       <span className="spec-label" style={{ display: 'block', marginBottom: 8, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Foto del Equipo</span>
                                       <img 
-                                        src={e.Foto_Equipo} 
-                                        alt={e.Nombre_Equipo} 
+                                        src={details.Foto_Equipo} 
+                                        alt={details.Nombre_Equipo} 
                                         style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
-                                        onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(e.Foto_Equipo || null) }}
+                                        onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Equipo || null) }}
                                         title="Clic para ampliar foto"
                                       />
                                     </div>
@@ -549,26 +615,26 @@ function EquiposContent() {
                                   </div>
                                   <div className="spec-row">
                                     <span className="spec-label">Ubicación</span>
-                                    <span className="spec-value">{e.Area_Asignada}</span>
+                                    <span className="spec-value">{details.Area_Asignada}</span>
                                   </div>
                                   <div className="spec-row">
                                     <span className="spec-label">Responsable</span>
-                                    <span className="spec-value">{e.Responsable}</span>
+                                    <span className="spec-value">{details.Responsable}</span>
                                   </div>
                                   <div className="spec-row">
                                     <span className="spec-label">Estado Sist.</span>
-                                    <span className="spec-value" style={{ color: statusColor }}>{e.Estado}</span>
+                                    <span className="spec-value" style={{ color: detailsStatusColor }}>{details.Estado}</span>
                                   </div>
                                   <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
-                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(e) }}>
+                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(details) }}>
                                       <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
                                     </button>
-                                    {(e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA') ? (
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(e.ID_Equipo, e.Nombre_Equipo) }}>Re-habilitar</button>
+                                    {(details.Estado === 'FUERA_DE_SERVICIO' || details.Estado === 'DE_BAJA_OBSOLETO' || details.Estado === 'OBSOLETO' || details.Estado === 'BAJA') ? (
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(details.ID_Equipo, details.Nombre_Equipo) }}>Re-habilitar</button>
                                     ) : (
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(e.ID_Equipo, e.Nombre_Equipo) }}>Dar de Baja</button>
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(details.ID_Equipo, details.Nombre_Equipo) }}>Dar de Baja</button>
                                     )}
-                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(e.ID_Equipo, e.Nombre_Equipo) }}>
+                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(details.ID_Equipo, details.Nombre_Equipo) }}>
                                       <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
                                     </button>
                                   </div>
@@ -584,7 +650,7 @@ function EquiposContent() {
                                   <button 
                                     className="btn btn-cyan btn-xs" 
                                     style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}
-                                    onClick={(ev) => { ev.stopPropagation(); setModalHistorical(e) }}
+                                    onClick={(ev) => { ev.stopPropagation(); setModalHistorical(details) }}
                                   >
                                     ➕ Agregar Verificación Anterior
                                   </button>
@@ -606,7 +672,7 @@ function EquiposContent() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {e.historiales.map((h, index) => (
+                                    {details.historiales.map((h, index) => (
                                       <tr key={h.ID_Log}>
                                         <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(h.Fecha_Ejecucion)}</td>
                                         <td>
@@ -683,7 +749,7 @@ function EquiposContent() {
                                               <button 
                                                 className="btn btn-ghost btn-xs" 
                                                 style={{ color: 'var(--accent)', padding: '4px' }}
-                                                onClick={(ev) => { ev.stopPropagation(); setEditLog({ ...h, FK_ID_Equipo: e.ID_Equipo }) }}
+                                                onClick={(ev) => { ev.stopPropagation(); setEditLog({ ...h, FK_ID_Equipo: details.ID_Equipo }) }}
                                                 title="Editar la última verificación"
                                               >
                                                 <Edit size={14} />
@@ -692,7 +758,7 @@ function EquiposContent() {
                                             <button 
                                               className="btn btn-ghost btn-xs" 
                                               style={{ color: 'var(--danger)', padding: '4px' }}
-                                              onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, e.Nombre_Equipo) }}
+                                              onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, details.Nombre_Equipo) }}
                                               title="Eliminar este registro"
                                             >
                                               <Trash2 size={14} />
@@ -701,7 +767,7 @@ function EquiposContent() {
                                         </td>
                                       </tr>
                                     ))}
-                                    {e.historiales.length === 0 && (
+                                    {details.historiales.length === 0 && (
                                       <tr>
                                         <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
                                           No hay verificaciones registradas para este activo.
@@ -712,7 +778,10 @@ function EquiposContent() {
                                 </table>
                                 </div>
                               </div>
-                            </div>
+                            
+                                </div>
+                              )
+                            })()}
                           </td>
                         </tr>
                       )}

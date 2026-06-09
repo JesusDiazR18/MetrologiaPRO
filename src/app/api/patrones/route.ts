@@ -24,20 +24,64 @@ export async function GET(request: Request) {
       return NextResponse.json({ nextId })
     }
 
-    const patrones = await prisma.patronReferencia.findMany({ 
-      include: { historiales: { orderBy: { Fecha_Ejecucion: 'desc' }, take: 10 } },
-      orderBy: { ID_Patron: 'asc' } 
-    })
+    const selectLightPatron = {
+      ID_Patron: true,
+      Codigo: true,
+      Nombre_Patron: true,
+      Fecha_Calibracion_Externa: true,
+      Fecha_Vencimiento_Certificado: true,
+      N_Certificado: true,
+      Proveedor_Laboratorio: true,
+      Estado_Vigencia: true,
+      Magnitud: true,
+    }
+
+    const [patrones, pdfCheck] = await Promise.all([
+      prisma.patronReferencia.findMany({
+        select: {
+          ...selectLightPatron,
+          historiales: {
+            select: {
+              ID_Log: true,
+              Fecha_Ejecucion: true,
+              Variacion_Calculada: true,
+              Resultado_Status: true,
+              Tecnico_Ejecutor: true,
+              Observaciones: true,
+            },
+            orderBy: { Fecha_Ejecucion: 'desc' },
+            take: 10
+          }
+        },
+        orderBy: { ID_Patron: 'asc' }
+      }),
+      prisma.$queryRaw<Array<{ ID_Patron: string, Has_PDF: any, Has_Foto: any }>>`
+        SELECT "ID_Patron", 
+               ("PDF_Certificado" IS NOT NULL AND "PDF_Certificado" <> '') AS "Has_PDF", 
+               ("Foto_Patron" IS NOT NULL AND "Foto_Patron" <> '') AS "Has_Foto" 
+        FROM "PatronReferencia"
+      `
+    ])
+
+    const patronPdfMap = new Map(pdfCheck.map(x => [x.ID_Patron, !!x.Has_PDF]))
+    const patronFotoMap = new Map(pdfCheck.map(x => [x.ID_Patron, !!x.Has_Foto]))
 
     const processed = patrones.map(p => {
+      const hasPDF = patronPdfMap.get(p.ID_Patron) || false
+      const hasFoto = patronFotoMap.get(p.ID_Patron) || false
+      const fakePdf = hasPDF ? 'dummy_exists' : null
+      const fakeFoto = hasFoto ? 'dummy_exists' : null
+
       let estado = p.Estado_Vigencia
-      if (!p.PDF_Certificado || p.PDF_Certificado.trim() === '' || p.PDF_Certificado === 'null' || p.PDF_Certificado === 'undefined') {
+      if (!fakePdf) {
         estado = 'SIN CERTIFICADO'
       } else if (p.Fecha_Vencimiento_Certificado && new Date(p.Fecha_Vencimiento_Certificado).getTime() < Date.now()) {
         estado = 'VENCIDO'
       }
       return {
         ...p,
+        PDF_Certificado: fakePdf,
+        Foto_Patron: fakeFoto,
         Estado_Vigencia: estado
       }
     })

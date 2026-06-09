@@ -8,15 +8,53 @@ export async function GET(request: Request) {
     const idEquipo = searchParams.get('equipo') ?? ''
 
     const where = idEquipo ? { FK_ID_Equipo: idEquipo } : {}
-    const historiales = await prisma.historialVerificacion.findMany({
-      where,
-      orderBy: { Fecha_Ejecucion: 'desc' },
-      include: {
-        equipo: { select: { Nombre_Equipo: true, Codigo_Interno: true } },
-        patron: { select: { Nombre_Patron: true, Codigo: true } },
-      }
-    })
-    return NextResponse.json(historiales)
+
+    const selectLightHistorial = {
+      ID_Log: true,
+      FK_ID_Equipo: true,
+      Fecha_Ejecucion: true,
+      FK_ID_Patron_Usado: true,
+      Medida_Instrumento: true,
+      Medida_Patron: true,
+      Variacion_Calculada: true,
+      Resultado_Status: true,
+      Tecnico_Ejecutor: true,
+      Observaciones: true,
+      Tipo_Verificacion: true,
+      Acciones_Pendientes: true,
+      Estado_Seguimiento: true,
+      Magnitud_Controlada: true,
+      Mediciones_Puntos: true,
+    }
+
+    const [historiales, fileCheck] = await Promise.all([
+      prisma.historialVerificacion.findMany({
+        where,
+        orderBy: { Fecha_Ejecucion: 'desc' },
+        select: {
+          ...selectLightHistorial,
+          equipo: { select: { Nombre_Equipo: true, Codigo_Interno: true } },
+          patron: { select: { Nombre_Patron: true, Codigo: true } },
+        }
+      }),
+      prisma.$queryRaw<Array<{ ID_Log: string, Has_PDF: any, Has_Foto: any }>>`
+        SELECT "ID_Log", 
+               ("PDF_Certificado_interno" IS NOT NULL AND "PDF_Certificado_interno" <> '') AS "Has_PDF", 
+               ("Evidencia_Foto" IS NOT NULL AND "Evidencia_Foto" <> '') AS "Has_Foto" 
+        FROM "HistorialVerificacion"
+      `
+    ])
+
+    const histPdfMap = new Map(fileCheck.map(x => [x.ID_Log, !!x.Has_PDF]))
+    const histFotoMap = new Map(fileCheck.map(x => [x.ID_Log, !!x.Has_Foto]))
+
+    const processed = historiales.map(h => ({
+      ...h,
+      PDF_Certificado_interno: histPdfMap.get(h.ID_Log) ? 'dummy_exists' : null,
+      Evidencia_Foto: histFotoMap.get(h.ID_Log) ? 'dummy_exists' : null
+    }))
+
+    return NextResponse.json(processed)
   } catch (error: any) {
     console.error('[API Historial GET Error]:', error)
     return NextResponse.json({ error: error.message, data: [] }, { status: 500 })

@@ -68,6 +68,48 @@ export default function DashboardPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null)
   const [hoveredData, setHoveredData] = useState<any | null>(null)
 
+  // Carga asíncrona de detalles para fotos/documentos pesados
+  const [loadingAssetDetails, setLoadingAssetDetails] = useState(false)
+  const [fullAssetDetails, setFullAssetDetails] = useState<any | null>(null)
+
+  useEffect(() => {
+    if (!selectedAsset) {
+      setFullAssetDetails(null)
+      return
+    }
+    if (
+      (selectedAsset.Foto_Equipo && selectedAsset.Foto_Equipo !== 'dummy_exists') ||
+      (selectedAsset.Foto_Patron && selectedAsset.Foto_Patron !== 'dummy_exists')
+    ) {
+      setFullAssetDetails(selectedAsset)
+      return
+    }
+    async function fetchDetails() {
+      try {
+        setLoadingAssetDetails(true)
+        const isPatron = selectedAsset.categoria === 'patron'
+        const url = isPatron ? `/api/patrones/${selectedAsset.id}` : `/api/equipos/${selectedAsset.id}`
+        const res = await fetch(url)
+        if (res.ok) {
+          const data = await res.json()
+          setFullAssetDetails({
+            ...data,
+            id: selectedAsset.id,
+            codigo: selectedAsset.codigo,
+            tipoActivo: selectedAsset.tipoActivo,
+            status: selectedAsset.status,
+            categoria: selectedAsset.categoria
+          })
+        }
+      } catch (err) {
+        console.error("Error fetching full asset details:", err)
+      } finally {
+        setLoadingAssetDetails(false)
+      }
+    }
+    fetchDetails()
+  }, [selectedAsset])
+
   // AUDITORÍA Y OPTIMIZACIÓN: Solo hacemos 1 fetch consolidado en lugar de 3 para reducir latencia y carga de DB.
   async function loadAllData() {
     try {
@@ -265,10 +307,29 @@ export default function DashboardPage() {
   const handleDownloadPDF = async (asset: any) => {
     setPdfLoadingId(asset.id)
     try {
-      if (asset.categoria === 'patron') {
-        await generatePatronSheetPDF(asset)
+      // Obtener detalles completos si el activo es una versión compacta (contiene dummy)
+      let fullAsset = asset
+      if (asset.PDF_Certificado === 'dummy_exists' || asset.Foto_Equipo === 'dummy_exists' || asset.Foto_Patron === 'dummy_exists') {
+        const isPatron = asset.categoria === 'patron'
+        const url = isPatron ? `/api/patrones/${asset.id}` : `/api/equipos/${asset.id}`
+        const res = await fetch(url)
+        if (res.ok) {
+          const data = await res.json()
+          fullAsset = {
+            ...data,
+            id: asset.id,
+            codigo: asset.codigo,
+            tipoActivo: asset.tipoActivo,
+            status: asset.status,
+            categoria: asset.categoria
+          }
+        }
+      }
+
+      if (fullAsset.categoria === 'patron') {
+        await generatePatronSheetPDF(fullAsset)
       } else {
-        await generateTechnicalSheetPDF(asset)
+        await generateTechnicalSheetPDF(fullAsset)
       }
     } catch (err) {
       console.error('Error generando pdf:', err)
@@ -718,8 +779,13 @@ export default function DashboardPage() {
             <div className="modal-body-content">
               {/* Imagen si existe */}
               <div className="modal-photo-section">
-                {selectedAsset.Foto_Equipo || selectedAsset.Foto_Patron ? (
-                  <img src={selectedAsset.Foto_Equipo || selectedAsset.Foto_Patron} alt="Evidencia del activo" className="modal-photo-img" />
+                {loadingAssetDetails ? (
+                  <div className="modal-no-photo">
+                    <div className="mini-spinner" style={{ borderTopColor: 'var(--accent)', margin: '0 auto 12px' }} />
+                    <span>Cargando registro fotográfico...</span>
+                  </div>
+                ) : (fullAssetDetails?.Foto_Equipo || fullAssetDetails?.Foto_Patron) ? (
+                  <img src={fullAssetDetails.Foto_Equipo || fullAssetDetails.Foto_Patron} alt="Evidencia del activo" className="modal-photo-img" />
                 ) : (
                   <div className="modal-no-photo">
                     <Info size={20} color="var(--text-soft)" />
