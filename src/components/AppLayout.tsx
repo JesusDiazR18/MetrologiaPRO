@@ -123,6 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )
           })}
 
+          {/* 
           <div className="nav-group-label" style={{ marginTop: 16 }}>Sistema</div>
           <Link 
             href="/configuracion" 
@@ -132,6 +133,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Settings size={18} />
             <span>Configuración</span>
           </Link>
+          */}
         </nav>
 
         <div className="sidebar-footer">
