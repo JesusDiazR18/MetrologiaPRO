@@ -80,6 +80,8 @@ function EquiposContent() {
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [tipo, setTipo] = useState('')
+  const [filterEstado, setFilterEstado] = useState<string>('ALL')
+  const [filterResponsable, setFilterResponsable] = useState<string>('ALL')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [modalEquipo, setModalEquipo] = useState<Equipo | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -92,6 +94,38 @@ function EquiposContent() {
   const [editLog, setEditLog] = useState<any | null>(null)
   const [sortBy, setSortBy] = useState<string>('code-desc')
   const searchParams = useSearchParams()
+
+  const uniqueResponsables = React.useMemo(() => {
+    const set = new Set<string>()
+    equipos.forEach(e => {
+      if (e.Responsable && e.Responsable.trim() !== '') {
+        set.add(e.Responsable.trim())
+      }
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [equipos])
+
+  const uniqueEstados = React.useMemo(() => {
+    const set = new Set<string>()
+    equipos.forEach(e => {
+      if (e.Estado && e.Estado.trim() !== '') {
+        set.add(e.Estado.trim())
+      }
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [equipos])
+
+  const getEstadoLabel = (est: string) => {
+    switch (est) {
+      case 'OPERATIVO': return 'Operativo'
+      case 'OPERATIVO_CON_DETALLES': return 'Operativo con Detalles'
+      case 'FUERA_DE_SERVICIO': return 'Fuera de Servicio'
+      case 'MANTENIMIENTO': return 'Mantenimiento'
+      case 'NO_APTO': return 'No Apto'
+      case 'DE_BAJA_OBSOLETO': return 'De Baja / Obsoleto'
+      default: return est
+    }
+  }
 
   const [expandedDetails, setExpandedDetails] = useState<Record<string, Equipo>>({})
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({})
@@ -172,7 +206,38 @@ function EquiposContent() {
   }
 
   const sortedEquipos = React.useMemo(() => {
-    const list = [...equipos]
+    let list = [...equipos]
+
+    // 1. Tipo Filter
+    if (tipo) {
+      list = list.filter(e => e.Tipo === tipo)
+    }
+
+    // 2. Estado Filter
+    if (filterEstado !== 'ALL') {
+      list = list.filter(e => e.Estado === filterEstado)
+    }
+
+    // 3. Responsable Filter
+    if (filterResponsable !== 'ALL') {
+      list = list.filter(e => e.Responsable === filterResponsable)
+    }
+
+    // 4. Search Filter (q)
+    if (q.trim()) {
+      const term = q.toLowerCase().trim()
+      list = list.filter(e => 
+        e.ID_Equipo.toLowerCase().includes(term) ||
+        e.Codigo_Interno.toLowerCase().includes(term) ||
+        e.Nombre_Equipo.toLowerCase().includes(term) ||
+        (e.Responsable && e.Responsable.toLowerCase().includes(term)) ||
+        (e.Marca && e.Marca.toLowerCase().includes(term)) ||
+        (e.Modelo && e.Modelo.toLowerCase().includes(term)) ||
+        (e.Area_Asignada && e.Area_Asignada.toLowerCase().includes(term))
+      )
+    }
+
+    // 5. Sorting
     if (sortBy === 'code-desc') {
       list.sort((a, b) => naturalSort(a.Codigo_Interno, b.Codigo_Interno, true))
     } else if (sortBy === 'code-asc') {
@@ -185,28 +250,16 @@ function EquiposContent() {
       })
     }
     return list
-  }, [equipos, sortBy])
+  }, [equipos, q, tipo, filterEstado, filterResponsable, sortBy])
 
-  const load = useCallback(async (query = '', tipoF = '') => {
+  const load = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (query) params.set('q', query)
-    if (tipoF) params.set('tipo', tipoF)
     try {
-      const r = await fetch('/api/equipos?' + params.toString())
+      const r = await fetch('/api/equipos')
       const data = await r.json()
       
       if (Array.isArray(data)) {
         setEquipos(data)
-        if (query && data.length === 1) {
-          setExpanded(data[0].ID_Equipo)
-        } else if (query) {
-          const exact = data.find((e: Equipo) => 
-            e.Codigo_Interno.toLowerCase() === query.toLowerCase() ||
-            e.ID_Equipo.toLowerCase() === query.toLowerCase()
-          )
-          if (exact) setExpanded(exact.ID_Equipo)
-        }
       } else {
         console.error("API returned non-array data:", data)
         setEquipos([])
@@ -219,14 +272,32 @@ function EquiposContent() {
   }, [])
 
   useEffect(() => {
+    load()
     const qParam = searchParams.get('q')
     if (qParam) {
       setQ(qParam)
-      load(qParam)
-    } else {
-      load()
     }
   }, [searchParams, load])
+
+  useEffect(() => {
+    if (equipos.length > 0 && q) {
+      const exact = equipos.find((e: Equipo) => 
+        e.Codigo_Interno.toLowerCase() === q.toLowerCase() ||
+        e.ID_Equipo.toLowerCase() === q.toLowerCase()
+      )
+      if (exact) {
+        setExpanded(exact.ID_Equipo)
+      }
+    }
+  }, [equipos, q])
+
+  const hasActiveFilters = q !== '' || tipo !== '' || filterEstado !== 'ALL' || filterResponsable !== 'ALL'
+  const handleClearFilters = () => {
+    setQ('')
+    setTipo('')
+    setFilterEstado('ALL')
+    setFilterResponsable('ALL')
+  }
 
   const handleDeBaja = async (id: string, nombre: string) => {
     const motivo = prompt(`¿Estás seguro de que deseas dar de baja o marcar como obsoleto el equipo "${nombre}"? Por favor, indica el motivo:`)
@@ -245,7 +316,7 @@ function EquiposContent() {
       })
     }).then(res => {
       if (!res.ok) throw new Error('Error al actualizar el estado')
-      load(q, tipo)
+      load()
     })
 
     toast.promise(updatePromise, {
@@ -270,7 +341,7 @@ function EquiposContent() {
       })
     }).then(res => {
       if (!res.ok) throw new Error('Error al habilitar el equipo')
-      load(q, tipo)
+      load()
     })
 
     toast.promise(updatePromise, {
@@ -285,7 +356,7 @@ function EquiposContent() {
     
     const deletePromise = fetch(`/api/equipos/${id}`, { method: 'DELETE' }).then(res => {
       if (!res.ok) throw new Error('Error al eliminar')
-      load(q, tipo)
+      load()
     })
 
     toast.promise(deletePromise, {
@@ -302,7 +373,7 @@ function EquiposContent() {
       method: 'DELETE'
     }).then(res => {
       if (!res.ok) throw new Error('Error al eliminar el registro')
-      load(q, tipo)
+      load()
     })
 
     toast.promise(deletePromise, {
@@ -342,25 +413,67 @@ function EquiposContent() {
               <Search size={18} color="var(--text-dim)" />
               <input 
                 type="text" 
-                placeholder="Buscar por ID, nombre o código QR..." 
+                placeholder="Buscar por ID, nombre, responsable o código..." 
                 value={q} 
-                onChange={e => { setQ(e.target.value); load(e.target.value, tipo) }}
+                onChange={e => setQ(e.target.value)}
                 style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', width: '100%', outline: 'none', fontSize: 14 }}
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Filtro:</span>
-              <select 
-                style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-                value={tipo} 
-                onChange={e => { setTipo(e.target.value); load(q, e.target.value) }}
-              >
-                <option value="">Todos los tipos</option>
-                <option value="EQUIPO">Equipos</option>
-                <option value="INSTRUMENTO">Instrumentos</option>
-              </select>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Tipo:</span>
+                <select 
+                  style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  value={tipo} 
+                  onChange={e => setTipo(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value="EQUIPO">Equipos</option>
+                  <option value="INSTRUMENTO">Instrumentos</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Estado:</span>
+                <select 
+                  style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  value={filterEstado} 
+                  onChange={e => setFilterEstado(e.target.value)}
+                >
+                  <option value="ALL">Todos</option>
+                  {uniqueEstados.map(est => (
+                    <option key={est} value={est}>{getEstadoLabel(est)}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Responsable:</span>
+                <select 
+                  style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', maxWidth: 180 }}
+                  value={filterResponsable} 
+                  onChange={e => setFilterResponsable(e.target.value)}
+                >
+                  <option value="ALL">Todos</option>
+                  {uniqueResponsables.map(resp => (
+                    <option key={resp} value={resp}>{resp}</option>
+                  ))}
+                </select>
+              </div>
+
+              {hasActiveFilters && (
+                <button 
+                  className="btn btn-ghost btn-xs" 
+                  style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4, height: 32 }}
+                  onClick={handleClearFilters}
+                >
+                  <RotateCcw size={12} /> Limpiar Filtros
+                </button>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <SlidersHorizontal size={14} /> Ordenar:
               </span>
@@ -369,9 +482,9 @@ function EquiposContent() {
                 value={sortBy} 
                 onChange={e => setSortBy(e.target.value)}
               >
-                <option value="code-desc">Primero los últimos (Código Z-A)</option>
-                <option value="code-asc">Primero los más antiguos (Código A-Z)</option>
-                <option value="deadline">Plazos de verificación (Próximos primero)</option>
+                <option value="code-desc">Código (Z-A)</option>
+                <option value="code-asc">Código (A-Z)</option>
+                <option value="deadline">Próxima Verif. (Cercana)</option>
               </select>
             </div>
           </div>
@@ -861,20 +974,20 @@ function EquiposContent() {
           equipo={modalEquipo.ID_Equipo ? modalEquipo : null}
           equipos={equipos}
           onClose={() => setModalEquipo(null)}
-          onSaved={() => { setModalEquipo(null); load(q, tipo) }}
+          onSaved={() => { setModalEquipo(null); load() }}
         />
       )}
       {showCreateModal && (
         <CreateEquipoModal 
           onClose={() => setShowCreateModal(false)}
-          onSaved={() => { setShowCreateModal(false); load(q, tipo) }}
+          onSaved={() => { setShowCreateModal(false); load() }}
         />
       )}
       {editEquipo && (
         <EditEquipoModal
           equipo={editEquipo}
           onClose={() => setEditEquipo(null)}
-          onSaved={() => { setEditEquipo(null); load(q, tipo) }}
+          onSaved={() => { setEditEquipo(null); load() }}
         />
       )}
       {renewEquipo && (
@@ -889,7 +1002,7 @@ function EquiposContent() {
             fechaVenc: renewEquipo.Fecha_Vencimiento_Certificado ? new Date(renewEquipo.Fecha_Vencimiento_Certificado).toISOString().split('T')[0] : undefined
           }}
           onClose={() => setRenewEquipo(null)}
-          onSaved={() => { setRenewEquipo(null); load(q, tipo) }}
+          onSaved={() => { setRenewEquipo(null); load() }}
         />
       )}
       {modalHistorical && (
@@ -897,7 +1010,7 @@ function EquiposContent() {
           equipo={modalHistorical}
           equipos={equipos}
           onClose={() => setModalHistorical(null)}
-          onSaved={() => { setModalHistorical(null); load(q, tipo) }}
+          onSaved={() => { setModalHistorical(null); load() }}
         />
       )}
       {showHistoricalModal && (
@@ -905,7 +1018,7 @@ function EquiposContent() {
           equipo={null}
           equipos={equipos}
           onClose={() => setShowHistoricalModal(false)}
-          onSaved={() => { setShowHistoricalModal(false); load(q, tipo) }}
+          onSaved={() => { setShowHistoricalModal(false); load() }}
         />
       )}
       {editLog && (
@@ -914,7 +1027,7 @@ function EquiposContent() {
           equipos={equipos}
           logToEdit={editLog}
           onClose={() => setEditLog(null)}
-          onSaved={() => { setEditLog(null); load(q, tipo) }}
+          onSaved={() => { setEditLog(null); load() }}
         />
       )}
       {qrLabelEquipo && (
