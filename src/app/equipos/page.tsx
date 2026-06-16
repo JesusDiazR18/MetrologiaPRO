@@ -96,13 +96,34 @@ function EquiposContent() {
   const searchParams = useSearchParams()
 
   const uniqueResponsables = React.useMemo(() => {
-    const set = new Set<string>()
+    const map = new Map<string, string>() // normalizedKey -> originalName (best representation)
+
+    const getNameScore = (s: string) => {
+      let score = 0
+      // Prefer Title Case words
+      const words = s.split(/\s+/)
+      const isTitleCase = words.every(w => w.length > 0 && w[0] === w[0].toUpperCase() && w.slice(1) === w.slice(1).toLowerCase())
+      if (isTitleCase) score += 10
+      // Prefer having accents/tilde
+      if (/[áéíóúÁÉÍÓÚñÑ]/.test(s)) score += 5
+      return score
+    }
+
     equipos.forEach(e => {
-      if (e.Responsable && e.Responsable.trim() !== '') {
-        set.add(e.Responsable.trim())
+      const resp = e.Responsable?.trim()
+      if (resp) {
+        // Strip accents and convert to uppercase for grouping
+        const norm = resp.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+        const existing = map.get(norm)
+        if (!existing || getNameScore(resp) > getNameScore(existing)) {
+          map.set(norm, resp)
+        }
       }
     })
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
+
+    return Array.from(map.entries())
+      .map(([key, display]) => ({ key, display }))
+      .sort((a, b) => a.display.localeCompare(b.display))
   }, [equipos])
 
   const uniqueEstados = React.useMemo(() => {
@@ -220,7 +241,11 @@ function EquiposContent() {
 
     // 3. Responsable Filter
     if (filterResponsable !== 'ALL') {
-      list = list.filter(e => e.Responsable === filterResponsable)
+      list = list.filter(e => {
+        if (!e.Responsable) return false
+        const norm = e.Responsable.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+        return norm === filterResponsable
+      })
     }
 
     // 4. Search Filter (q)
@@ -457,7 +482,7 @@ function EquiposContent() {
                 >
                   <option value="ALL">Todos</option>
                   {uniqueResponsables.map(resp => (
-                    <option key={resp} value={resp}>{resp}</option>
+                    <option key={resp.key} value={resp.key}>{resp.display}</option>
                   ))}
                 </select>
               </div>
