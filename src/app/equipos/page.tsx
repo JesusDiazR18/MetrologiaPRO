@@ -95,6 +95,20 @@ function EquiposContent() {
   const [sortBy, setSortBy] = useState<string>('code-desc')
   const searchParams = useSearchParams()
 
+  const getFuzzyKey = (s: string): string => {
+    let k = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim()
+    k = k.replace(/\s+/g, ' ')
+    k = k.replace(/H/g, '')
+    k = k.replace(/Y/g, 'I')
+    k = k.replace(/V/g, 'B')
+    k = k.replace(/GE/g, 'JE').replace(/GI/g, 'JI')
+    k = k.replace(/Z/g, 'S')
+    k = k.replace(/CE/g, 'SE').replace(/CI/g, 'SI')
+    k = k.replace(/K/g, 'C').replace(/Q/g, 'C')
+    k = k.replace(/NN+/g, 'N').replace(/CC+/g, 'C').replace(/PP+/g, 'P').replace(/TT+/g, 'T')
+    return k
+  }
+
   const uniqueResponsables = React.useMemo(() => {
     const map = new Map<string, string>() // normalizedKey -> originalName (best representation)
 
@@ -112,8 +126,7 @@ function EquiposContent() {
     equipos.forEach(e => {
       const resp = e.Responsable?.trim()
       if (resp) {
-        // Strip accents and convert to uppercase for grouping
-        const norm = resp.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+        const norm = getFuzzyKey(resp)
         const existing = map.get(norm)
         if (!existing || getNameScore(resp) > getNameScore(existing)) {
           map.set(norm, resp)
@@ -243,8 +256,7 @@ function EquiposContent() {
     if (filterResponsable !== 'ALL') {
       list = list.filter(e => {
         if (!e.Responsable) return false
-        const norm = e.Responsable.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
-        return norm === filterResponsable
+        return getFuzzyKey(e.Responsable) === filterResponsable
       })
     }
 
