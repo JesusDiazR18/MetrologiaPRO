@@ -104,25 +104,27 @@ export default function QRCodesPage() {
     return `<!DOCTYPE html><html><head>
       <title>QMS - Impresión de Etiquetas</title>
       <style>
-        @page { margin: 0; size: auto; }
+        @page { margin: 12mm 10mm; size: auto; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #fff; padding: 15mm; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #fff; padding: 0; }
         .grid { 
           display: grid; 
           grid-template-columns: repeat(${printCols}, 1fr); 
           gap: ${printGaps}mm; 
           justify-items: center;
+          padding: 4mm;
         }
         .label { 
           width: ${sizeMap.w}mm; 
           height: ${sizeMap.h}mm; 
-          border: 1px solid #eee; 
+          border: 1px solid #ddd; 
           padding: 3mm; 
           display: flex; 
           flex-direction: ${printSize === 'MINI' ? 'row' : 'column'}; 
           align-items: center; 
           justify-content: center; 
           gap: 3mm; 
+          break-inside: avoid;
           page-break-inside: avoid;
           background: #fff;
           border-radius: 2mm;
@@ -131,10 +133,6 @@ export default function QRCodesPage() {
         .info { text-align: ${printSize === 'MINI' ? 'left' : 'center'}; flex: 1; }
         .info-code { font-weight: 900; color: #000; letter-spacing: -0.02em; text-align: center; margin-bottom: 2px; }
         .info-name { font-weight: 700; color: #444; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-align: center; }
-        @media print {
-          body { padding: 10mm; }
-          .label { border: 1px solid #eee; }
-        }
       </style>
     </head><body><div class="grid">${labelsHTML}</div></body></html>`
   }
