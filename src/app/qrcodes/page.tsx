@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { QrCode, Printer, Search, CheckCircle2, Settings2, Trash2, X, Scaling, Grid3X3, Layers } from 'lucide-react'
-import { calcularSemaforo, semaforoHex } from '@/lib/metrologia'
+import { calcularSemaforo, semaforoHex, getScanUrl } from '@/lib/metrologia'
 import { QRCodeSVG } from 'qrcode.react'
 
 interface Equipo {
@@ -78,7 +78,6 @@ export default function QRCodesPage() {
   const clearSelection = () => setSelectedIds(new Set())
 
   function generatePrintHTML(targetEquipos: Equipo[]) {
-    const scanUrlBase = `${window.location.protocol}//${window.location.host}/escaneo?id=`
     const sizeMap = {
       STANDARD: { w: 60, h: 40, qr: 100, fontCode: 14, fontName: 8 },
       MINI: { w: 30, h: 18, qr: 50, fontCode: 9, fontName: 6 }
@@ -86,10 +85,8 @@ export default function QRCodesPage() {
 
     let labelsHTML = ''
     targetEquipos.forEach(e => {
-      const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
-      const statusLabel = semaforo === 'VERDE' ? 'AL DÍA' : semaforo === 'AMARILLO' ? 'PRÓX. VENC.' : (e.Estado === 'OBSOLETO' ? 'BAJA' : 'VENCIDO')
-      const statusColor = semaforoHex(semaforo)
-      const qrData = encodeURIComponent(scanUrlBase + e.Codigo_Interno)
+      const qrUrl = getScanUrl(e.Codigo_Interno)
+      const qrData = encodeURIComponent(qrUrl)
       
       labelsHTML += `
         <div class="label">
@@ -97,10 +94,7 @@ export default function QRCodesPage() {
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}" style="width: ${sizeMap.qr}px; height: ${sizeMap.qr}px;" />
           </div>
           <div class="info">
-            <div class="header-row">
-              <span class="info-code" style="font-size: ${sizeMap.fontCode}pt">${e.Codigo_Interno}</span>
-              ${printSize === 'STANDARD' ? `<span class="status-badge" style="border-color: ${statusColor}; color: ${statusColor}">${statusLabel}</span>` : ''}
-            </div>
+            <div class="info-code" style="font-size: ${sizeMap.fontCode}pt">${e.Codigo_Interno}</div>
             <div class="info-name" style="font-size: ${sizeMap.fontName}pt">${e.Nombre_Equipo}</div>
           </div>
         </div>
@@ -135,10 +129,8 @@ export default function QRCodesPage() {
         }
         .qr-wrap { display: flex; align-items: center; justify-content: center; }
         .info { text-align: ${printSize === 'MINI' ? 'left' : 'center'}; flex: 1; }
-        .header-row { display: flex; align-items: center; justify-content: ${printSize === 'MINI' ? 'flex-start' : 'center'}; gap: 6px; margin-bottom: 2px; }
-        .info-code { font-weight: 900; color: #000; letter-spacing: -0.02em; }
-        .status-badge { font-size: 6pt; font-weight: 800; border: 1px solid #000; padding: 1px 4px; border-radius: 4px; text-transform: uppercase; }
-        .info-name { font-weight: 700; color: #444; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .info-code { font-weight: 900; color: #000; letter-spacing: -0.02em; text-align: center; margin-bottom: 2px; }
+        .info-name { font-weight: 700; color: #444; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-align: center; }
         @media print {
           body { padding: 10mm; }
           .label { border: 1px solid #eee; }
@@ -297,7 +289,7 @@ export default function QRCodesPage() {
             const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
             const statusColor = semaforoHex(semaforo)
             const isSelected = selectedIds.has(e.ID_Equipo)
-            const scanUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/escaneo?id=${e.Codigo_Interno}`
+            const scanUrl = getScanUrl(e.Codigo_Interno)
 
             return (
               <div 

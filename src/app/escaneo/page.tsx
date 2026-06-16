@@ -165,7 +165,11 @@ function EscaneoContent() {
   const handleOnScanSuccess = async (decodedText: string) => {
     let searchCode = decodedText
     try {
-      if (decodedText.includes('?id=')) {
+      if (decodedText.includes('/visor/')) {
+        const parts = decodedText.split('/visor/')
+        const code = parts[parts.length - 1].split('?')[0]
+        if (code) searchCode = code
+      } else if (decodedText.includes('?id=')) {
         const urlParams = new URLSearchParams(decodedText.split('?')[1])
         const id = urlParams.get('id')
         if (id) searchCode = id
