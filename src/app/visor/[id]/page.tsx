@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { PrismaClient } from '@prisma/client'
 import { notFound } from 'next/navigation'
 import { calcularSemaforo, semaforoLabel, semaforoHex, formatFecha, diasRestantes } from '@/lib/metrologia'
+import VisorVerificationButton from '@/components/VisorVerificationButton'
 
 const prisma = new PrismaClient()
 
@@ -382,6 +383,13 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
             </div>
           </div>
         </div>
+
+        {/* Acciones */}
+        {!isPatron && (
+          <div style={{ padding: '0 24px 20px' }}>
+            <VisorVerificationButton equipo={assetFound as any} />
+          </div>
+        )}
         
         <div style={{ background: '#f1f5f9', padding: '16px', textAlign: 'center', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderTop: '1px solid #e2e8f0' }}>
           POLIFUSION METROLOGY PRO — MODO LECTURA
