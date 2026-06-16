@@ -33,20 +33,16 @@ export default function QRLabelModal({ asset: a, onClose }: Props) {
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .label { width: 300px; padding: 24px; border: 3px solid ${statusColor}; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+        .label { width: 300px; padding: 24px; border: 3px solid #0f172a; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
         .qr-wrap { background: #fff; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
         .info-code { font-size: 32px; font-weight: 900; color: #0f172a; line-height: 1; }
-        .status-badge { padding: 6px 14px; border-radius: 30px; font-size: 11px; font-weight: 800; color: #fff; background: ${statusColor}; text-transform: uppercase; }
         .info-name { font-size: 16px; font-weight: 700; color: #475569; line-height: 1.2; margin-top: 4px; }
         .footer { margin-top: 12px; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
       </style>
     </head><body>
       <div class="label">
         <div class="qr-wrap">${svgHtml}</div>
-        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-          <span class="info-code">${a.code}</span>
-          <span class="status-badge">${statusLabel}</span>
-        </div>
+        <div class="info-code">${a.code}</div>
         <div class="info-name">${a.name}</div>
         <div class="footer">Polifusion Metrology PRO</div>
       </div>
@@ -79,11 +75,11 @@ export default function QRLabelModal({ asset: a, onClose }: Props) {
         {/* Preview Area - Compacta */}
         <div style={{ padding: '24px', background: '#f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ 
-            background: '#fff', borderRadius: 20, border: `3px solid ${statusColor}`, 
+            background: '#fff', borderRadius: 20, border: '3px solid #0f172a', 
             padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
             boxShadow: '0 10px 25px rgba(0,0,0,0.05)', width: '100%'
           }}>
-            {/* QR - Más Grande */}
+            {/* QR */}
             <div style={{ background: '#fff', padding: '12px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
               <QRCodeSVG
                 id="qr-label-svg"
@@ -96,17 +92,9 @@ export default function QRLabelModal({ asset: a, onClose }: Props) {
               />
             </div>
 
-            {/* Simple Info - Estado al lado del código */}
+            {/* Código y Nombre solamente */}
             <div style={{ textAlign: 'center', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
-                <span style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{a.code}</span>
-                <span style={{ 
-                  display: 'inline-block', padding: '6px 14px', borderRadius: '30px', 
-                  color: '#fff', background: statusColor, fontSize: '11px', fontWeight: 800, letterSpacing: '0.05em',
-                  boxShadow: `0 4px 10px ${statusColor}44`,
-                  textTransform: 'uppercase'
-                }}>{statusLabel}</span>
-              </div>
+              <div style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', lineHeight: 1, marginBottom: 6 }}>{a.code}</div>
               <div style={{ fontSize: '16px', color: '#64748b', fontWeight: 700, lineHeight: 1.3, maxWidth: '300px', margin: '0 auto' }}>{a.name}</div>
             </div>
           </div>

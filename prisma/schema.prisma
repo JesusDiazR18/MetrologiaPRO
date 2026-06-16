@@ -135,4 +135,5 @@ model Usuario {
   Nombre        String
   Rol           String  // Admin | Técnico | Lector
   Firma_Imagen  String?
+  Contrasena    String? // Contraseña para autenticación de verificaciones
 }

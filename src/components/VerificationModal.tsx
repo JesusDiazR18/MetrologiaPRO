@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
 import { 
   CheckCircle2, XCircle, User, FileText, 
-  Calculator, AlertTriangle, Settings2, Activity, ClipboardList
+  Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Lock, LogIn
 } from 'lucide-react'
 
 // Componente de Selección Búsqueda Rápida (Combobox)
@@ -198,6 +198,14 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  // Auth state
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authUserName, setAuthUserName] = useState('')
   const [multimagnitudData, setMultimagnitudData] = useState<Record<string, {
     FK_ID_Patron_Usado: string;
     Mediciones: { patron: string, instrumento: string }[];
@@ -330,10 +338,53 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   // Filtrar patrones si el equipo tiene magnitud
   const equipoMags = selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
 
-  async function handleSubmit(ev: React.FormEvent) {
+  async function handleAuthAndSubmit(ev: React.FormEvent) {
     ev.preventDefault()
     if (!selectedId) { setError('Selecciona un equipo'); return }
     if (!tecnico) { setError('El nombre del técnico es requerido'); return }
+
+    // Si aún no está autenticado, mostrar el prompt de autenticación
+    if (!isAuthenticated) {
+      setShowAuthPrompt(true)
+      setAuthError('')
+      return
+    }
+
+    // Si ya está autenticado, proceder con el guardado
+    await doSaveVerification()
+  }
+
+  async function handleAuthSubmit() {
+    if (!authEmail.trim() || !authPassword.trim()) {
+      setAuthError('Ingrese usuario y contraseña')
+      return
+    }
+    setAuthLoading(true)
+    setAuthError('')
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail.trim(), contrasena: authPassword })
+      })
+      const data = await res.json()
+      if (res.ok && data.authenticated) {
+        setIsAuthenticated(true)
+        setAuthUserName(data.nombre)
+        setShowAuthPrompt(false)
+        // Proceder directamente a guardar
+        await doSaveVerification()
+      } else {
+        setAuthError(data.error || 'Credenciales inválidas')
+      }
+    } catch {
+      setAuthError('Error de conexión')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  async function doSaveVerification() {
 
     if (tipoVerif === 'CALIBRACION') {
       if (equipoMags.length > 1) {
@@ -383,6 +434,8 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       }
     }
     
+    if (!selectedId) { setError('Selecciona un equipo'); return }
+    if (!tecnico) { setError('El nombre del técnico es requerido'); return }
     setSaving(true); setError('')
     try {
       let photoBase64 = ''
@@ -467,7 +520,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+      <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' }}>
         <div className="modal-header" style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 42, height: 42, background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', borderRadius: 12, display: 'grid', placeItems: 'center', boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)' }}>
@@ -538,7 +591,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <form onSubmit={handleAuthAndSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
             {error && (
               <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: 12, fontSize: 13, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -993,13 +1046,108 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             </div>
           </div>
 
-          <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12, alignItems: 'center' }}>
+            {isAuthenticated && (
+              <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#10b981', fontWeight: 700 }}>
+                <CheckCircle2 size={14} /> Autenticado como {authUserName}
+              </div>
+            )}
             <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-save-premium" disabled={saving}>
-              {saving ? 'Guardando...' : <><CheckCircle2 size={18} /> Guardar Verificación</>}
+              {saving ? 'Guardando...' : <><Lock size={16} /> Registrar Verificación</>}
             </button>
           </div>
         </form>
+
+        {/* Auth Overlay */}
+        {showAuthPrompt && (
+          <div style={{
+            position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3100, borderRadius: 24, padding: 24
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: 20, padding: '32px', width: '100%', maxWidth: 380,
+              boxShadow: '0 25px 50px rgba(0,0,0,0.3)', animation: 'slideUp 0.3s ease-out'
+            }}>
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', borderRadius: 16, display: 'grid', placeItems: 'center', margin: '0 auto 16px', boxShadow: '0 12px 24px rgba(14, 165, 233, 0.3)' }}>
+                  <Lock size={24} color="#fff" />
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Autenticación Requerida</h3>
+                <p style={{ fontSize: 12, color: '#64748b', fontWeight: 500, lineHeight: 1.5 }}>
+                  Ingrese sus credenciales para autorizar este registro de verificación.
+                </p>
+              </div>
+
+              {authError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertTriangle size={14} color="#ef4444" />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#dc2626' }}>{authError}</span>
+                </div>
+              )}
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Email de Usuario</label>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={e => setAuthEmail(e.target.value)}
+                  placeholder="usuario@empresa.com"
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: 12, border: '2px solid #f1f5f9',
+                    background: '#f8fafc', fontSize: 14, fontWeight: 600, color: '#1e293b', outline: 'none',
+                    transition: 'all 0.2s', boxSizing: 'border-box'
+                  }}
+                  onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 4px rgba(14, 165, 233, 0.1)' }}
+                  onBlur={e => { e.target.style.borderColor = '#f1f5f9'; e.target.style.boxShadow = 'none' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Contraseña</label>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={e => setAuthPassword(e.target.value)}
+                  placeholder="••••••••"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAuthSubmit() } }}
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: 12, border: '2px solid #f1f5f9',
+                    background: '#f8fafc', fontSize: 14, fontWeight: 600, color: '#1e293b', outline: 'none',
+                    transition: 'all 0.2s', boxSizing: 'border-box'
+                  }}
+                  onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 4px rgba(14, 165, 233, 0.1)' }}
+                  onBlur={e => { e.target.style.borderColor = '#f1f5f9'; e.target.style.boxShadow = 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowAuthPrompt(false); setAuthError('') }}
+                  style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', fontWeight: 700, color: '#64748b', cursor: 'pointer', fontSize: 13 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAuthSubmit}
+                  disabled={authLoading}
+                  style={{
+                    flex: 1.5, padding: '12px', borderRadius: 12, border: 'none',
+                    background: authLoading ? '#94a3b8' : 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                    fontWeight: 800, color: '#fff', cursor: authLoading ? 'not-allowed' : 'pointer', fontSize: 13,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    boxShadow: '0 8px 16px rgba(14, 165, 233, 0.3)', transition: 'all 0.2s'
+                  }}
+                >
+                  {authLoading ? 'Verificando...' : <><LogIn size={16} /> Autorizar</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <style jsx>{`
