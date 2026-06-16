@@ -6,6 +6,7 @@ const prisma = new PrismaClient()
 /**
  * POST /api/auth/verify
  * Verifica credenciales de usuario para autorizar registros de verificación.
+ * Solo usuarios con Rol 'Admin' o 'Técnico' y contraseña válida pueden autorizar.
  * Body: { email: string, contrasena: string }
  */
 export async function POST(req: Request) {
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { Email: email },
+      where: { Email: email.trim() },
       select: {
         Email: true,
         Nombre: true,
@@ -31,24 +32,17 @@ export async function POST(req: Request) {
 
     if (!usuario) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' },
+        { error: 'Usuario no autorizado' },
         { status: 401 }
       )
     }
 
-    // Si el usuario no tiene contraseña configurada, permitir acceso (primera vez)
+    // Solo usuarios con contraseña configurada pueden autorizar
     if (!usuario.Contrasena) {
-      // Guardar la contraseña proporcionada como la nueva contraseña
-      await prisma.usuario.update({
-        where: { Email: email },
-        data: { Contrasena: contrasena }
-      })
-      return NextResponse.json({
-        authenticated: true,
-        nombre: usuario.Nombre,
-        rol: usuario.Rol,
-        message: 'Contraseña configurada exitosamente'
-      })
+      return NextResponse.json(
+        { error: 'Usuario sin permisos de verificación. Contacte al administrador.' },
+        { status: 403 }
+      )
     }
 
     // Verificar contraseña
