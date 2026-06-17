@@ -385,9 +385,11 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
         </div>
 
         {/* Acciones */}
-        <div style={{ padding: '0 24px 20px' }}>
-          <VisorVerificationButton equipo={assetFound as any} isPatron={isPatron} />
-        </div>
+        {!isPatron && (
+          <div style={{ padding: '0 24px 20px' }}>
+            <VisorVerificationButton equipo={assetFound as any} />
+          </div>
+        )}
         
         <div style={{ background: '#f1f5f9', padding: '16px', textAlign: 'center', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderTop: '1px solid #e2e8f0' }}>
           POLIFUSION METROLOGY PRO — MODO LECTURA

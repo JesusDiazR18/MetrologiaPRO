@@ -3,8 +3,9 @@ import { useState, useEffect, useRef } from 'react'
 import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
 import { 
   CheckCircle2, XCircle, User, FileText, 
-  Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Lock, LogIn
+  Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Lock, LogIn, BookOpen
 } from 'lucide-react'
+import ProcedureModal from '@/components/ProcedureModal'
 
 // Componente de Selección Búsqueda Rápida (Combobox)
 function SearchableSelect({ 
@@ -185,6 +186,7 @@ interface Props {
 
 export default function VerificationModal({ equipo, equipos, onClose, onSaved }: Props) {
   const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
+  const [showProcedure, setShowProcedure] = useState(false)
   const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo ?? '')
   const [mediciones, setMediciones] = useState<{ patron: string, instrumento: string }[]>([
     { patron: '', instrumento: '' }
@@ -1052,6 +1054,23 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                 <CheckCircle2 size={14} /> Autenticado como {authUserName}
               </div>
             )}
+            {selectedEquipo?.Tipo === 'EQUIPO' && (
+              <button 
+                type="button" 
+                className="btn-cancel"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  border: '2px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#334155',
+                }}
+                onClick={() => setShowProcedure(true)}
+              >
+                <BookOpen size={14} /> Ver Procedimiento
+              </button>
+            )}
             <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-save-premium" disabled={saving}>
               {saving ? 'Guardando...' : <><Lock size={16} /> Registrar Verificación</>}
@@ -1149,6 +1168,13 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
           </div>
         )}
       </div>
+
+      {showProcedure && selectedEquipo && (
+        <ProcedureModal 
+          equipo={selectedEquipo}
+          onClose={() => setShowProcedure(false)}
+        />
+      )}
 
       <style jsx>{`
         .modal-overlay {
