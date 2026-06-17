@@ -48,6 +48,7 @@ model InstrumentoEquipo {
   Insumos                       String?
 
   historiales               HistorialVerificacion[]
+  documentosEnsayo          DocumentoEnsayo[]
 
   @@index([Codigo_Interno])
   @@index([Tipo])
@@ -136,4 +137,20 @@ model Usuario {
   Rol           String  // Admin | Técnico | Lector
   Firma_Imagen  String?
   Contrasena    String? // Contraseña para autenticación de verificaciones
+}
+
+// ─────────────────────────────────────────────
+//  DOCUMENTOS DE ENSAYO
+// ─────────────────────────────────────────────
+model DocumentoEnsayo {
+  ID_Ensayo      String            @id @default(uuid())
+  Nombre_Ensayo  String
+  Norma          String?
+  PDF_Url        String            // Base64 encoded string: data:application/pdf;base64,...
+  FK_ID_Equipo   String
+  Creado_En      DateTime          @default(now())
+
+  equipo         InstrumentoEquipo @relation(fields: [FK_ID_Equipo], references: [ID_Equipo], onDelete: Cascade)
+
+  @@index([FK_ID_Equipo])
 }

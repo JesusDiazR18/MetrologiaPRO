@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, BookOpen } from 'lucide-react'
 import VerificationModal from '@/components/VerificationModal'
+import { toast } from 'react-hot-toast'
 
 interface Equipo {
   ID_Equipo: string
@@ -50,38 +51,79 @@ export default function VisorVerificationButton({ equipo }: Props) {
 
   return (
     <>
-      <button 
-        onClick={handleOpen}
-        disabled={loading}
-        style={{
-          width: '100%',
-          padding: '14px',
-          background: '#0284c7', // Sky blue
-          color: '#fff',
-          border: 'none',
-          borderRadius: '16px',
-          fontWeight: 800,
-          fontSize: '15px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px',
-          boxShadow: '0 10px 15px -3px rgba(2, 132, 199, 0.3)',
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#0369a1'
-          e.currentTarget.style.transform = 'translateY(-1px)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#0284c7'
-          e.currentTarget.style.transform = 'none'
-        }}
-      >
-        <ShieldCheck size={18} />
-        {loading ? 'Cargando formulario...' : 'Registrar Verificación'}
-      </button>
+      <div style={{ display: 'flex', gap: '10px', width: '100%', flexDirection: 'row' }}>
+        {equipo.Tipo === 'EQUIPO' && (
+          <button 
+            onClick={() => {
+              const element = document.getElementById('documentos-ensayo-section')
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth' })
+              } else {
+                toast.error('Este equipo no tiene documentos de ensayo asociados.')
+              }
+            }}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: '#ffffff',
+              color: '#334155',
+              border: '2px solid #cbd5e1',
+              borderRadius: '14px',
+              fontWeight: 800,
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f8fafc'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff'
+              e.currentTarget.style.transform = 'none'
+            }}
+          >
+            <BookOpen size={16} color="var(--accent)" />
+            Procedimiento
+          </button>
+        )}
+        <button 
+          onClick={handleOpen}
+          disabled={loading}
+          style={{
+            flex: equipo.Tipo === 'EQUIPO' ? 1.4 : 1,
+            padding: '12px',
+            background: '#0284c7', // Sky blue
+            color: '#fff',
+            border: 'none',
+            borderRadius: '14px',
+            fontWeight: 800,
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 8px 12px -3px rgba(2, 132, 199, 0.25)',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#0369a1'
+            e.currentTarget.style.transform = 'translateY(-1px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#0284c7'
+            e.currentTarget.style.transform = 'none'
+          }}
+        >
+          <ShieldCheck size={16} />
+          {loading ? 'Cargando...' : 'Verificar Activo'}
+        </button>
+      </div>
 
       {showModal && (
         <VerificationModal

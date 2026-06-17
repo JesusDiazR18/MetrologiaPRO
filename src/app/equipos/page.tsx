@@ -15,6 +15,7 @@ import EditEquipoModal from '@/components/EditEquipoModal'
 import RenewCertModal from '@/components/RenewCertModal'
 import QRLabelModal from '@/components/QRLabelModal'
 import HistoricalVerificationModal from '@/components/HistoricalVerificationModal'
+import EquipmentAssaysManager from '@/components/EquipmentAssaysManager'
 import { toast } from 'react-hot-toast'
 
 interface Equipo {
@@ -797,6 +798,13 @@ function EquiposContent() {
                                   </div>
                                 </div>
                               </div>
+
+                              {details.Tipo === 'EQUIPO' && (
+                                <EquipmentAssaysManager 
+                                  equipoId={details.ID_Equipo}
+                                  equipoNombre={details.Nombre_Equipo}
+                                />
+                              )}
 
                               <div className="card" style={{ overflow: 'hidden', marginTop: 24, background: 'rgba(255,255,255,0.02)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', gap: 12 }}>

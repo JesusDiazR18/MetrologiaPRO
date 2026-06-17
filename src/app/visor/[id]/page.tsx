@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { notFound } from 'next/navigation'
 import { calcularSemaforo, semaforoLabel, semaforoHex, formatFecha, diasRestantes } from '@/lib/metrologia'
 import VisorVerificationButton from '@/components/VisorVerificationButton'
+import VisorAssaysList from '@/components/VisorAssaysList'
 
 const prisma = new PrismaClient()
 
@@ -29,6 +30,9 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
           Tipo_Verificacion: true,
           Observaciones: true,
         }
+      },
+      documentosEnsayo: {
+        orderBy: { Creado_En: 'desc' }
       }
     }
   })
@@ -383,6 +387,18 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
             </div>
           </div>
         </div>
+
+        {/* Documentos de Ensayo */}
+        {assetFound.Tipo === 'EQUIPO' && (
+          <div id="documentos-ensayo-section" style={{ padding: '0 24px 24px' }}>
+            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '16px' }}>
+              <h3 style={{ fontSize: 12, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🧪 Documentos de Ensayo (Procedimientos)
+              </h3>
+              <VisorAssaysList documentos={(assetFound as any).documentosEnsayo || []} />
+            </div>
+          </div>
+        )}
 
         {/* Acciones */}
         {!isPatron && (

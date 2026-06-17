@@ -21,6 +21,9 @@ export async function GET(
               }
             }
           }
+        },
+        documentosEnsayo: {
+          orderBy: { Creado_En: 'desc' }
         }
       }
     })
