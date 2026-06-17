@@ -672,34 +672,36 @@ function EquiposContent() {
                               )}
 
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', animation: 'slideDown 0.3s ease-out' }}>
-                                <div 
-                                  className="card" 
-                                  style={{ padding: 20, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.2s', minHeight: 180 }}
-                                  onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(details) }}
-                                  title="Haz clic para ver e imprimir la etiqueta"
-                                >
-                                  <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
-                                    <QRCodeSVG
-                                      value={getScanUrl(details.ID_Equipo)}
-                                      size={84}
-                                      bgColor="#ffffff"
-                                      fgColor="#0f172a"
-                                      level="H"
-                                      style={{ display: 'block', borderRadius: 4 }}
-                                    />
+                                {details.Tipo === 'EQUIPO' && (
+                                  <div 
+                                    className="card" 
+                                    style={{ padding: 20, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.2s', minHeight: 180 }}
+                                    onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(details) }}
+                                    title="Haz clic para ver e imprimir la etiqueta"
+                                  >
+                                    <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
+                                      <QRCodeSVG
+                                        value={getScanUrl(details.ID_Equipo)}
+                                        size={84}
+                                        bgColor="#ffffff"
+                                        fgColor="#0f172a"
+                                        level="H"
+                                        style={{ display: 'block', borderRadius: 4 }}
+                                      />
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', marginBottom: 4 }}>CÓDIGO DIGITAL QR</div>
+                                      <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, marginBottom: 8 }}>🖨️ Clic para imprimir etiqueta</div>
+                                      <button 
+                                        className="btn btn-ghost btn-xs" 
+                                        style={{ fontSize: 10, color: 'var(--accent)', border: '1px solid var(--accent-dim)' }}
+                                        onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}
+                                      >
+                                        📄 Descargar Ficha PDF
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', marginBottom: 4 }}>CÓDIGO DIGITAL QR</div>
-                                    <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, marginBottom: 8 }}>🖨️ Clic para imprimir etiqueta</div>
-                                    <button 
-                                      className="btn btn-ghost btn-xs" 
-                                      style={{ fontSize: 10, color: 'var(--accent)', border: '1px solid var(--accent-dim)' }}
-                                      onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}
-                                    >
-                                      📄 Descargar Ficha PDF
-                                    </button>
-                                  </div>
-                                </div>
+                                )}
 
                                 <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -776,6 +778,11 @@ function EquiposContent() {
                                     <span className="spec-value" style={{ color: detailsStatusColor }}>{details.Estado}</span>
                                   </div>
                                   <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
+                                    {details.Tipo !== 'EQUIPO' && (
+                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}>
+                                        📄 Ficha PDF
+                                      </button>
+                                    )}
                                     <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(details) }}>
                                       <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
                                     </button>

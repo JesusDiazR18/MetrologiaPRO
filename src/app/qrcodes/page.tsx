@@ -18,7 +18,6 @@ export default function QRCodesPage() {
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<'ALL' | 'EQUIPO' | 'INSTRUMENTO'>('ALL')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showPrintOptions, setShowPrintOptions] = useState(false)
   
@@ -34,7 +33,7 @@ export default function QRCodesPage() {
       .then(data => {
         if (active) {
           if (Array.isArray(data)) {
-            setEquipos(data)
+            setEquipos(data.filter(e => e.Tipo === 'EQUIPO'))
           } else {
             console.error("QR Codes API returned non-array:", data)
             setEquipos([])
@@ -58,8 +57,7 @@ export default function QRCodesPage() {
       e.Codigo_Interno.toLowerCase().includes(search.toLowerCase()) ||
       e.Nombre_Equipo.toLowerCase().includes(search.toLowerCase()) ||
       (e.Area_Asignada ?? '').toLowerCase().includes(search.toLowerCase())
-    const matchFilter = filter === 'ALL' || e.Tipo === filter
-    return matchSearch && matchFilter
+    return matchSearch
   })
 
   const toggleSelect = (id: string) => {
@@ -165,25 +163,6 @@ export default function QRCodesPage() {
               <button onClick={clearSelection} style={{ background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer' }}><X size={14} /></button>
             </div>
           )}
-          
-          <div className="filter-group-premium" style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 14 }}>
-            {(['ALL', 'EQUIPO', 'INSTRUMENTO'] as const).map(f => (
-              <button
-                key={f}
-                className={`filter-tab ${filter === f ? 'active' : ''}`}
-                onClick={() => setFilter(f)}
-                style={{
-                  border: 'none', background: filter === f ? '#fff' : 'transparent',
-                  padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-                  color: filter === f ? '#0f172a' : '#64748b', cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: filter === f ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
-                }}
-              >
-                {f === 'ALL' ? 'Todos' : f === 'EQUIPO' ? 'Equipos' : 'Instr.'}
-              </button>
-            ))}
-          </div>
-
           <button 
             className="btn-print-master" 
             onClick={() => setShowPrintOptions(!showPrintOptions)}

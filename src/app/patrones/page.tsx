@@ -3,11 +3,9 @@ import React, { useEffect, useState } from 'react'
 import { FlaskConical, Plus, CheckCircle, XCircle, AlertCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit, History } from 'lucide-react'
 import { formatFecha, getScanUrl } from '@/lib/metrologia'
 import { generatePatronSheetPDF } from '@/lib/reports'
-import { QRCodeSVG } from 'qrcode.react'
 import CreatePatronModal from '@/components/CreatePatronModal'
 import EditPatronModal from '@/components/EditPatronModal'
 import RenewCertModal from '@/components/RenewCertModal'
-import QRLabelModal from '@/components/QRLabelModal'
 import PatronCalibrationHistoryModal from '@/components/PatronCalibrationHistoryModal'
 import { toast } from 'react-hot-toast'
 
@@ -34,7 +32,6 @@ export default function PatronesPage() {
   const [editPatron, setEditPatron] = useState<Patron | null>(null)
   const [renewPatron, setRenewPatron] = useState<Patron | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [qrLabelAsset, setQrLabelAsset] = useState<any | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [historialPatron, setHistorialPatron] = useState<Patron | null>(null)
 
@@ -335,62 +332,14 @@ export default function PatronesPage() {
                           const details = expandedDetails[p.ID_Patron] || p
                           const detailsStatusColor = details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'
                           return (
-                            <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap' }}>
-                          <div 
-                            className="card" 
-                            style={{ 
-                              background: 'var(--page-bg-soft)', 
-                              padding: 24, 
-                              borderRadius: 20, 
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              textAlign: 'center',
-                              gap: 16,
-                              width: 'clamp(200px, 100%, 240px)',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              margin: '0 auto'
-                            }}
-                            onClick={ev => { ev.stopPropagation(); setQrLabelAsset({
-                              id: details.ID_Patron,
-                              code: details.Codigo,
-                              name: details.Nombre_Patron,
-                              status: details.Estado_Vigencia,
-                              statusLabel: details.Estado_Vigencia === 'VIGENTE' ? 'AL DÍA' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? 'SIN CERT' : 'VENCIDO',
-                              statusColor: details.Estado_Vigencia === 'VIGENTE' ? '#10b981' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : '#ef4444'
-                            })}}
-                            title="Haz clic para ver e imprimir la etiqueta"
-                          >
-                            <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)' }}>
-                              <QRCodeSVG
-                                value={getScanUrl(details.Codigo)}
-                                size={120}
-                                bgColor="#ffffff"
-                                fgColor="#0f172a"
-                                level="H"
-                                style={{ display: 'block', borderRadius: 4 }}
-                              />
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--cyan)', marginBottom: 4, textTransform: 'uppercase' }}>CÓDIGO DIGITAL QR</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                <div style={{ fontSize: 10, color: 'var(--cyan)', fontWeight: 600, background: 'var(--cyan-dim)', padding: '3px 10px', borderRadius: 999 }}>🖨️ Clic para imprimir etiqueta</div>
-                                <button 
-                                  className="btn btn-ghost btn-sm" 
-                                  style={{ fontSize: 10, padding: '4px 8px', border: '1px solid var(--cyan-dim)', color: 'var(--cyan)' }}
-                                  onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(details); }}
-                                >
-                                  📄 Descargar Ficha PDF
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                          
+                            <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap', width: '100%' }}>
                           <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 12 }}>
                               <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>Especificaciones y Trazabilidad</h4>
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(details); }}>
+                                  📄 Ficha PDF
+                                </button>
                                 <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(details) }}>
                                   <History size={12} style={{ display: 'inline', marginRight: 4 }} /> Historial Cal.
                                 </button>
@@ -493,19 +442,7 @@ export default function PatronesPage() {
           onSaved={() => { setHistorialPatron(null); loadPatrones() }}
         />
       )}
-      {qrLabelAsset && (
-        <QRLabelModal
-          asset={{
-            id: qrLabelAsset.id,
-            code: qrLabelAsset.code,
-            name: qrLabelAsset.name,
-            status: qrLabelAsset.status,
-            statusLabel: qrLabelAsset.statusLabel,
-            statusColor: qrLabelAsset.statusColor
-          }}
-          onClose={() => setQrLabelAsset(null)}
-        />
-      )}
+
       {selectedPhoto && (
         <div className="modal-overlay" onClick={() => setSelectedPhoto(null)} style={{ zIndex: 4000, display: 'grid', placeItems: 'center', padding: 24, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)' }}>
           <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} onClick={ev => ev.stopPropagation()}>
