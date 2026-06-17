@@ -443,25 +443,24 @@ function EquiposContent() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-body">
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 280px' }}>
-              <Search size={18} color="var(--text-dim)" />
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="card-body" style={{ padding: '10px 14px' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="search-box" style={{ flex: '1 1 240px' }}>
+              <Search size={16} color="var(--text-soft)" />
               <input 
                 type="text" 
                 placeholder="Buscar por ID, nombre, responsable o código..." 
                 value={q} 
                 onChange={e => setQ(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', width: '100%', outline: 'none', fontSize: 14 }}
               />
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Tipo:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Tipo:</span>
                 <select 
-                  style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  className="select-filter"
                   value={tipo} 
                   onChange={e => setTipo(e.target.value)}
                 >
@@ -471,10 +470,10 @@ function EquiposContent() {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Estado:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Estado:</span>
                 <select 
-                  style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  className="select-filter"
                   value={filterEstado} 
                   onChange={e => setFilterEstado(e.target.value)}
                 >
@@ -485,10 +484,11 @@ function EquiposContent() {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Responsable:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Responsable:</span>
                 <select 
-                  style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', maxWidth: 180 }}
+                  className="select-filter"
+                  style={{ maxWidth: 150 }}
                   value={filterResponsable} 
                   onChange={e => setFilterResponsable(e.target.value)}
                 >
@@ -502,20 +502,20 @@ function EquiposContent() {
               {hasActiveFilters && (
                 <button 
                   className="btn btn-ghost btn-xs" 
-                  style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4, height: 32 }}
+                  style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4, height: 28, padding: '4px 8px' }}
                   onClick={handleClearFilters}
                 >
-                  <RotateCcw size={12} /> Limpiar Filtros
+                  <RotateCcw size={11} /> Limpiar
                 </button>
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <SlidersHorizontal size={14} /> Ordenar:
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <SlidersHorizontal size={12} /> Orden:
               </span>
               <select 
-                style={{ background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                className="select-filter"
                 value={sortBy} 
                 onChange={e => setSortBy(e.target.value)}
               >

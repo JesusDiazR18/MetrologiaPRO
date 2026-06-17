@@ -202,16 +202,15 @@ export default function PatronesPage() {
         </button>
       </div>
 
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-body" style={{ padding: '16px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Search size={18} color="var(--text-dim)" />
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="card-body" style={{ padding: '10px 14px' }}>
+          <div className="search-box">
+            <Search size={16} color="var(--text-soft)" />
             <input 
               type="text" 
               placeholder="Buscar patrón por ID, nombre, código o laboratorio..." 
               value={q} 
               onChange={e => setQ(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', width: '100%', outline: 'none', fontSize: 14 }}
             />
           </div>
         </div>

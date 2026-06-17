@@ -954,59 +954,59 @@ export default function DashboardPage() {
 
         /* 1. KPIs Ribbon - Glass & Ultra-Compact */
         .kpi-glass-bar {
-          background: rgba(255, 255, 255, 0.65);
+          background: var(--glass-bg);
           backdrop-filter: blur(18px);
           -webkit-backdrop-filter: blur(18px);
-          border: 1px solid rgba(15, 23, 42, 0.05);
-          border-radius: 16px;
-          padding: 12px 24px;
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-lg);
+          padding: 8px 18px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-          gap: 16px;
+          box-shadow: var(--shadow-sm);
+          gap: 12px;
         }
 
         .kpi-bar-item {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          gap: 4px;
+          gap: 3px;
           flex: 1;
           min-width: 0;
         }
 
         .kpi-bar-item.clickable {
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          padding: 6px 12px;
-          border-radius: 10px;
+          transition: var(--transition-smooth);
+          padding: 4px 8px;
+          border-radius: var(--radius-md);
         }
         .kpi-bar-item.clickable:hover {
-          background: var(--alpha-02);
+          background: var(--alpha-04);
           transform: translateY(-1px);
         }
 
         .kpi-dot {
-          width: 8px;
-          height: 8px;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
           display: inline-block;
           flex-shrink: 0;
         }
-        .kpi-dot.bg-blue { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-        .kpi-dot.bg-green { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .kpi-dot.bg-red { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
-        .kpi-dot.bg-yellow { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+        .kpi-dot.bg-blue { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+        .kpi-dot.bg-green { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .kpi-dot.bg-red { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+        .kpi-dot.bg-yellow { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
 
         .kpi-meta {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
         .kpi-bar-label {
-          font-size: 10px;
+          font-size: 9px;
           font-weight: 750;
           color: var(--text-muted);
           text-transform: uppercase;
@@ -1017,14 +1017,14 @@ export default function DashboardPage() {
         .kpi-bar-value-row {
           display: flex;
           align-items: baseline;
-          gap: 10px;
-          margin-top: 2px;
+          gap: 8px;
+          margin-top: 1px;
           min-width: 0;
           width: 100%;
         }
 
         .kpi-bar-val {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 900;
           color: var(--text-main);
           letter-spacing: -0.03em;
@@ -1041,7 +1041,7 @@ export default function DashboardPage() {
 
         .kpi-bar-divider {
           width: 1px;
-          height: 34px;
+          height: 28px;
           background: var(--glass-border);
           flex-shrink: 0;
         }
@@ -1057,34 +1057,32 @@ export default function DashboardPage() {
         .dashboard-grid {
           display: grid;
           grid-template-columns: 1.62fr 1fr;
-          gap: 20px;
+          gap: 12px;
           align-items: start;
         }
 
         .grid-left {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 12px;
         }
 
         .grid-right {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 12px;
         }
 
         /* Panel Card */
         .panel-card {
-          background: var(--glass-bg);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          background: var(--card-bg);
           border: 1px solid var(--glass-border);
-          border-radius: 18px;
+          border-radius: var(--radius-lg);
           box-shadow: var(--shadow-sm);
-          padding: 20px;
+          padding: 14px 16px;
           display: flex;
           flex-direction: column;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: var(--transition-smooth);
         }
 
         .panel-card:hover {
@@ -1092,7 +1090,7 @@ export default function DashboardPage() {
         }
 
         .panel-card.compact {
-          padding: 16px;
+          padding: 12px;
         }
 
         .panel-card-header {
@@ -1184,11 +1182,11 @@ export default function DashboardPage() {
 
         .search-bar-wrapper input {
           width: 100%;
-          background: var(--alpha-02);
+          background: var(--page-bg-soft);
           border: 1px solid var(--glass-border);
-          border-radius: 12px;
-          padding: 9px 12px 9px 34px;
-          font-size: 13px;
+          border-radius: var(--radius-md);
+          padding: 8px 12px 8px 32px;
+          font-size: 12.5px;
           color: var(--text-main);
           outline: none;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1205,11 +1203,11 @@ export default function DashboardPage() {
         }
 
         .filter-dropdown {
-          background: var(--alpha-02);
+          background: var(--page-bg-soft);
           border: 1px solid var(--glass-border);
-          border-radius: 12px;
-          padding: 8.5px 12px;
-          font-size: 12.5px;
+          border-radius: var(--radius-md);
+          padding: 7.5px 12px;
+          font-size: 12px;
           font-weight: 600;
           color: var(--text-dim);
           outline: none;
@@ -1230,11 +1228,11 @@ export default function DashboardPage() {
         }
 
         .filter-date-input {
-          background: var(--alpha-02);
+          background: var(--page-bg-soft);
           border: 1px solid var(--glass-border);
-          border-radius: 12px;
-          padding: 8px 10px;
-          font-size: 12px;
+          border-radius: var(--radius-md);
+          padding: 7px 10px;
+          font-size: 11.5px;
           font-weight: 600;
           color: var(--text-dim);
           outline: none;
@@ -1250,7 +1248,7 @@ export default function DashboardPage() {
         }
 
         .filter-date-to-separator {
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
           color: var(--text-soft);
           text-transform: uppercase;

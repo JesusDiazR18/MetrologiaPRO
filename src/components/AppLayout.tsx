@@ -293,31 +293,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         @media (max-width: 768px) {
           .mobile-toggle { display: flex !important; }
           .topbar { 
-            height: 60px !important; 
-            padding: 0 16px !important; 
-            gap: 12px !important;
-            background: rgba(255, 255, 255, 0.9) !important;
-            border-bottom: 1px solid #f1f5f9 !important;
+            height: 56px !important; 
+            padding: 0 14px !important; 
+            gap: 10px !important;
+            background: var(--glass-bg) !important;
+            border-bottom: 1px solid var(--glass-border) !important;
           }
           .topbar-search-container { display: none !important; }
           .btn-scan { 
             padding: 8px 12px !important; 
-            border-radius: 12px !important; 
-            background: #f1f5f9 !important;
+            border-radius: var(--radius-md) !important; 
+            background: var(--page-bg-soft) !important;
             box-shadow: none !important;
-            color: #1e293b !important;
-            border: 1px solid #e2e8f0 !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--glass-border) !important;
           }
           .btn-scan span { display: none; }
           .btn-scan svg { color: var(--accent) !important; }
           
           .main-content { 
-            padding-bottom: 80px !important; /* Más espacio para el bottom nav y evitar solapamiento */
+            padding-bottom: 70px !important; /* Más espacio para el bottom nav y evitar solapamiento */
             overflow-y: visible !important;
             height: auto !important;
           }
           .page { 
-            padding: 12px 6px !important; 
+            padding: 10px 8px !important; 
             overflow-x: hidden !important; 
             overflow-y: visible !important;
             display: block !important;
@@ -328,14 +328,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             bottom: 0;
             left: 0;
             right: 0;
-            height: 65px;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            height: 56px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            border-top: 1px solid rgba(0,0,0,0.05);
+            border-top: 1px solid var(--glass-border);
             padding-bottom: env(safe-area-inset-bottom);
             z-index: 1000;
           }
@@ -343,24 +343,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             text-decoration: none;
-            color: #94a3b8;
+            color: var(--text-soft);
             transition: all 0.2s;
             flex: 1;
           }
           .bottom-nav-item span {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.02em;
           }
           .bottom-nav-item.active {
-            color: #0ea5e9;
+            color: var(--accent);
           }
           .bottom-nav-item.active svg {
-            transform: translateY(-2px);
-            filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.3));
+            transform: translateY(-1px);
+            filter: drop-shadow(0 2px 6px var(--accent-glow));
           }
         }
         @media (min-width: 769px) {
@@ -369,7 +369,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             display: none !important;
           }
           .dashboard-page-view {
-            padding: 24px var(--page-px) !important;
+            padding: 16px var(--page-px) !important;
             min-height: 100vh !important;
           }
         }

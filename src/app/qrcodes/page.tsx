@@ -236,29 +236,25 @@ export default function QRCodesPage() {
       )}
 
       {/* Global Selection Info */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
           <button className="btn-secondary-light" onClick={selectAllFiltered}>
             Seleccionar todos los filtrados ({filtered.length})
           </button>
       </div>
 
-      <div className="topbar-search-modern" style={{ position: 'relative', marginBottom: 32 }}>
-        <Search style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={20} />
+      <div className="search-box" style={{ marginBottom: 16 }}>
+        <Search size={16} color="var(--text-soft)" />
         <input
           placeholder="Filtrar por código, nombre, área o responsable..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%', padding: '18px 24px 18px 56px', borderRadius: 20, border: '2px solid #f1f5f9',
-            fontSize: 16, fontWeight: 500, outline: 'none', transition: 'all 0.2s', background: '#fff'
-          }}
         />
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 100 }}>
           <div className="spinner" />
-          <p style={{ marginTop: 20, fontWeight: 600, color: '#64748b' }}>Cargando activos...</p>
+          <p style={{ marginTop: 20, fontWeight: 600, color: 'var(--text-soft)' }}>Cargando activos...</p>
         </div>
       ) : (
         <div className="qr-grid-premium">
@@ -275,11 +271,11 @@ export default function QRCodesPage() {
                 onClick={() => toggleSelect(e.ID_Equipo)}
               >
                 <div className="card-selector">
-                  {isSelected ? <CheckCircle2 size={24} color="#0ea5e9" strokeWidth={3} /> : <div className="selector-circle" />}
+                  {isSelected ? <CheckCircle2 size={20} color="var(--accent)" strokeWidth={3} /> : <div className="selector-circle" />}
                 </div>
 
                 <div className="qr-img-box">
-                  <QRCodeSVG value={scanUrl} size={150} level="H" />
+                  <QRCodeSVG value={scanUrl} size={120} level="H" />
                 </div>
 
                 <div className="card-footer">
@@ -298,46 +294,47 @@ export default function QRCodesPage() {
 
       <style jsx>{`
         .config-btn {
-          flex: 1; border: 2px solid #f1f5f9; background: #fff; padding: 10px; border-radius: 12px;
-          font-size: 11px; font-weight: 800; color: #64748b; cursor: pointer; transition: all 0.2s;
+          flex: 1; border: 1.5px solid var(--glass-border); background: var(--page-bg-soft); padding: 8px; border-radius: var(--radius-md);
+          font-size: 11px; font-weight: 850; color: var(--text-dim); cursor: pointer; transition: all 0.2s;
         }
-        .config-btn.active { border-color: #0ea5e9; color: #0ea5e9; background: #f0f9ff; }
+        .config-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
         
         .qr-grid-premium {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 24px;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 16px;
         }
         .qr-premium-card {
-          background: #fff; border-radius: 24px; border: 2px solid #f1f5f9; padding: 24px;
-          display: flex; flex-direction: column; align-items: center; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--glass-border); padding: 16px;
+          display: flex; flex-direction: column; align-items: center; transition: var(--transition-smooth);
           cursor: pointer; position: relative;
         }
-        .qr-premium-card.selected { border-color: #0ea5e9; background: #f0f9ff; transform: scale(1.02); }
-        .qr-premium-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.06); }
+        .qr-premium-card.selected { border-color: var(--accent); background: var(--accent-glow); transform: scale(1.01); }
+        .qr-premium-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
         
-        .card-selector { position: absolute; top: 16px; right: 16px; }
-        .selector-circle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #e2e8f0; background: #fff; }
+        .card-selector { position: absolute; top: 12px; right: 12px; }
+        .selector-circle { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--glass-border); background: var(--page-bg-soft); }
         
-        .qr-img-box { background: #fff; padding: 12px; border-radius: 16px; border: 1px solid #f1f5f9; margin-bottom: 20px; }
+        .qr-img-box { background: #fff; padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); margin-bottom: 12px; }
         
         .card-footer { text-align: center; width: 100%; }
-        .footer-code { font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
-        .footer-name { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 12px; line-height: 1.2; height: 28px; overflow: hidden; }
-        .footer-meta { display: flex; alignItems: center; justifyContent: center; gap: 8px; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .footer-code { font-size: 14px; font-weight: 900; color: var(--text-main); margin-bottom: 2px; }
+        .footer-name { font-size: 11px; font-weight: 700; color: var(--text-soft); margin-bottom: 8px; line-height: 1.2; height: 26px; overflow: hidden; }
+        .footer-meta { display: flex; alignItems: center; justifyContent: center; gap: 6px; font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-        .btn-secondary-light { background: #f1f5f9; border: none; padding: 10px 18px; borderRadius: 12px; fontSize: 12px; fontWeight: 700; color: #475569; cursor: pointer; }
+        .btn-secondary-light { background: var(--page-bg-soft); border: 1px solid var(--glass-border); padding: 6px 12px; borderRadius: var(--radius-md); fontSize: 11px; fontWeight: 700; color: var(--text-dim); cursor: pointer; transition: var(--transition-smooth); }
+        .btn-secondary-light:hover { background: var(--alpha-08); color: var(--text-main); }
         
         @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         
         @media (max-width: 768px) {
           .header-actions { flex-direction: column; align-items: stretch !important; width: 100%; }
-          .qr-grid-premium { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
-          .qr-premium-card { padding: 16px; }
-          .footer-code { font-size: 15px; }
-          .qr-img-box { margin-bottom: 12px; }
-          .qr-img-box :global(svg) { width: 100px !important; height: 100px !important; }
+          .qr-grid-premium { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+          .qr-premium-card { padding: 12px; }
+          .footer-code { font-size: 13px; }
+          .qr-img-box { margin-bottom: 8px; }
+          .qr-img-box :global(svg) { width: 90px !important; height: 90px !important; }
         }
       `}</style>
     </div>
