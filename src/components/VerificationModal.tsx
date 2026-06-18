@@ -366,7 +366,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       const res = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authEmail.trim(), contrasena: authPassword })
+        body: JSON.stringify({ username: authEmail.trim(), contrasena: authPassword })
       })
       const data = await res.json()
       if (res.ok && data.authenticated) {
@@ -1088,12 +1088,12 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
               )}
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Email de Usuario</label>
+                <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Usuario Autorizado</label>
                 <input
-                  type="email"
+                  type="text"
                   value={authEmail}
                   onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="usuario@empresa.com"
+                  placeholder="Ej. cmunizaga"
                   autoFocus
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: 12, border: '2px solid #f1f5f9',

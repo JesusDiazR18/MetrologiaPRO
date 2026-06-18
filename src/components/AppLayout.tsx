@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import {
   LayoutDashboard, ClipboardList, CalendarDays,
-  FlaskConical, ScanLine, Settings, ChevronRight,
-  Microscope, X, Menu, QrCode, Search, Sun, Moon
+  FlaskConical, Settings, ChevronRight,
+  Microscope, X, Menu, QrCode, Search, Sun, Moon, BookOpen
 } from 'lucide-react'
 
 
@@ -15,7 +15,7 @@ const navItems = [
   { href: '/equipos', label: 'Fichas Técnicas', icon: ClipboardList },
   { href: '/calendario', label: 'Calendario', icon: CalendarDays },
   { href: '/patrones', label: 'Patrones', icon: FlaskConical },
-  { href: '/escaneo', label: 'Escaneo QR', icon: ScanLine },
+  { href: '/biblioteca', label: 'Biblioteca', icon: BookOpen },
   { href: '/qrcodes', label: 'Galería QR', icon: QrCode },
 ]
 
@@ -241,24 +241,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
-            <div style={{ width: 1, height: 32, background: 'var(--glass-border)' }} />
-            <Link href="/escaneo" className="btn-scan" style={{
-              background: 'linear-gradient(135deg, var(--oxford-blue-dark) 0%, var(--oxford-blue-light) 100%)',
-              color: '#fff',
-              fontWeight: 700,
-              padding: '12px 24px',
-              borderRadius: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.2)',
-              textDecoration: 'none',
-              fontSize: 14,
-              transition: 'all 0.3s'
-            }}>
-              <ScanLine size={18} color="var(--accent)" />
-              <span>Smart Scan</span>
-            </Link>
           </div>
         </header>
 

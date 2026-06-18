@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ShieldCheck, BookOpen } from 'lucide-react'
 import VerificationModal from '@/components/VerificationModal'
+import VisorProceduresModal from '@/components/VisorProceduresModal'
 import { toast } from 'react-hot-toast'
 
 interface Equipo {
@@ -13,6 +14,7 @@ interface Equipo {
   Magnitud?: string | null
   Tipo?: string | null
   Tolerancias_Multimagnitud?: string | null
+  documentosEnsayo?: any[]
 }
 
 interface Props {
@@ -22,6 +24,7 @@ interface Props {
 export default function VisorVerificationButton({ equipo }: Props) {
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showProcedures, setShowProcedures] = useState(false)
   const [equiposList, setEquiposList] = useState<Equipo[]>([])
 
   const handleOpen = async () => {
@@ -54,14 +57,7 @@ export default function VisorVerificationButton({ equipo }: Props) {
       <div style={{ display: 'flex', gap: '10px', width: '100%', flexDirection: 'row' }}>
         {equipo.Tipo === 'EQUIPO' && (
           <button 
-            onClick={() => {
-              const element = document.getElementById('documentos-ensayo-section')
-              if (element) {
-                element.scrollIntoView({ behavior: 'smooth' })
-              } else {
-                toast.error('Este equipo no tiene documentos de ensayo asociados.')
-              }
-            }}
+            onClick={() => setShowProcedures(true)}
             style={{
               flex: 1,
               padding: '12px',
@@ -124,6 +120,14 @@ export default function VisorVerificationButton({ equipo }: Props) {
           {loading ? 'Cargando...' : 'Verificar Activo'}
         </button>
       </div>
+
+      {showProcedures && (
+        <VisorProceduresModal 
+          equipoNombre={equipo.Nombre_Equipo}
+          documentos={equipo.documentosEnsayo || []}
+          onClose={() => setShowProcedures(false)}
+        />
+      )}
 
       {showModal && (
         <VerificationModal

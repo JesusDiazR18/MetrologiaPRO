@@ -11,17 +11,26 @@ const prisma = new PrismaClient()
  */
 export async function POST(req: Request) {
   try {
-    const { email, contrasena } = await req.json()
+    const { username, contrasena } = await req.json()
 
-    if (!email || !contrasena) {
+    if (!username || !contrasena) {
       return NextResponse.json(
-        { error: 'Se requiere email y contraseña' },
+        { error: 'Se requiere usuario y contraseña' },
         { status: 400 }
       )
     }
 
+    const targetUser = username.trim().toLowerCase()
+    if (targetUser !== 'cmunizaga') {
+      return NextResponse.json(
+        { error: 'Usuario no autorizado para registrar verificaciones' },
+        { status: 401 }
+      )
+    }
+
+    const email = 'cmunizaga@polifusion.cl'
     const usuario = await prisma.usuario.findUnique({
-      where: { Email: email.trim() },
+      where: { Email: email },
       select: {
         Email: true,
         Nombre: true,
