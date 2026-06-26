@@ -1261,3 +1261,503 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
 
   doc.save(`REPORTE_EJECUTIVO_${new Date().getMonth() + 1}_${new Date().getFullYear()}.pdf`);
 }
+
+/**
+ * Genera un Reporte Metrológico General consolidado en PDF conteniendo:
+ * 1. Resumen de KPIs y Portada de Diagnóstico.
+ * 2. Tabla completa de Equipos e Instrumentos con su última verificación.
+ * 3. Tabla completa de Patrones de Referencia con su última calibración.
+ * 4. Tabla completa de la Biblioteca de Documentos de Ensayo y sus equipos asociados.
+ */
+export async function generateGeneralMetrologicalReportPDF(
+  documentos: any[],
+  equipos: any[],
+  patrones: any[]
+) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 16;
+  const printableWidth = 178;
+
+  const logoBase64 = await getBase64FromUrl('/logo.png');
+
+  // Helper para dibujar pie de página estándar
+  const drawPageFooter = (pageNum: number, total: number) => {
+    doc.setPage(pageNum);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(margin, 282, pageWidth - margin, 282);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.setFont('helvetica', 'normal');
+    doc.text('POLIFUSION QMS · REPORTE METROLÓGICO GENERAL CONSOLIDADO', margin, 287);
+    doc.text(`Página ${pageNum} de ${total}`, pageWidth - margin, 287, { align: 'right' });
+  };
+
+  // Helper para dibujar encabezado estándar en páginas internas
+  const drawPageHeader = (title: string) => {
+    doc.setFillColor(15, 23, 42); // Slate 900
+    doc.rect(margin, 12, printableWidth, 12, 'F');
+    doc.setFillColor(0, 229, 255); // Cyan accent
+    doc.rect(margin, 24, printableWidth, 0.8, 'F');
+    
+    // Logo si existe
+    if (logoBase64) {
+      try {
+        const aspect = logoBase64.width / logoBase64.height;
+        const logoH = 8;
+        const logoW = 8 * aspect;
+        doc.addImage(logoBase64.data, logoBase64.format, margin + 4, 14, logoW, logoH);
+      } catch (e) {}
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text(title.toUpperCase(), margin + 35, 19.5);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(formatFecha(new Date().toISOString()), margin + printableWidth - 4, 19.5, { align: 'right' });
+  };
+
+  // ==========================================
+  // PÁGINA 1: PORTADA Y DIAGNÓSTICO EJECUTIVO
+  // ==========================================
+  
+  // Encabezado Portada
+  doc.setFillColor(15, 23, 42); // Slate 900
+  doc.rect(16, 15, 178, 30, 'F');
+  doc.setFillColor(0, 229, 255); // Cyan line
+  doc.rect(16, 45, 178, 1.5, 'F');
+
+  // Separadores verticales
+  doc.setDrawColor(51, 65, 85);
+  doc.setLineWidth(0.3);
+  doc.line(60, 17, 60, 43);
+  doc.line(146, 17, 146, 43);
+
+  // Logo
+  if (logoBase64) {
+    try {
+      const maxLogoW = 34;
+      const maxLogoH = 20;
+      const aspect = logoBase64.width / logoBase64.height;
+      let logoW = maxLogoW;
+      let logoH = maxLogoW / aspect;
+      if (logoH > maxLogoH) {
+        logoH = maxLogoH;
+        logoW = maxLogoH * aspect;
+      }
+      const logoX = 16 + (44 - logoW) / 2;
+      const logoY = 15 + (30 - logoH) / 2;
+      doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
+    } catch (e) {}
+  }
+
+  // Título Central
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255);
+  doc.text('REPORTE METROLÓGICO GENERAL', 103, 26, { align: 'center' });
+  doc.line(68, 29, 138, 29);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 229, 255);
+  doc.text('INVENTARIO, ESTADO DE CONTROL Y BIBLIOTECA', 103, 35, { align: 'center' });
+
+  // Metadatos Portada
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text('INFORME N°:', 148, 23);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(255, 255, 255);
+  doc.text(`RMG-${new Date().getFullYear()}-${new Date().getMonth() + 1}`, 192, 23, { align: 'right' });
+  doc.line(148, 26, 192, 26);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(148, 163, 184);
+  doc.text('FECHA:', 148, 31);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(255, 255, 255);
+  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
+  doc.line(148, 34, 192, 34);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(148, 163, 184);
+  doc.text('EMISOR:', 148, 39);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(255, 255, 255);
+  doc.text('SISTEMA QMS', 192, 39, { align: 'right' });
+
+  let currY = 56;
+
+  // Resumen Ejecutivo de la Portada
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(30, 41, 59); // Slate 800
+  doc.text('DIAGNÓSTICO EJECUTIVO DE CONTROL METROLÓGICO', margin, currY);
+  
+  doc.setDrawColor(203, 213, 225); // Slate 300
+  doc.setLineWidth(0.3);
+  doc.line(margin, currY + 2, margin + printableWidth, currY + 2);
+  
+  currY += 7;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Este informe consolida el estado actual de calibraciones, verificaciones y documentación del laboratorio metrológico. A continuación se presentan los KPIs del sistema actualizados a la fecha de hoy.', margin, currY, { maxWidth: printableWidth });
+
+  currY += 12;
+
+  // Calcular métricas
+  // 1. Equipos
+  const totalEquipos = equipos.length;
+  const eqAlDia = equipos.filter(e => {
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
+    return sem === 'VERDE';
+  }).length;
+  const eqAdvertencia = equipos.filter(e => {
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
+    return sem === 'AMARILLO';
+  }).length;
+  const eqCriticos = equipos.filter(e => {
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
+    return sem === 'ROJO';
+  }).length;
+
+  // 2. Patrones
+  const totalPatrones = patrones.length;
+  const patVigentes = patrones.filter(p => p.Estado_Vigencia === 'VIGENTE').length;
+  const patVencidos = patrones.filter(p => p.Estado_Vigencia !== 'VIGENTE').length;
+
+  // 3. Documentos
+  const totalDocs = documentos.length;
+
+  // Pintar Cuadros Resumen KPIs
+  // Cuadro 1: Equipos
+  doc.setFillColor(248, 250, 252);
+  doc.rect(margin, currY, printableWidth, 38, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(margin, currY, printableWidth, 38, 'S');
+
+  doc.setFillColor(15, 23, 42); // Header del cuadro
+  doc.rect(margin, currY, printableWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('EQUIPOS E INSTRUMENTOS DE MEDICIÓN', margin + 4, currY + 5);
+
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Total Activos Registrados: ${totalEquipos} unidades`, margin + 6, currY + 14);
+  
+  doc.setFillColor(22, 163, 74); // Verde
+  doc.rect(margin + 6, currY + 19, 3, 3, 'F');
+  doc.text(`Al Día / Operativos: ${eqAlDia} unidades`, margin + 12, currY + 21.5);
+
+  doc.setFillColor(217, 119, 6); // Amarillo
+  doc.rect(margin + 6, currY + 25, 3, 3, 'F');
+  doc.text(`Próximos a Vencer (Advertencia): ${eqAdvertencia} unidades`, margin + 12, currY + 27.5);
+
+  doc.setFillColor(220, 38, 38); // Rojo
+  doc.rect(margin + 6, currY + 31, 3, 3, 'F');
+  doc.text(`Expirados / Fuera de Servicio (Críticos): ${eqCriticos} unidades`, margin + 12, currY + 33.5);
+
+  // Cuadro 2: Patrones
+  currY += 44;
+  doc.setFillColor(248, 250, 252);
+  doc.rect(margin, currY, printableWidth, 26, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(margin, currY, printableWidth, 26, 'S');
+
+  doc.setFillColor(88, 28, 135); // Purple 900
+  doc.rect(margin, currY, printableWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('PATRONES DE REFERENCIA Y CALIBRACIÓN', margin + 4, currY + 5);
+
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Total Estándares Certificados: ${totalPatrones} unidades`, margin + 6, currY + 14);
+
+  doc.setFillColor(22, 163, 74); // Verde
+  doc.rect(margin + 6, currY + 19, 3, 3, 'F');
+  doc.text(`Vigentes: ${patVigentes} unidades`, margin + 12, currY + 21.5);
+
+  doc.setFillColor(220, 38, 38); // Rojo
+  doc.rect(margin + 66, currY + 19, 3, 3, 'F');
+  doc.text(`Vencidos / Sin Certificado: ${patVencidos} unidades`, margin + 72, currY + 21.5);
+
+  // Cuadro 3: Biblioteca
+  currY += 32;
+  doc.setFillColor(248, 250, 252);
+  doc.rect(margin, currY, printableWidth, 20, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(margin, currY, printableWidth, 20, 'S');
+
+  doc.setFillColor(21, 94, 117); // Cyan 800
+  doc.rect(margin, currY, printableWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('BIBLIOTECA DE ENSAYOS Y PROCEDIMIENTOS', margin + 4, currY + 5);
+
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Total Procedimientos de Calidad Cargados: ${totalDocs} archivos PDF asociados a Equipos.`, margin + 6, currY + 14);
+
+  // ==========================================
+  // PÁGINA 2: TABLA DE EQUIPOS E INSTRUMENTOS
+  // ==========================================
+  doc.addPage();
+  currY = 28;
+  drawPageHeader('Inventario de Equipos e Instrumentos');
+
+  // Cabecera Tabla Equipos
+  const colXEq = {
+    codigo: margin + 2,
+    nombre: margin + 22,
+    ubicacion: margin + 72,
+    ultima: margin + 104,
+    proxima: margin + 128,
+    estado: margin + 152
+  };
+
+  doc.setFillColor(30, 41, 59); // Slate 800
+  doc.rect(margin, currY, printableWidth, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Código', colXEq.codigo, currY + 5.5);
+  doc.text('Nombre del Equipo', colXEq.nombre, currY + 5.5);
+  doc.text('Ubicación / Área', colXEq.ubicacion, currY + 5.5);
+  doc.text('Última Ver.', colXEq.ultima, currY + 5.5);
+  doc.text('Próxima Ver.', colXEq.proxima, currY + 5.5);
+  doc.text('Estado', colXEq.estado, currY + 5.5);
+  
+  currY += 8;
+
+  equipos.forEach((e, idx) => {
+    // Calculo semáforo
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
+    const estLabel = sem === 'VERDE' ? 'AL DÍA' : sem === 'AMARILLO' ? 'POR VENCER' : 'CRÍTICO / VENCIDO';
+    const estColor = sem === 'VERDE' ? [22, 163, 74] : sem === 'AMARILLO' ? [217, 119, 6] : [220, 38, 38];
+
+    const rowH = 8;
+    if (currY + rowH > 270) {
+      doc.addPage();
+      currY = 28;
+      drawPageHeader('Inventario de Equipos e Instrumentos');
+      
+      // Re-draw table header
+      doc.setFillColor(30, 41, 59);
+      doc.rect(margin, currY, printableWidth, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Código', colXEq.codigo, currY + 5.5);
+      doc.text('Nombre del Equipo', colXEq.nombre, currY + 5.5);
+      doc.text('Ubicación / Área', colXEq.ubicacion, currY + 5.5);
+      doc.text('Última Ver.', colXEq.ultima, currY + 5.5);
+      doc.text('Próxima Ver.', colXEq.proxima, currY + 5.5);
+      doc.text('Estado', colXEq.estado, currY + 5.5);
+      currY += 8;
+    }
+
+    const bg = idx % 2 === 0 ? 255 : 248;
+    doc.setFillColor(bg, bg, bg);
+    doc.rect(margin, currY, printableWidth, rowH, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, currY + rowH, margin + printableWidth, currY + rowH);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(e.Codigo_Interno || e.ID_Equipo || '', colXEq.codigo, currY + 5.2);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text((e.Nombre_Equipo || '').substring(0, 28), colXEq.nombre, currY + 5.2);
+    doc.text((e.Area_Asignada || '—').substring(0, 18), colXEq.ubicacion, currY + 5.2);
+    doc.text(formatFecha(e.Fecha_Ultima_Verificacion), colXEq.ultima, currY + 5.2);
+    doc.text(formatFecha(e.Fecha_Proximo_Control), colXEq.proxima, currY + 5.2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(estColor[0], estColor[1], estColor[2]);
+    doc.text(estLabel, colXEq.estado, currY + 5.2);
+
+    currY += rowH;
+  });
+
+  // ==========================================
+  // PÁGINA X: TABLA DE PATRONES DE REFERENCIA
+  // ==========================================
+  doc.addPage();
+  currY = 28;
+  drawPageHeader('Patrones de Referencia');
+
+  const colXPat = {
+    codigo: margin + 2,
+    nombre: margin + 22,
+    laboratorio: margin + 74,
+    certificado: margin + 110,
+    vencimiento: margin + 138,
+    estado: margin + 160
+  };
+
+  doc.setFillColor(30, 41, 59); // Slate 800
+  doc.rect(margin, currY, printableWidth, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Código', colXPat.codigo, currY + 5.5);
+  doc.text('Nombre del Patrón', colXPat.nombre, currY + 5.5);
+  doc.text('Laboratorio Cal.', colXPat.laboratorio, currY + 5.5);
+  doc.text('N° Certificado', colXPat.certificado, currY + 5.5);
+  doc.text('Vence Cert.', colXPat.vencimiento, currY + 5.5);
+  doc.text('Estado', colXPat.estado, currY + 5.5);
+
+  currY += 8;
+
+  patrones.forEach((p, idx) => {
+    const isVig = p.Estado_Vigencia === 'VIGENTE';
+    const estLabel = isVig ? 'VIGENTE' : 'VENCIDO';
+    const estColor = isVig ? [22, 163, 74] : [220, 38, 38];
+
+    const rowH = 8;
+    if (currY + rowH > 270) {
+      doc.addPage();
+      currY = 28;
+      drawPageHeader('Patrones de Referencia');
+
+      doc.setFillColor(30, 41, 59);
+      doc.rect(margin, currY, printableWidth, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Código', colXPat.codigo, currY + 5.5);
+      doc.text('Nombre del Patrón', colXPat.nombre, currY + 5.5);
+      doc.text('Laboratorio Cal.', colXPat.laboratorio, currY + 5.5);
+      doc.text('N° Certificado', colXPat.certificado, currY + 5.5);
+      doc.text('Vence Cert.', colXPat.vencimiento, currY + 5.5);
+      doc.text('Estado', colXPat.estado, currY + 5.5);
+      currY += 8;
+    }
+
+    const bg = idx % 2 === 0 ? 255 : 248;
+    doc.setFillColor(bg, bg, bg);
+    doc.rect(margin, currY, printableWidth, rowH, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, currY + rowH, margin + printableWidth, currY + rowH);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(p.Codigo || p.ID_Patron || '', colXPat.codigo, currY + 5.2);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text((p.Nombre_Patron || '').substring(0, 26), colXPat.nombre, currY + 5.2);
+    doc.text((p.Proveedor_Laboratorio || '—').substring(0, 18), colXPat.laboratorio, currY + 5.2);
+    doc.text(p.N_Certificado || '—', colXPat.certificado, currY + 5.2);
+    doc.text(formatFecha(p.Fecha_Vencimiento_Certificado), colXPat.vencimiento, currY + 5.2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(estColor[0], estColor[1], estColor[2]);
+    doc.text(estLabel, colXPat.estado, currY + 5.2);
+
+    currY += rowH;
+  });
+
+  // ==========================================
+  // PÁGINA X: TABLA DE DOCUMENTOS DE ENSAYO
+  // ==========================================
+  doc.addPage();
+  currY = 28;
+  drawPageHeader('Biblioteca de Ensayos y Procedimientos');
+
+  const colXDoc = {
+    nombre: margin + 4,
+    norma: margin + 85,
+    equipo: margin + 125
+  };
+
+  doc.setFillColor(30, 41, 59); // Slate 800
+  doc.rect(margin, currY, printableWidth, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Procedimiento / Ensayo', colXDoc.nombre, currY + 5.5);
+  doc.text('Norma de Referencia', colXDoc.norma, currY + 5.5);
+  doc.text('Equipo Relacionado', colXDoc.equipo, currY + 5.5);
+
+  currY += 8;
+
+  if (documentos.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('No hay documentos registrados en la biblioteca de ensayos.', margin + 10, currY + 8);
+  } else {
+    documentos.forEach((d, idx) => {
+      const rowH = 8;
+      if (currY + rowH > 270) {
+        doc.addPage();
+        currY = 28;
+        drawPageHeader('Biblioteca de Ensayos y Procedimientos');
+
+        doc.setFillColor(30, 41, 59);
+        doc.rect(margin, currY, printableWidth, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Procedimiento / Ensayo', colXDoc.nombre, currY + 5.5);
+        doc.text('Norma de Referencia', colXDoc.norma, currY + 5.5);
+        doc.text('Equipo Relacionado', colXDoc.equipo, currY + 5.5);
+        currY += 8;
+      }
+
+      const bg = idx % 2 === 0 ? 255 : 248;
+      doc.setFillColor(bg, bg, bg);
+      doc.rect(margin, currY, printableWidth, rowH, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, currY + rowH, margin + printableWidth, currY + rowH);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text((d.Nombre_Ensayo || '').substring(0, 45), colXDoc.nombre, currY + 5.2);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(d.Norma || '—', colXDoc.norma, currY + 5.2);
+      
+      const eqCode = d.equipo?.Codigo_Interno || d.FK_ID_Equipo || '—';
+      const eqNombre = d.equipo?.Nombre_Equipo ? ` - ${d.equipo.Nombre_Equipo}` : '';
+      doc.text(`${eqCode}${eqNombre}`.substring(0, 30), colXDoc.equipo, currY + 5.2);
+
+      currY += rowH;
+    });
+  }
+
+  // ==========================================
+  // GENERAL: CONSTRUIR PIES DE PÁGINA
+  // ==========================================
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    drawPageFooter(i, totalPages);
+  }
+
+  doc.save(`REPORTE_METROLOGICO_GENERAL_${new Date().getDate()}_${new Date().getMonth() + 1}_${new Date().getFullYear()}.pdf`);
+}
+

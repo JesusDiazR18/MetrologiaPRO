@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatFecha, semaforoHex, calcularSemaforo, formatFechaLarga } from '@/lib/metrologia'
-import { generateExecutiveSummaryPDF, generateTechnicalSheetPDF, generatePatronSheetPDF } from '@/lib/reports'
+import { generateExecutiveSummaryPDF, generateTechnicalSheetPDF, generatePatronSheetPDF, generateGeneralMetrologicalReportPDF } from '@/lib/reports'
+import { toast } from 'react-hot-toast'
 
 interface Stats {
   total: number
@@ -71,6 +72,7 @@ export default function DashboardPage() {
   // Carga asíncrona de detalles para fotos/documentos pesados
   const [loadingAssetDetails, setLoadingAssetDetails] = useState(false)
   const [fullAssetDetails, setFullAssetDetails] = useState<any | null>(null)
+  const [reporteLoading, setReporteLoading] = useState(false)
 
   useEffect(() => {
     if (!selectedAsset) {
@@ -130,6 +132,23 @@ export default function DashboardPage() {
       setError(err.message || 'Error al conectar con el servidor')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExportReporteMetrologico = async () => {
+    try {
+      setReporteLoading(true)
+      const toastId = toast.loading('Generando Reporte Metrológico General...')
+      const resDocs = await fetch('/api/ensayos')
+      let docs = []
+      if (resDocs.ok) docs = await resDocs.json()
+      await generateGeneralMetrologicalReportPDF(docs, equipos, patrones)
+      toast.success('Reporte Metrológico General generado con éxito', { id: toastId })
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al generar el reporte metrológico')
+    } finally {
+      setReporteLoading(false)
     }
   }
 
@@ -446,6 +465,16 @@ export default function DashboardPage() {
                 >
                   <Download size={13} />
                   <span>Reporte Ejecutivo PDF</span>
+                </button>
+                <button 
+                  className="btn-compact-pdf" 
+                  onClick={handleExportReporteMetrologico}
+                  disabled={reporteLoading}
+                  title="Exportar listado completo de documentos, equipos y patrones en PDF"
+                  style={{ marginLeft: '8px' }}
+                >
+                  <Download size={13} />
+                  <span>Reporte Metrológico PDF</span>
                 </button>
                 <div className="panel-badge-count">
                   {filteredAssets.length} de {allAssets.length}
@@ -1151,10 +1180,16 @@ export default function DashboardPage() {
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           box-shadow: var(--shadow-sm);
         }
-        .btn-compact-pdf:hover {
+        .btn-compact-pdf:hover:not(:disabled) {
           background: linear-gradient(135deg, var(--oxford-blue-light) 0%, var(--snow-3) 100%);
           transform: translateY(-1px);
           box-shadow: var(--shadow-md);
+        }
+        .btn-compact-pdf:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
         }
 
         /* Seccion Filtros */
