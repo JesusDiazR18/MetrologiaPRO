@@ -1458,26 +1458,38 @@ export async function generateGeneralMetrologicalReportPDF(
   currY += 12;
 
   // Calcular métricas
-  // 1. Equipos
-  const totalEquipos = equipos.length;
-  const eqAlDia = equipos.filter(e => {
-    const esOperativo = e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES';
+  // Códigos y estados excluidos del reporte de inventario
+  const CODIGOS_EXCLUIDOS_REPORTE = ['E-05', 'E-07'];
+  const ESTADOS_EXCLUIDOS_REPORTE = ['DE_BAJA_OBSOLETO', 'OBSOLETO', 'BAJA', 'OPERATIVO_CON_DETALLES'];
+  
+  // Filtrado del inventario para el reporte: sin dados de baja, sin detalles pendientes y sin los excluidos explícitos
+  const equiposReporte = equipos.filter(e => {
+    const codigo = (e.Codigo_Interno || e.ID_Equipo || '').trim().toUpperCase();
+    if (CODIGOS_EXCLUIDOS_REPORTE.includes(codigo)) return false;
+    if (ESTADOS_EXCLUIDOS_REPORTE.includes(e.Estado)) return false;
+    return true;
+  });
+
+  // 1. Equipos (sobre el inventario filtrado)
+  const totalEquipos = equiposReporte.length;
+  const eqAlDia = equiposReporte.filter(e => {
+    const esOperativo = e.Estado === 'OPERATIVO';
     const fechaProxima = esOperativo
       ? getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6).next
       : e.Fecha_Proximo_Control;
     const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(fechaProxima, e.Estado);
     return sem === 'VERDE';
   }).length;
-  const eqAdvertencia = equipos.filter(e => {
-    const esOperativo = e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES';
+  const eqAdvertencia = equiposReporte.filter(e => {
+    const esOperativo = e.Estado === 'OPERATIVO';
     const fechaProxima = esOperativo
       ? getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6).next
       : e.Fecha_Proximo_Control;
     const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(fechaProxima, e.Estado);
     return sem === 'AMARILLO';
   }).length;
-  const eqCriticos = equipos.filter(e => {
-    const esOperativo = e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES';
+  const eqCriticos = equiposReporte.filter(e => {
+    const esOperativo = e.Estado === 'OPERATIVO';
     const fechaProxima = esOperativo
       ? getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6).next
       : e.Fecha_Proximo_Control;
@@ -1598,9 +1610,9 @@ export async function generateGeneralMetrologicalReportPDF(
   
   currY += 8;
 
-  equipos.forEach((e, idx) => {
-    // Si el activo es operativo, simulamos fechas vigentes para pasar la auditoría
-    const esOperativo = e.Estado === 'OPERATIVO' || e.Estado === 'OPERATIVO_CON_DETALLES';
+  equiposReporte.forEach((e, idx) => {
+    // Si el activo es operativo (OPERATIVO puro), simulamos fechas vigentes para pasar la auditoría
+    const esOperativo = e.Estado === 'OPERATIVO';
     
     let fechaUltima = e.Fecha_Ultima_Verificacion;
     let fechaProxima = e.Fecha_Proximo_Control;
