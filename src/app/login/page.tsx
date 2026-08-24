@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import { 
-  Lock, User, Eye, EyeOff, ArrowRight, ShieldCheck, 
-  AlertCircle, Sun, Moon, Activity, Sparkles, QrCode
+  Lock, User, Eye, EyeOff, LogIn, ShieldCheck, 
+  AlertCircle, QrCode, Activity, Sparkles, Sun, Moon,
+  ArrowRight, CheckCircle2
 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -48,7 +49,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username.trim() || !password) {
-      setError('Por favor ingrese su usuario y contraseña')
+      setError('Por favor complete su usuario y contraseña')
       return
     }
 
@@ -60,585 +61,625 @@ export default function LoginPage() {
     if (res.success) {
       router.replace(redirectUrl)
     } else {
-      setError(res.error || 'Credenciales inválidas. Verifique su usuario y contraseña.')
+      setError(res.error || 'Usuario o contraseña incorrectos')
       setLoading(false)
     }
   }
 
   return (
-    <div className="login-viewport">
-      {/* Subtle Background Glow Elements */}
-      <div className="ambient-glow glow-top" />
-      <div className="ambient-glow glow-bottom" />
+    <div className="login-root">
+      {/* Background ambient orbs */}
+      <div className="bg-glow bg-glow-1" />
+      <div className="bg-glow bg-glow-2" />
+      <div className="bg-glow bg-glow-3" />
 
       {/* Top Header Controls */}
-      <header className="login-top-bar">
-        <div className="brand-badge-mini">
-          <span className="brand-dot" />
-          <span className="brand-status">Sistema Operativo</span>
+      <header className="login-top-nav">
+        <div className="status-live-pill">
+          <span className="live-dot" />
+          <span>Sistema Operativo & Conectado</span>
         </div>
 
         <button 
           onClick={toggleTheme} 
-          className="theme-toggle"
+          className="theme-switch-btn"
           title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
           type="button"
         >
-          {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
       </header>
 
-      {/* Main Container */}
-      <main className="login-stage">
-        <div className="login-frame">
-          
-          {/* LEFT: Editorial Showcase / Brand Context (Desktop) */}
-          <div className="frame-presentation">
-            <div className="presentation-content">
-              {/* Logo with Pure Transparent Background */}
-              <div className="logo-wrapper">
-                <img 
-                  src="/logo.png" 
-                  alt="Polifusion" 
-                  className="brand-logo-img" 
-                />
-              </div>
-
-              <div className="hero-copy">
-                <span className="kicker-tag">CONTROL METROLÓGICO</span>
-                <h1 className="hero-title">
-                  Precisión, control <br />
-                  <span className="serif-accent">y trazabilidad digital.</span>
-                </h1>
-                <p className="hero-text">
-                  Gestión integral de equipos de ensayo, instrumentos de medición y patrones de referencia en planta y laboratorio.
-                </p>
-              </div>
-
-              {/* Minimalist Feature Pillars */}
-              <div className="feature-pillars">
-                <div className="pillar-item">
-                  <div className="pillar-dot" />
-                  <div>
-                    <h4>Trazabilidad QR Directa</h4>
-                    <p>Fichas técnicas y procedimientos accesibles in-situ.</p>
-                  </div>
-                </div>
-
-                <div className="pillar-item">
-                  <div className="pillar-dot" />
-                  <div>
-                    <h4>Semáforo & Vigilancia</h4>
-                    <p>Monitoreo preventivo de vigencias y tolerancias.</p>
-                  </div>
-                </div>
-
-                <div className="pillar-item">
-                  <div className="pillar-dot" />
-                  <div>
-                    <h4>Confirmación Metrológica</h4>
-                    <p>Historiales auditables con firma digital del técnico.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="presentation-footer">
-              <span>POLIFUSIÓN S.A.</span>
-              <span className="version-tag">v1.0.0</span>
+      <div className="login-wrapper">
+        {/* LEFT COLUMN: Rich Enterprise Presentation Hero (Desktop) */}
+        <div className="hero-column">
+          <div className="hero-brand-header">
+            <div className="hero-logo-box">
+              <img src="/logo.png" alt="Polifusion" className="hero-logo" />
             </div>
           </div>
 
-          {/* RIGHT: High-Precision Authentication Card */}
-          <div className="frame-auth">
-            <div className="auth-panel">
-              {/* Mobile-only logo presentation */}
-              <div className="mobile-brand-head">
-                <img 
-                  src="/logo.png" 
-                  alt="Polifusion" 
-                  className="mobile-brand-logo" 
-                />
-                <h2>Control Metrológico</h2>
-                <p>Ingreso a la plataforma de gestión</p>
-              </div>
+          <div className="hero-text-block">
+            <h1 className="hero-headline">
+              Control <span className="gradient-text">Metrológico</span>
+            </h1>
+            <p className="hero-description">
+              Plataforma digital centralizada para el aseguramiento, calibración y trazabilidad técnica de equipos, instrumentos y patrones de referencia.
+            </p>
+          </div>
 
-              <div className="auth-panel-header">
-                <div className="auth-badge">
-                  <ShieldCheck size={14} />
-                  <span>Acceso Institucional</span>
-                </div>
-                <h2 className="panel-title">Iniciar Sesión</h2>
-                <p className="panel-subtitle">Ingrese sus credenciales autorizadas para continuar</p>
+          {/* Eye-catching Feature Highlights Cards with Colorful Icons */}
+          <div className="hero-features-list">
+            <div className="feature-pill-card">
+              <div className="feature-icon-circle blue">
+                <QrCode size={22} />
               </div>
+              <div className="feature-text">
+                <h4>Trazabilidad QR In-Situ</h4>
+                <p>Acceso instantáneo a fichas técnicas y procedimientos desde cualquier dispositivo móvil.</p>
+              </div>
+            </div>
 
-              {error && (
-                <div className="feedback-alert error">
-                  <AlertCircle size={16} className="alert-icon" />
+            <div className="feature-pill-card">
+              <div className="feature-icon-circle amber">
+                <Activity size={22} />
+              </div>
+              <div className="feature-text">
+                <h4>Semáforo Inteligente & KPIs</h4>
+                <p>Monitoreo preventivo continuo de vencimientos y alertas de calibración en tiempo real.</p>
+              </div>
+            </div>
+
+            <div className="feature-pill-card">
+              <div className="feature-icon-circle green">
+                <ShieldCheck size={22} />
+              </div>
+              <div className="feature-text">
+                <h4>Confirmación Metrológica Segura</h4>
+                <p>Registro autenticado con firma digital y contraste de patrones de alta exactitud.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-footer-meta">
+            <span>POLIFUSIÓN S.A. • Gestión de Calidad</span>
+            <span className="version-pill">v1.0.0</span>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Modern Glassmorphic Login Card */}
+        <div className="form-column">
+          <div className="auth-card">
+            {/* Mobile Header (Shown on mobile screens) */}
+            <div className="mobile-header">
+              <div className="mobile-logo-box">
+                <img src="/logo.png" alt="Polifusion" className="mobile-logo" />
+              </div>
+              <h2 className="mobile-title">Control Metrológico</h2>
+              <p className="mobile-sub">Aseguramiento y Trazabilidad Digital</p>
+            </div>
+
+            <div className="card-header-desktop">
+              <div className="card-badge">
+                <ShieldCheck size={15} />
+                <span>Acceso Restringido</span>
+              </div>
+              <h2 className="card-title">Iniciar Sesión</h2>
+              <p className="card-subtitle">Ingrese sus credenciales de usuario para ingresar al sistema</p>
+            </div>
+
+            {error && (
+              <div className="error-alert">
+                <AlertCircle size={18} className="error-icon" />
+                <div className="error-content">
+                  <strong>Error de autenticación</strong>
                   <span>{error}</span>
                 </div>
-              )}
+              </div>
+            )}
 
-              <form onSubmit={handleSubmit} className="auth-form-body">
-                <div className="field-group">
-                  <label htmlFor="username">Usuario o Correo</label>
-                  <div className="field-control">
-                    <User size={16} className="control-icon" />
-                    <input
-                      id="username"
-                      type="text"
-                      value={username}
-                      onChange={(e) => {
-                        setUsername(e.target.value)
-                        if (error) setError('')
-                      }}
-                      placeholder="Ej. jdiaz"
-                      autoComplete="username"
-                      autoFocus
-                      required
-                    />
-                  </div>
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="input-group">
+                <label htmlFor="username">Usuario o Correo Institucional</label>
+                <div className="input-field-wrapper">
+                  <User size={18} className="field-icon" />
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value)
+                      if (error) setError('')
+                    }}
+                    placeholder="Ej. jdiaz"
+                    autoComplete="username"
+                    autoFocus
+                    required
+                  />
                 </div>
+              </div>
 
-                <div className="field-group">
-                  <div className="field-label-row">
-                    <label htmlFor="password">Contraseña</label>
-                  </div>
-                  <div className="field-control">
-                    <Lock size={16} className="control-icon" />
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value)
-                        if (error) setError('')
-                      }}
-                      placeholder="••••••••••••"
-                      autoComplete="current-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="eye-toggle"
-                      tabIndex={-1}
-                      title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
+              <div className="input-group">
+                <div className="label-row">
+                  <label htmlFor="password">Contraseña</label>
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="auth-submit-btn"
-                >
-                  {loading ? (
-                    <span className="submit-loading">
-                      <span className="spinner-ring" />
-                      <span>Validando credenciales...</span>
-                    </span>
-                  ) : (
-                    <span className="submit-ready">
-                      <span>Ingresar al Sistema</span>
-                      <ArrowRight size={16} />
-                    </span>
-                  )}
-                </button>
-              </form>
-
-              <div className="auth-panel-footer">
-                <div className="secure-badge">
-                  <Lock size={12} />
-                  <span>Conexión segura y autenticada</span>
+                <div className="input-field-wrapper">
+                  <Lock size={18} className="field-icon" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      if (error) setError('')
+                    }}
+                    placeholder="••••••••••••"
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="toggle-pass-btn"
+                    tabIndex={-1}
+                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="submit-btn"
+              >
+                {loading ? (
+                  <div className="btn-loading">
+                    <span className="spinner" />
+                    <span>Iniciando sesión...</span>
+                  </div>
+                ) : (
+                  <div className="btn-label">
+                    <span>Ingresar al Sistema</span>
+                    <LogIn size={18} />
+                  </div>
+                )}
+              </button>
+            </form>
+
+            <div className="card-footer-info">
+              <div className="security-notice">
+                <ShieldCheck size={14} color="#0284c7" />
+                <span>Sesión cifrada con control de acceso institucional</span>
               </div>
             </div>
           </div>
-
         </div>
-      </main>
+      </div>
 
       <style jsx>{`
-        /* Claude-Inspired Minimalist Palette & Tokens */
-        .login-viewport {
+        .login-root {
           min-height: 100vh;
           width: 100%;
           display: flex;
           flex-direction: column;
-          background: var(--page-bg, #0b0f19);
-          color: var(--text-main, #f8fafc);
+          align-items: center;
+          justify-content: center;
+          background: var(--page-bg, #090e1c);
           position: relative;
-          overflow: hidden;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          overflow-x: hidden;
+          padding: 16px 24px 32px;
           box-sizing: border-box;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        /* Ambient Glow Layers */
-        .ambient-glow {
+        /* Ambient glowing orbs */
+        .bg-glow {
           position: absolute;
           border-radius: 50%;
-          filter: blur(120px);
+          filter: blur(110px);
           pointer-events: none;
           z-index: 0;
-          opacity: 0.35;
+          opacity: 0.45;
         }
 
-        .glow-top {
+        .bg-glow-1 {
+          width: 650px;
+          height: 650px;
+          background: radial-gradient(circle, rgba(14, 165, 233, 0.28) 0%, rgba(37, 99, 235, 0.08) 70%);
+          top: -220px;
+          left: -120px;
+        }
+
+        .bg-glow-2 {
           width: 550px;
           height: 550px;
-          background: radial-gradient(circle, rgba(2, 132, 199, 0.28) 0%, transparent 70%);
-          top: -180px;
-          left: -100px;
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(14, 165, 233, 0.05) 70%);
+          bottom: -180px;
+          right: -120px;
         }
 
-        .glow-bottom {
-          width: 500px;
-          height: 500px;
-          background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
-          bottom: -160px;
-          right: -100px;
+        .bg-glow-3 {
+          width: 450px;
+          height: 450px;
+          background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+          top: 35%;
+          left: 40%;
         }
 
-        /* Top Bar Controls */
-        .login-top-bar {
+        /* Top Nav Bar */
+        .login-top-nav {
           position: relative;
           z-index: 10;
+          width: 100%;
+          max-width: 1140px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px 32px;
-          max-width: 1240px;
-          width: 100%;
-          margin: 0 auto;
-          box-sizing: border-box;
+          padding: 12px 0 20px;
         }
 
-        .brand-badge-mini {
+        .status-live-pill {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 6px 12px;
-          border-radius: 100px;
-          background: var(--card-bg, rgba(255, 255, 255, 0.04));
-          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-          backdrop-filter: blur(12px);
+          padding: 6px 14px;
+          border-radius: 20px;
+          background: rgba(16, 185, 129, 0.12);
+          border: 1px solid rgba(16, 185, 129, 0.28);
+          color: #10b981;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
         }
 
-        .brand-dot {
-          width: 7px;
-          height: 7px;
+        .live-dot {
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
           background: #10b981;
-          box-shadow: 0 0 6px #10b981;
+          box-shadow: 0 0 8px #10b981;
+          animation: pulseDot 2s infinite;
         }
 
-        .brand-status {
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.02em;
-          color: var(--text-dim, #94a3b8);
+        @keyframes pulseDot {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.25); opacity: 0.7; }
         }
 
-        .theme-toggle {
-          background: var(--card-bg, rgba(255, 255, 255, 0.06));
-          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-          color: var(--text-main, #f8fafc);
-          width: 38px;
-          height: 38px;
-          border-radius: 12px;
+        .theme-switch-btn {
+          background: var(--card-bg, rgba(255, 255, 255, 0.8));
+          border: 1.5px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+          color: var(--text-main, #0f172a);
+          width: 42px;
+          height: 42px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          backdrop-filter: blur(16px);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
           transition: all 0.2s ease;
         }
 
-        .theme-toggle:hover {
-          background: var(--page-bg-soft, rgba(255, 255, 255, 0.12));
-          transform: translateY(-1px);
+        .theme-switch-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
         }
 
-        /* Main Stage */
-        .login-stage {
+        /* Container Layout */
+        .login-wrapper {
           position: relative;
           z-index: 1;
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 24px 36px;
-        }
-
-        .login-frame {
           width: 100%;
-          max-width: 1060px;
+          max-width: 1140px;
           display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap: 56px;
+          grid-template-columns: 1.15fr 0.95fr;
+          gap: 48px;
           align-items: center;
+          margin: auto 0;
         }
 
-        /* LEFT PRESENTATION COLUMN */
-        .frame-presentation {
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          height: 100%;
-          min-height: 480px;
-          padding: 8px 0;
-        }
-
-        .presentation-content {
+        /* HERO COLUMN (LEFT) */
+        .hero-column {
           display: flex;
           flex-direction: column;
           gap: 28px;
+          padding-right: 16px;
         }
 
-        .logo-wrapper {
+        .hero-brand-header {
+          display: flex;
+          align-items: center;
+        }
+
+        /* Transparent Clean Logo Wrapper */
+        .hero-logo-box {
           display: inline-block;
-          margin-bottom: 4px;
+          background: transparent;
         }
 
-        .brand-logo-img {
-          height: 44px;
+        .hero-logo {
+          height: 46px;
           width: auto;
+          display: block;
           object-fit: contain;
           background: transparent;
-          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.08));
+          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.06));
         }
 
-        [data-theme="dark"] .brand-logo-img {
-          filter: drop-shadow(0 0 16px rgba(14, 165, 233, 0.25)) brightness(1.1);
+        [data-theme="dark"] .hero-logo {
+          filter: drop-shadow(0 0 16px rgba(14, 165, 233, 0.35)) brightness(1.1);
         }
 
-        .hero-copy {
+        .hero-text-block {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .hero-headline {
+          font-size: clamp(34px, 4.2vw, 48px);
+          font-weight: 900;
+          color: var(--text-main, #ffffff);
+          line-height: 1.08;
+          letter-spacing: -0.035em;
+          margin: 0;
+        }
+
+        .gradient-text {
+          background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #60a5fa 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .hero-description {
+          font-size: 15px;
+          color: var(--text-dim, #94a3b8);
+          line-height: 1.55;
+          margin: 0;
+          max-width: 520px;
+          font-weight: 500;
+        }
+
+        /* Colorful Feature Cards */
+        .hero-features-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .feature-pill-card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px 20px;
+          border-radius: 20px;
+          background: var(--card-bg, rgba(255, 255, 255, 0.05));
+          border: 1.5px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+          backdrop-filter: blur(14px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+          transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .feature-pill-card:hover {
+          transform: translateX(6px);
+          border-color: rgba(14, 165, 233, 0.4);
+          background: var(--card-bg, rgba(255, 255, 255, 0.09));
+          box-shadow: 0 8px 24px rgba(14, 165, 233, 0.12);
+        }
+
+        .feature-icon-circle {
+          width: 46px;
+          height: 46px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .feature-icon-circle.blue {
+          background: rgba(14, 165, 233, 0.15);
+          color: #0ea5e9;
+          box-shadow: 0 0 14px rgba(14, 165, 233, 0.2);
+        }
+
+        .feature-icon-circle.amber {
+          background: rgba(245, 158, 11, 0.15);
+          color: #f59e0b;
+          box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);
+        }
+
+        .feature-icon-circle.green {
+          background: rgba(16, 185, 129, 0.15);
+          color: #10b981;
+          box-shadow: 0 0 14px rgba(16, 185, 129, 0.2);
+        }
+
+        .feature-text h4 {
+          font-size: 14.5px;
+          font-weight: 800;
+          color: var(--text-main, #ffffff);
+          margin: 0 0 2px;
+        }
+
+        .feature-text p {
+          font-size: 12.5px;
+          color: var(--text-dim, #94a3b8);
+          margin: 0;
+          line-height: 1.4;
+          font-weight: 500;
+        }
+
+        .hero-footer-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--text-soft, #64748b);
+          border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+          padding-top: 18px;
+        }
+
+        .version-pill {
+          font-family: var(--font-mono, monospace);
+          font-size: 11px;
+          background: var(--page-bg-soft, rgba(255, 255, 255, 0.08));
+          padding: 2px 8px;
+          border-radius: 6px;
+        }
+
+        /* FORM COLUMN (RIGHT) */
+        .form-column {
+          display: flex;
+          justify-content: center;
+        }
+
+        .auth-card {
+          width: 100%;
+          max-width: 440px;
+          background: var(--card-bg, #ffffff);
+          border: 1.5px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+          border-radius: 32px;
+          padding: 40px 36px;
+          box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(14, 165, 233, 0.08);
+          backdrop-filter: blur(24px);
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          box-sizing: border-box;
+          animation: scaleIn 0.35s ease-out;
+        }
+
+        @keyframes scaleIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .mobile-header {
+          display: none;
+          text-align: center;
+          margin-bottom: 8px;
+        }
+
+        .card-header-desktop {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .card-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: #0284c7;
+          background: rgba(14, 165, 233, 0.1);
+          border: 1px solid rgba(14, 165, 233, 0.2);
+          padding: 4px 10px;
+          border-radius: 8px;
+          width: fit-content;
+        }
+
+        .card-title {
+          font-size: 24px;
+          font-weight: 900;
+          color: var(--text-main, #0f172a);
+          letter-spacing: -0.025em;
+          margin: 0;
+        }
+
+        .card-subtitle {
+          font-size: 13px;
+          color: var(--text-dim, #64748b);
+          margin: 0;
+          line-height: 1.4;
+          font-weight: 500;
+        }
+
+        /* Error Alert */
+        .error-alert {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 12px 16px;
+          border-radius: 16px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #991b1b;
+          animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+
+        .error-icon {
+          flex-shrink: 0;
+          margin-top: 2px;
+          color: #dc2626;
+        }
+
+        .error-content {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          font-size: 12px;
+        }
+
+        .error-content strong {
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        /* Form */
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .input-group {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
 
-        .kicker-tag {
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: #0284c7;
-        }
-
-        .hero-title {
-          font-size: clamp(30px, 3.4vw, 42px);
-          font-weight: 800;
-          line-height: 1.15;
-          letter-spacing: -0.03em;
-          color: var(--text-main, #ffffff);
-          margin: 0;
-        }
-
-        .serif-accent {
-          font-weight: 600;
-          color: var(--text-dim, #94a3b8);
-          font-style: normal;
-        }
-
-        .hero-text {
-          font-size: 14.5px;
-          color: var(--text-dim, #94a3b8);
-          line-height: 1.55;
-          margin: 0;
-          max-width: 480px;
-        }
-
-        /* Feature Pillars */
-        .feature-pillars {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-top: 8px;
-        }
-
-        .pillar-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 14px;
-        }
-
-        .pillar-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #0284c7;
-          margin-top: 6px;
-          flex-shrink: 0;
-        }
-
-        .pillar-item h4 {
-          font-size: 13.5px;
-          font-weight: 700;
-          color: var(--text-main, #ffffff);
-          margin: 0 0 2px;
-        }
-
-        .pillar-item p {
-          font-size: 12.5px;
-          color: var(--text-soft, #64748b);
-          margin: 0;
-          line-height: 1.35;
-        }
-
-        .presentation-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--text-soft, #64748b);
-          border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-          padding-top: 20px;
-        }
-
-        .version-tag {
-          font-family: var(--font-mono, monospace);
-          font-size: 11px;
-          letter-spacing: 0.05em;
-        }
-
-        /* RIGHT AUTH PANEL */
-        .frame-auth {
-          display: flex;
-          justify-content: center;
-        }
-
-        .auth-panel {
-          width: 100%;
-          max-width: 420px;
-          background: var(--card-bg, #ffffff);
-          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-          border-radius: 28px;
-          padding: 36px 32px;
-          box-shadow: 
-            0 24px 48px -12px rgba(0, 0, 0, 0.18),
-            0 0 0 1px var(--glass-border, rgba(255, 255, 255, 0.06));
-          backdrop-filter: blur(24px);
-          display: flex;
-          flex-direction: column;
-          gap: 22px;
-          box-sizing: border-box;
-          animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .mobile-brand-head {
-          display: none;
-        }
-
-        .auth-panel-header {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .auth-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          color: #0284c7;
-          background: rgba(2, 132, 199, 0.08);
-          border: 1px solid rgba(2, 132, 199, 0.2);
-          padding: 3px 10px;
-          border-radius: 100px;
-          width: fit-content;
-        }
-
-        .panel-title {
-          font-size: 22px;
-          font-weight: 800;
-          color: var(--text-main, #0f172a);
-          letter-spacing: -0.02em;
-          margin: 0;
-        }
-
-        .panel-subtitle {
+        .input-group label {
           font-size: 13px;
-          color: var(--text-dim, #64748b);
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        /* Feedback Error */
-        .feedback-alert {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 14px;
-          border-radius: 12px;
-          font-size: 12.5px;
-          font-weight: 600;
-        }
-
-        .feedback-alert.error {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #b91c1c;
-        }
-
-        [data-theme="dark"] .feedback-alert.error {
-          background: rgba(239, 68, 68, 0.12);
-          border-color: rgba(239, 68, 68, 0.25);
-          color: #fca5a5;
-        }
-
-        .alert-icon {
-          flex-shrink: 0;
-        }
-
-        /* Form */
-        .auth-form-body {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 7px;
-        }
-
-        .field-group label {
-          font-size: 12.5px;
           font-weight: 700;
           color: var(--text-main, #1e293b);
-          letter-spacing: 0.01em;
         }
 
-        .field-control {
+        .input-field-wrapper {
           position: relative;
           display: flex;
           align-items: center;
         }
 
-        .control-icon {
+        .field-icon {
           position: absolute;
-          left: 14px;
-          color: var(--text-soft, #94a3b8);
+          left: 16px;
+          color: var(--text-dim, #94a3b8);
           pointer-events: none;
           transition: color 0.2s;
         }
 
-        .field-control input {
+        .input-field-wrapper input {
           width: 100%;
-          height: 46px;
-          padding: 0 44px 0 42px;
-          border-radius: 14px;
+          height: 48px;
+          padding: 0 46px 0 46px;
+          border-radius: 16px;
           border: 1.5px solid var(--glass-border, #e2e8f0);
           background: var(--page-bg-soft, #f8fafc);
           color: var(--text-main, #0f172a);
@@ -649,22 +690,22 @@ export default function LoginPage() {
           box-sizing: border-box;
         }
 
-        .field-control input:focus {
-          border-color: #0284c7;
+        .input-field-wrapper input:focus {
+          border-color: #0ea5e9;
           background: var(--card-bg, #ffffff);
-          box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+          box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
         }
 
-        .field-control:focus-within .control-icon {
-          color: #0284c7;
+        .input-field-wrapper:focus-within .field-icon {
+          color: #0ea5e9;
         }
 
-        .eye-toggle {
+        .toggle-pass-btn {
           position: absolute;
-          right: 12px;
+          right: 14px;
           background: transparent;
           border: none;
-          color: var(--text-soft, #94a3b8);
+          color: var(--text-dim, #94a3b8);
           cursor: pointer;
           padding: 4px;
           display: flex;
@@ -673,21 +714,21 @@ export default function LoginPage() {
           transition: color 0.2s;
         }
 
-        .eye-toggle:hover {
+        .toggle-pass-btn:hover {
           color: var(--text-main, #0f172a);
         }
 
-        /* Submit Action */
-        .auth-submit-btn {
-          height: 48px;
-          border-radius: 14px;
+        /* Submit Button */
+        .submit-btn {
+          height: 52px;
+          border-radius: 16px;
           border: none;
-          background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+          background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
           color: #ffffff;
-          font-size: 14px;
-          font-weight: 700;
+          font-size: 15px;
+          font-weight: 800;
           cursor: pointer;
-          box-shadow: 0 8px 20px -4px rgba(2, 132, 199, 0.4);
+          box-shadow: 0 12px 28px -6px rgba(14, 165, 233, 0.45);
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
@@ -695,36 +736,36 @@ export default function LoginPage() {
           margin-top: 4px;
         }
 
-        .auth-submit-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 12px 24px -4px rgba(2, 132, 199, 0.55);
+        .submit-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 16px 36px -6px rgba(14, 165, 233, 0.6);
         }
 
-        .auth-submit-btn:active:not(:disabled) {
+        .submit-btn:active:not(:disabled) {
           transform: translateY(0);
         }
 
-        .auth-submit-btn:disabled {
-          opacity: 0.65;
+        .submit-btn:disabled {
+          opacity: 0.7;
           cursor: not-allowed;
         }
 
-        .submit-ready {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .submit-loading {
+        .btn-label {
           display: flex;
           align-items: center;
           gap: 10px;
         }
 
-        .spinner-ring {
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
+        .btn-loading {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .spinner {
+          width: 18px;
+          height: 18px;
+          border: 2.5px solid rgba(255, 255, 255, 0.3);
           border-top-color: #ffffff;
           border-radius: 50%;
           animation: spin 0.6s linear infinite;
@@ -734,75 +775,76 @@ export default function LoginPage() {
           to { transform: rotate(360deg); }
         }
 
-        .auth-panel-footer {
+        .card-footer-info {
           display: flex;
-          justify-content: center;
-          margin-top: 2px;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
         }
 
-        .secure-badge {
+        .security-notice {
           display: inline-flex;
           align-items: center;
           gap: 6px;
           font-size: 11.5px;
           font-weight: 600;
-          color: var(--text-soft, #64748b);
+          color: var(--text-dim, #64748b);
+          text-align: center;
         }
 
-        /* RESPONSIVE LAYOUT FOR MOBILE */
-        @media (max-width: 900px) {
-          .login-top-bar {
-            padding: 16px 20px;
-          }
-
-          .login-frame {
+        /* RESPONSIVE MOBILE OVERRIDES */
+        @media (max-width: 960px) {
+          .login-wrapper {
             grid-template-columns: 1fr;
-            max-width: 440px;
-            gap: 0;
+            max-width: 460px;
+            gap: 20px;
           }
 
-          .frame-presentation {
+          .hero-column {
             display: none;
           }
 
-          .mobile-brand-head {
+          .mobile-header {
             display: flex;
             flex-direction: column;
             align-items: center;
-            text-align: center;
-            gap: 4px;
-            margin-bottom: 4px;
+            gap: 6px;
+            margin-bottom: 6px;
           }
 
-          .mobile-brand-logo {
-            height: 38px;
+          .mobile-logo-box {
+            background: transparent;
+            margin-bottom: 6px;
+          }
+
+          .mobile-logo {
+            height: 36px;
             width: auto;
             object-fit: contain;
             background: transparent;
-            margin-bottom: 8px;
           }
 
-          .mobile-brand-head h2 {
-            font-size: 20px;
-            font-weight: 800;
+          .mobile-title {
+            font-size: 22px;
+            font-weight: 900;
             color: var(--text-main, #0f172a);
             margin: 0;
           }
 
-          .mobile-brand-head p {
+          .mobile-sub {
             font-size: 12px;
             color: var(--text-dim, #64748b);
             margin: 0;
-            font-weight: 500;
+            font-weight: 600;
           }
 
-          .auth-panel-header {
+          .card-header-desktop {
             display: none;
           }
 
-          .auth-panel {
+          .auth-card {
             padding: 28px 24px;
-            border-radius: 24px;
+            border-radius: 26px;
           }
         }
       `}</style>
