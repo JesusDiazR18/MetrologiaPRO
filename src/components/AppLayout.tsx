@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // 2. LOGIN PAGE VIEW
   if (pathname === '/login') {
-    return <div className="app-layout">{children}</div>
+    return <>{children}</>
   }
 
   // 3. AUTHENTICATION LOADING SCREEN

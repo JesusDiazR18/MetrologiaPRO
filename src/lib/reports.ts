@@ -101,42 +101,7 @@ function getStatusColor(valStr: string): [number, number, number] {
   return [16, 185, 129]; // Verde (Operativo)
 }
 
-/**
- * Genera fechas deterministas simuladas basadas en el ID/Código del equipo.
- * Esto asegura consistencia, variedad realista (algunas el año pasado, otras este año)
- * y fechas vigentes/realistas para pasar la auditoría.
- */
-function getDeterministicSimulatedDates(id: string, periodicityMonths: number = 6) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const absHash = Math.abs(hash);
-  
-  const months = periodicityMonths || 6;
-  const periodDays = months * 30;
-  
-  // Para garantizar que el equipo sea visualizado como OPERATIVO (al día), 
-  // la fecha de próxima verificación debe ser posterior al 26 de Junio 2026.
-  // Por ende, los días transcurridos desde la última verificación (daysAgo) deben ser
-  // menores al período total de control (periodDays).
-  // Distribuimos determinísticamente los días transcurridos para simular fechas realistas:
-  const minDaysAgo = 15;
-  const maxDaysAgo = Math.max(30, periodDays - 15);
-  
-  const daysAgo = minDaysAgo + (absHash % (maxDaysAgo - minDaysAgo));
-  
-  const lastDate = new Date('2026-06-26T12:00:00Z');
-  lastDate.setDate(lastDate.getDate() - daysAgo);
-  
-  const nextDate = new Date(lastDate);
-  nextDate.setMonth(nextDate.getMonth() + months);
-  
-  return {
-    last: lastDate.toISOString(),
-    next: nextDate.toISOString()
-  };
-}
+
 
 /**
  * Renderiza un encabezado de sección con estilo premium (Fondo oscuro y acento lateral).
@@ -1457,43 +1422,27 @@ export async function generateGeneralMetrologicalReportPDF(
 
   currY += 12;
 
-  // Calcular métricas
-  // Códigos y estados excluidos del reporte de inventario
-  const CODIGOS_EXCLUIDOS_REPORTE = ['E-05', 'E-07'];
-  const ESTADOS_EXCLUIDOS_REPORTE = ['DE_BAJA_OBSOLETO', 'OBSOLETO', 'BAJA', 'OPERATIVO_CON_DETALLES'];
-  
-  // Filtrado del inventario para el reporte: sin dados de baja, sin detalles pendientes y sin los excluidos explícitos
-  const equiposReporte = equipos.filter(e => {
-    const codigo = (e.Codigo_Interno || e.ID_Equipo || '').trim().toUpperCase();
-    if (CODIGOS_EXCLUIDOS_REPORTE.includes(codigo)) return false;
-    if (ESTADOS_EXCLUIDOS_REPORTE.includes(e.Estado)) return false;
-    return true;
-  });
+  // Calcular métricas 100% reales basadas en el inventario actual
+  const equiposReporte = equipos;
 
-  // 1. Equipos (sobre el inventario filtrado)
+  // 1. Equipos
   const totalEquipos = equiposReporte.length;
   const eqAlDia = equiposReporte.filter(e => {
-    const esOperativo = e.Estado === 'OPERATIVO';
-    const fechaProxima = esOperativo
-      ? getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6).next
-      : e.Fecha_Proximo_Control;
-    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(fechaProxima, e.Estado);
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA'
+      ? 'ROJO'
+      : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
     return sem === 'VERDE';
   }).length;
   const eqAdvertencia = equiposReporte.filter(e => {
-    const esOperativo = e.Estado === 'OPERATIVO';
-    const fechaProxima = esOperativo
-      ? getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6).next
-      : e.Fecha_Proximo_Control;
-    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(fechaProxima, e.Estado);
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA'
+      ? 'ROJO'
+      : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
     return sem === 'AMARILLO';
   }).length;
   const eqCriticos = equiposReporte.filter(e => {
-    const esOperativo = e.Estado === 'OPERATIVO';
-    const fechaProxima = esOperativo
-      ? getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6).next
-      : e.Fecha_Proximo_Control;
-    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(fechaProxima, e.Estado);
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA'
+      ? 'ROJO'
+      : calcularSemaforo(e.Fecha_Proximo_Control, e.Estado);
     return sem === 'ROJO';
   }).length;
 
@@ -1611,20 +1560,13 @@ export async function generateGeneralMetrologicalReportPDF(
   currY += 8;
 
   equiposReporte.forEach((e, idx) => {
-    // Si el activo es operativo (OPERATIVO puro), simulamos fechas vigentes para pasar la auditoría
-    const esOperativo = e.Estado === 'OPERATIVO';
-    
-    let fechaUltima = e.Fecha_Ultima_Verificacion;
-    let fechaProxima = e.Fecha_Proximo_Control;
-    
-    if (esOperativo) {
-      const sim = getDeterministicSimulatedDates(e.Codigo_Interno || e.ID_Equipo || 'SIM', e.Periodicidad_Meses || 6);
-      fechaUltima = sim.last;
-      fechaProxima = sim.next;
-    }
+    const fechaUltima = e.Fecha_Ultima_Verificacion;
+    const fechaProxima = e.Fecha_Proximo_Control;
 
-    // Calculo semáforo (usando fechas simuladas si aplica)
-    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' ? 'ROJO' : calcularSemaforo(fechaProxima, e.Estado);
+    // Calculo semáforo real
+    const sem = e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'DE_BAJA_OBSOLETO' || e.Estado === 'OBSOLETO' || e.Estado === 'BAJA'
+      ? 'ROJO' 
+      : calcularSemaforo(fechaProxima, e.Estado);
     const estLabel = semaforoLabel(sem, e.Estado).toUpperCase();
     const estColor = sem === 'VERDE' ? [22, 163, 74] : sem === 'AMARILLO' ? [217, 119, 6] : [220, 38, 38];
 
