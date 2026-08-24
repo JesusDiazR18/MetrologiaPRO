@@ -21,16 +21,15 @@ export async function POST(req: Request) {
     }
 
     const targetUser = username.trim().toLowerCase()
-    if (targetUser !== 'cmunizaga') {
-      return NextResponse.json(
-        { error: 'Usuario no autorizado para registrar verificaciones' },
-        { status: 401 }
-      )
-    }
+    const emailToSearch = targetUser.includes('@') ? targetUser : `${targetUser}@polifusion.cl`
 
-    const email = 'cmunizaga@polifusion.cl'
-    const usuario = await prisma.usuario.findUnique({
-      where: { Email: email },
+    const usuario = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { Email: { equals: emailToSearch, mode: 'insensitive' } },
+          { Email: { equals: targetUser, mode: 'insensitive' } }
+        ]
+      },
       select: {
         Email: true,
         Nombre: true,
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
 
     if (!usuario) {
       return NextResponse.json(
-        { error: 'Usuario no autorizado' },
+        { error: 'Usuario no autorizado para registrar verificaciones' },
         { status: 401 }
       )
     }

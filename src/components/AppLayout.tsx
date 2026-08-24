@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ClipboardList, CalendarDays,
   FlaskConical, Settings, ChevronRight,
-  Microscope, X, Menu, QrCode, Search, Sun, Moon, BookOpen
+  Microscope, X, Menu, QrCode, Search, Sun, Moon, BookOpen,
+  LogOut, User as UserIcon, Shield
 } from 'lucide-react'
-
+import { useAuth } from '@/components/AuthProvider'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -22,6 +23,8 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { user, loading, isAuthenticated, logout } = useAuth()
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [scrolled, setScrolled] = useState(false)
@@ -54,7 +57,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text)
-    // Sincronizar con la URL instantáneamente
     const params = new URLSearchParams()
     if (text.trim()) {
       params.set('q', text.trim())
@@ -64,7 +66,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Sincronizar el input con la URL si cambia externamente (ej: navegando)
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get('q')
     if (q !== null && q !== searchQuery) {
@@ -72,9 +73,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname])
 
-  const currentPage = navItems.find(n => n.href === pathname)?.label ?? 'Panel'
-
-  // Si estamos en la vista pública "visor", ocultamos toda la estructura de la app
+  // 1. PUBLIC ACCESS FOR QR SCANS (/visor/*)
+  // El visor de QR es 100% público, no requiere login
   if (pathname.startsWith('/visor')) {
     return (
       <div className="app-layout">
@@ -84,6 +84,50 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     )
   }
+
+  // 2. LOGIN PAGE VIEW
+  if (pathname === '/login') {
+    return <div className="app-layout">{children}</div>
+  }
+
+  // 3. AUTHENTICATION LOADING SCREEN
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--page-bg, #f8fafc)',
+        gap: 16
+      }}>
+        <div style={{
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
+          border: '3px solid rgba(14, 165, 233, 0.2)',
+          borderTopColor: '#0ea5e9',
+          animation: 'spin 0.7s linear infinite'
+        }} />
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-dim, #64748b)', letterSpacing: '0.05em' }}>
+          VERIFICANDO ACCESO...
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  // 4. UNAUTHENTICATED REDIRECT
+  if (!isAuthenticated || !user) {
+    if (typeof window !== 'undefined') {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
+    }
+    return null
+  }
+
+  const currentPage = navItems.find(n => n.href === pathname)?.label ?? 'Panel'
+  const userInitials = user.nombre ? user.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : (user.username?.slice(0, 2).toUpperCase() || 'U')
 
   return (
     <div className="app-layout">
@@ -122,19 +166,92 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
-
-          {/* 
-          <div className="nav-group-label" style={{ marginTop: 16 }}>Sistema</div>
-          <Link 
-            href="/configuracion" 
-            className={`nav-item ${pathname === '/configuracion' ? 'active' : ''}`}
-            onClick={() => setSidebarOpen(false)}
-          >
-            <Settings size={18} />
-            <span>Configuración</span>
-          </Link>
-          */}
         </nav>
+
+        {/* User Card in Sidebar */}
+        <div className="sidebar-user-card" style={{
+          margin: '12px 14px',
+          padding: '12px 14px',
+          borderRadius: '16px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: 13,
+              boxShadow: '0 4px 10px rgba(14, 165, 233, 0.3)'
+            }}>
+              {userInitials}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#ffffff',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {user.nombre || user.username}
+              </div>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: '#38bdf8',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+                <Shield size={11} />
+                {user.rol || 'Administrador'}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => logout()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '10px',
+              border: 'none',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#fca5a5',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+              e.currentTarget.style.color = '#fca5a5'
+            }}
+            title="Cerrar sesión"
+          >
+            <LogOut size={14} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
 
         <div className="sidebar-footer">
           <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>v1.0.0</div>
@@ -220,7 +337,70 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* User pill topbar */}
+            <div className="desktop-only" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 14px',
+              borderRadius: 14,
+              background: 'var(--page-bg-soft)',
+              border: '1.5px solid var(--glass-border)',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              <div style={{
+                width: 26,
+                height: 26,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: 11
+              }}>
+                {userInitials}
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>
+                {user.nombre?.split(' ')[0] || user.username}
+              </span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: '#0284c7',
+                background: 'rgba(14, 165, 233, 0.1)',
+                padding: '2px 6px',
+                borderRadius: 6
+              }}>
+                {user.rol || 'Admin'}
+              </span>
+            </div>
+
+            {/* Logout button in topbar */}
+            <button
+              onClick={() => logout()}
+              style={{
+                background: 'var(--page-bg-soft)',
+                border: '1.5px solid var(--glass-border)',
+                borderRadius: '12px',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--danger, #ef4444)',
+                transition: 'all 0.2s',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+              title="Cerrar sesión"
+            >
+              <LogOut size={18} />
+            </button>
+
+            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               style={{
@@ -243,8 +423,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-
-
 
         <main className={`page ${pathname === '/' ? 'dashboard-page-view' : ''}`} style={{ 
           width: '100%', 
@@ -294,7 +472,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           .btn-scan svg { color: var(--accent) !important; }
           
           .main-content { 
-            padding-bottom: 70px !important; /* Más espacio para el bottom nav y evitar solapamiento */
+            padding-bottom: 70px !important;
             overflow-y: visible !important;
             height: auto !important;
           }

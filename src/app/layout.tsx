@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import AppLayout from '@/components/AppLayout'
 import NotificationsProvider from '@/components/NotificationsProvider'
+import { AuthProvider } from '@/components/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'Sistema de Control Metrológico PRO',
@@ -19,8 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body>
-        <NotificationsProvider />
-        <AppLayout>{children}</AppLayout>
+        <AuthProvider>
+          <NotificationsProvider />
+          <AppLayout>{children}</AppLayout>
+        </AuthProvider>
       </body>
     </html>
   )
