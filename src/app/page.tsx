@@ -411,7 +411,7 @@ export default function DashboardPage() {
           </div>
           <div className="kpi-bar-value-row">
             <span className="kpi-bar-val">{complianceGlobalDynamic}%</span>
-            <span className="kpi-bar-sub">Conformidad ISO 9001</span>
+            <span className="kpi-bar-sub">Conformidad Metrológica</span>
           </div>
         </div>
 

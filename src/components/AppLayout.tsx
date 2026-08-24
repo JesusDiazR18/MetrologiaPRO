@@ -7,16 +7,17 @@ import {
   LayoutDashboard, ClipboardList, CalendarDays,
   FlaskConical, Settings, ChevronRight,
   Microscope, X, Menu, QrCode, Search, Sun, Moon,
-  LogOut, User as UserIcon, Shield, Users
+  LogOut, User as UserIcon, Shield, Users, Sparkles,
+  Camera, CheckCircle2, ShieldCheck, ArrowUpRight
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 
 const baseNavItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/equipos', label: 'Fichas Técnicas', icon: ClipboardList },
-  { href: '/calendario', label: 'Calendario', icon: CalendarDays },
-  { href: '/patrones', label: 'Patrones', icon: FlaskConical },
-  { href: '/qrcodes', label: 'Galería QR', icon: QrCode },
+  { href: '/', label: 'Dashboard', shortLabel: 'Inicio', icon: LayoutDashboard },
+  { href: '/equipos', label: 'Fichas Técnicas', shortLabel: 'Fichas', icon: ClipboardList },
+  { href: '/calendario', label: 'Calendario', shortLabel: 'Agenda', icon: CalendarDays },
+  { href: '/patrones', label: 'Patrones', shortLabel: 'Patrones', icon: FlaskConical },
+  { href: '/qrcodes', label: 'Galería QR', shortLabel: 'QR Codes', icon: QrCode },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -48,9 +49,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
+      setScrolled(window.scrollY > 15)
     }
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -73,7 +74,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   // 1. PUBLIC ACCESS FOR QR SCANS (/visor/*)
-  // El visor de QR es 100% público, no requiere login
   if (pathname.startsWith('/visor')) {
     return (
       <div className="app-layout">
@@ -126,7 +126,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const navItems = user?.rol === 'Admin'
-    ? [...baseNavItems, { href: '/usuarios', label: 'Usuarios', icon: Users }]
+    ? [...baseNavItems, { href: '/usuarios', label: 'Gestión Usuarios', shortLabel: 'Usuarios', icon: Users }]
     : baseNavItems
 
   const currentPage = navItems.find(n => n.href === pathname)?.label ?? (pathname === '/usuarios' ? 'Gestión de Usuarios' : 'Panel')
@@ -134,26 +134,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-layout">
-      {/* Overlay mobile */}
+      {/* Mobile Drawer Overlay */}
       {sidebarOpen && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
+          className="drawer-backdrop"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar (Desktop Permanent / Mobile Slide Drawer) */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
-          <div className="brand" style={{ padding: '4px 0' }}>
+          <div className="brand" style={{ padding: '2px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="brand-logo-container">
               <img src="/logo.png" alt="Polifusion Logo" className="brand-logo-img" />
             </div>
+            {/* Mobile close button inside drawer */}
+            <button 
+              className="drawer-close-btn"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-group-label">Principal</div>
+          <div className="nav-group-label">Módulos de Control</div>
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href
             return (
@@ -165,90 +172,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={18} />
                 <span style={{ flex: 1 }}>{label}</span>
-                {active && <ChevronRight size={14} />}
+                {active && <ChevronRight size={14} className="nav-chevron" />}
               </Link>
             )
           })}
         </nav>
 
         {/* User Card in Sidebar */}
-        <div className="sidebar-user-card" style={{
-          margin: '12px 14px',
-          padding: '12px 14px',
-          borderRadius: '16px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: 13,
-              boxShadow: '0 4px 10px rgba(14, 165, 233, 0.3)'
-            }}>
+        <div className="sidebar-user-card">
+          <div className="user-profile-row">
+            <div className="user-avatar-pill">
               {userInitials}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#ffffff',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
+            <div className="user-profile-info">
+              <div className="user-name-title">
                 {user.nombre || user.username}
               </div>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: '#38bdf8',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4
-              }}>
+              <div className="user-role-badge">
                 <Shield size={11} />
-                {user.rol || 'Administrador'}
+                <span>{user.rol || 'Administrador'}</span>
               </div>
             </div>
           </div>
 
           <button
             onClick={() => logout()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '10px',
-              border: 'none',
-              background: 'rgba(239, 68, 68, 0.15)',
-              color: '#fca5a5',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)'
-              e.currentTarget.style.color = '#ffffff'
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
-              e.currentTarget.style.color = '#fca5a5'
-            }}
+            className="sidebar-logout-btn"
             title="Cerrar sesión"
           >
             <LogOut size={14} />
@@ -257,283 +206,531 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="sidebar-footer">
-          <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>v1.0.0</div>
-          <div>CONTROL METROLÓGICO PRO</div>
+          <div className="footer-version">v1.0.0</div>
+          <div className="footer-title">CONTROL METROLÓGICO PRO</div>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content Viewport */}
       <div className="main-content">
         {/* Topbar Ultra-Premium */}
-        <header className={`topbar ${scrolled ? 'scrolled' : ''} ${pathname === '/' ? 'hide-on-dashboard' : ''}`}>
+        <header className={`topbar ${scrolled ? 'scrolled' : ''}`}>
+          {/* Mobile Drawer Trigger */}
           <button
-            style={{ 
-              display: 'flex', 
-              background: 'var(--page-bg-soft)', 
-              border: '1.5px solid var(--glass-border)', 
-              cursor: 'pointer', 
-              padding: 10, 
-              borderRadius: 12, 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}
             className="mobile-toggle"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Abrir menú de navegación"
           >
-            <Menu size={20} color="var(--text-main)" />
+            <Menu size={20} />
           </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div className="topbar-title" style={{ 
-              fontSize: scrolled ? 15 : 17, 
-              fontWeight: 900, 
-              color: 'var(--text-main)', 
-              lineHeight: 1.1,
-              letterSpacing: '-0.02em',
-              transition: 'all 0.3s'
-            }}>{currentPage}</div>
-            <div className="desktop-only" style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-dim)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONTROL METROLÓGICO PRO</div>
+          {/* Screen Title */}
+          <div className="topbar-title-block">
+            <div className="topbar-title">{currentPage}</div>
+            <div className="topbar-sub-brand">POLIFUSIÓN • SGC</div>
           </div>
 
-          <div className="topbar-search-container" style={{ 
-            flex: 1, 
-            maxWidth: 600,
-            position: 'relative',
-            marginLeft: 'auto'
-          }}>
-            <div style={{ 
-              background: 'var(--card-bg)', 
-              borderRadius: 16, 
-              padding: '2px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              border: searchQuery ? '2px solid var(--accent)' : '2px solid var(--glass-border)',
-              boxShadow: searchQuery ? '0 8px 20px var(--accent-glow)' : 'inset 0 2px 4px rgba(0,0,0,0.02)',
-              transition: 'all 0.3s ease',
-              transform: searchQuery ? 'translateY(-1px)' : 'none'
-            }}>
-              <Search size={20} color={searchQuery ? 'var(--accent)' : 'var(--text-soft)'} style={{ transition: 'all 0.3s' }} />
+          {/* Desktop Global Search Bar */}
+          <div className="topbar-search-container">
+            <div className="search-input-box">
+              <Search size={18} className="search-input-icon" />
               <input 
-                placeholder="Buscar activo, código o responsable..." 
+                placeholder="Buscar equipo, código interno o responsable..." 
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: '12px 0',
-                  fontSize: 15,
-                  fontWeight: 500,
-                  width: '100%',
-                  outline: 'none',
-                  color: 'var(--text-main)'
-                }}
               />
               {searchQuery && (
                 <button 
                   onClick={() => handleSearchChange('')}
-                  style={{ background: 'var(--page-bg-soft)', border: 'none', borderRadius: '50%', padding: 4, cursor: 'pointer', display: 'flex' }}
+                  className="search-clear-btn"
                 >
-                  <X size={12} color="var(--text-dim)" />
+                  <X size={12} />
                 </button>
               )}
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* User pill topbar */}
-            <div className="desktop-only" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '6px 14px',
-              borderRadius: 14,
-              background: 'var(--page-bg-soft)',
-              border: '1.5px solid var(--glass-border)',
-              boxShadow: 'var(--shadow-sm)'
-            }}>
-              <div style={{
-                width: 26,
-                height: 26,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: 11
-              }}>
+          {/* Topbar Action Controls */}
+          <div className="topbar-actions">
+            {/* Quick QR Gallery Trigger */}
+            <Link 
+              href="/qrcodes" 
+              className="topbar-icon-btn qr-quick-btn"
+              title="Ver Galería de Códigos QR"
+            >
+              <QrCode size={18} />
+              <span className="desktop-only qr-quick-label">QR Galería</span>
+            </Link>
+
+            {/* User Pill (Desktop) */}
+            <div className="desktop-only topbar-user-pill">
+              <div className="user-mini-avatar">
                 {userInitials}
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>
+              <span className="user-mini-name">
                 {user.nombre?.split(' ')[0] || user.username}
               </span>
-              <span style={{
-                fontSize: 10,
-                fontWeight: 800,
-                color: '#0284c7',
-                background: 'rgba(14, 165, 233, 0.1)',
-                padding: '2px 6px',
-                borderRadius: 6
-              }}>
+              <span className="user-mini-role">
                 {user.rol || 'Admin'}
               </span>
             </div>
 
-            {/* Logout button in topbar */}
-            <button
-              onClick={() => logout()}
-              style={{
-                background: 'var(--page-bg-soft)',
-                border: '1.5px solid var(--glass-border)',
-                borderRadius: '12px',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--danger, #ef4444)',
-                transition: 'all 0.2s',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-              title="Cerrar sesión"
-            >
-              <LogOut size={18} />
-            </button>
-
-            {/* Theme Toggle */}
+            {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              style={{
-                background: 'var(--page-bg-soft)',
-                border: '1.5px solid var(--glass-border)',
-                borderRadius: '12px',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-main)',
-                transition: 'all 0.2s',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-              title={theme === 'light' ? 'Cambiar a Tema Oscuro Stitch 2.0' : 'Cambiar a Tema Claro Original'}
+              className="topbar-icon-btn theme-btn"
+              title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+
+            {/* Logout button (Desktop) */}
+            <button
+              onClick={() => logout()}
+              className="desktop-only topbar-icon-btn logout-btn"
+              title="Cerrar sesión de usuario"
+            >
+              <LogOut size={18} />
             </button>
           </div>
         </header>
 
-        <main className={`page ${pathname === '/' ? 'dashboard-page-view' : ''}`} style={{ 
-          width: '100%', 
-          maxWidth: '100%',
-          minHeight: 'calc(100vh - 60px)',
-          display: 'block',
-          position: 'relative'
-        }}>
+        {/* Content Body */}
+        <main className="page">
           {children}
         </main>
       </div>
 
-      {/* Bottom Navigation para Móviles - Estilo iOS/Android Nativo */}
+      {/* 📱 NATIVE MOBILE BOTTOM TAB BAR (iOS / Android Native Feel) */}
       <nav className="bottom-nav">
-        {navItems.slice(0, 5).map(({ href, label, icon: Icon }) => {
+        {navItems.slice(0, 5).map(({ href, shortLabel, icon: Icon }) => {
           const active = pathname === href
           return (
-            <Link key={href} href={href} className={`bottom-nav-item ${active ? 'active' : ''}`}>
-              <Icon size={20} />
-              <span>{label.split(' ')[0]}</span>
+            <Link 
+              key={href} 
+              href={href} 
+              className={`bottom-nav-item ${active ? 'active' : ''}`}
+            >
+              <div className="bottom-nav-icon-box">
+                <Icon size={20} />
+                {active && <span className="active-glow-pill" />}
+              </div>
+              <span className="bottom-nav-label">{shortLabel}</span>
             </Link>
           )
         })}
       </nav>
 
-      {/* Mobile sidebar toggle CSS override */}
-      <style>{`
+      <style jsx global>{`
+        /* Global Navigation Enhancements */
+        .drawer-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.65);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 105;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .drawer-close-btn {
+          display: none;
+          background: rgba(255, 255, 255, 0.1);
+          border: none;
+          color: #ffffff;
+          padding: 6px;
+          border-radius: 10px;
+          cursor: pointer;
+        }
+
+        .sidebar-user-card {
+          margin: 12px 14px;
+          padding: 14px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          backdrop-filter: blur(12px);
+        }
+
+        .user-profile-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .user-avatar-pill {
+          width: 36px;
+          height: 36px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #0ea5e9, #2563eb);
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 13px;
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+          flex-shrink: 0;
+        }
+
+        .user-profile-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .user-name-title {
+          font-size: 13px;
+          font-weight: 700;
+          color: #ffffff;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .user-role-badge {
+          font-size: 11px;
+          font-weight: 600;
+          color: #38bdf8;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          margin-top: 1px;
+        }
+
+        .sidebar-logout-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          background: rgba(239, 68, 68, 0.12);
+          color: #fca5a5;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .sidebar-logout-btn:hover {
+          background: rgba(239, 68, 68, 0.25);
+          color: #ffffff;
+          border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .sidebar-footer {
+          padding: 14px 18px;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 11px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .footer-version {
+          font-weight: 700;
+          font-family: var(--font-mono, monospace);
+          color: #38bdf8;
+        }
+
+        .footer-title {
+          font-size: 10px;
+          letter-spacing: 0.05em;
+        }
+
+        /* Topbar Styles */
+        .topbar-title-block {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .topbar-sub-brand {
+          font-size: 9px;
+          font-weight: 800;
+          color: var(--text-dim, #64748b);
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .topbar-search-container {
+          flex: 1;
+          max-width: 520px;
+          position: relative;
+          margin-left: auto;
+        }
+
+        .search-input-box {
+          background: var(--card-bg, #ffffff);
+          border: 1.5px solid var(--glass-border, #e2e8f0);
+          border-radius: 14px;
+          padding: 0 16px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          box-shadow: var(--shadow-sm);
+          transition: all 0.2s ease;
+        }
+
+        .search-input-box:focus-within {
+          border-color: var(--accent, #0284c7);
+          box-shadow: 0 0 0 3px var(--accent-glow, rgba(2, 132, 199, 0.15));
+        }
+
+        .search-input-icon {
+          color: var(--text-soft, #94a3b8);
+          flex-shrink: 0;
+        }
+
+        .search-input-box input {
+          width: 100%;
+          height: 40px;
+          border: none;
+          background: transparent;
+          font-size: 13.5px;
+          font-weight: 500;
+          color: var(--text-main, #0f172a);
+          outline: none;
+        }
+
+        .search-clear-btn {
+          background: var(--page-bg-soft, #f1f5f9);
+          border: none;
+          border-radius: 50%;
+          padding: 3px;
+          cursor: pointer;
+          color: var(--text-dim, #64748b);
+          display: flex;
+        }
+
+        .topbar-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .topbar-icon-btn {
+          background: var(--card-bg, #ffffff);
+          border: 1.5px solid var(--glass-border, #e2e8f0);
+          border-radius: 12px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--text-main, #0f172a);
+          box-shadow: var(--shadow-sm);
+          transition: all 0.2s ease;
+          text-decoration: none;
+        }
+
+        .topbar-icon-btn:hover {
+          transform: translateY(-1px);
+          border-color: var(--accent, #0284c7);
+          color: var(--accent, #0284c7);
+        }
+
+        .qr-quick-btn {
+          width: auto;
+          padding: 0 14px;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #0284c7;
+        }
+
+        .logout-btn {
+          color: #ef4444;
+        }
+
+        .logout-btn:hover {
+          color: #ffffff;
+          background: #ef4444;
+          border-color: #ef4444;
+        }
+
+        .topbar-user-pill {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 5px 12px;
+          border-radius: 14px;
+          background: var(--card-bg, #ffffff);
+          border: 1.5px solid var(--glass-border, #e2e8f0);
+          box-shadow: var(--shadow-sm);
+        }
+
+        .user-mini-avatar {
+          width: 26px;
+          height: 26px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #0ea5e9, #2563eb);
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 11px;
+        }
+
+        .user-mini-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--text-main, #0f172a);
+        }
+
+        .user-mini-role {
+          font-size: 10px;
+          font-weight: 800;
+          color: #0284c7;
+          background: rgba(14, 165, 233, 0.1);
+          padding: 2px 6px;
+          border-radius: 6px;
+        }
+
+        /* 📱 BOTTOM TAB BAR STYLES */
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: calc(60px + env(safe-area-inset-bottom, 0px));
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+          background: var(--glass-bg, rgba(255, 255, 255, 0.85));
+          backdrop-filter: blur(28px) saturate(190%);
+          -webkit-backdrop-filter: blur(28px) saturate(190%);
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          border-top: 1px solid var(--glass-border, rgba(15, 23, 42, 0.08));
+          z-index: 1000;
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] .bottom-nav {
+          background: rgba(14, 20, 36, 0.88);
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .bottom-nav-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          text-decoration: none;
+          color: var(--text-soft, #94a3b8);
+          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+          flex: 1;
+          height: 100%;
+          position: relative;
+        }
+
+        .bottom-nav-icon-box {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 24px;
+        }
+
+        .bottom-nav-label {
+          font-size: 10.5px;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          transition: color 0.2s;
+        }
+
+        .bottom-nav-item.active {
+          color: var(--accent, #0284c7);
+        }
+
+        .active-glow-pill {
+          position: absolute;
+          top: -4px;
+          width: 20px;
+          height: 3px;
+          background: var(--accent, #0284c7);
+          border-radius: 4px;
+          box-shadow: 0 0 10px var(--accent, #0284c7);
+          animation: popGlow 0.25s ease-out;
+        }
+
+        @keyframes popGlow {
+          from { transform: scaleX(0); opacity: 0; }
+          to { transform: scaleX(1); opacity: 1; }
+        }
+
+        .bottom-nav-item.active .bottom-nav-icon-box svg {
+          transform: translateY(-1px);
+        }
+
+        /* MOBILE MEDIA OVERRIDES */
         @media (max-width: 768px) {
-          .mobile-toggle { display: flex !important; }
-          .topbar { 
-            height: 56px !important; 
-            padding: 0 14px !important; 
-            gap: 10px !important;
-            background: var(--glass-bg) !important;
-            border-bottom: 1px solid var(--glass-border) !important;
+          .mobile-toggle {
+            display: flex !important;
+            background: var(--card-bg, #ffffff);
+            border: 1.5px solid var(--glass-border, #e2e8f0);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 12px;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main, #0f172a);
           }
-          .topbar-search-container { display: none !important; }
-          .btn-scan { 
-            padding: 8px 12px !important; 
-            border-radius: var(--radius-md) !important; 
-            background: var(--page-bg-soft) !important;
-            box-shadow: none !important;
-            color: var(--text-main) !important;
-            border: 1px solid var(--glass-border) !important;
+
+          .drawer-close-btn {
+            display: flex;
           }
-          .btn-scan span { display: none; }
-          .btn-scan svg { color: var(--accent) !important; }
-          
-          .main-content { 
-            padding-bottom: 70px !important;
-            overflow-y: visible !important;
-            height: auto !important;
+
+          .topbar {
+            height: 56px !important;
+            padding: 0 14px !important;
+            gap: 12px !important;
           }
-          .page { 
-            padding: 10px 8px !important; 
-            overflow-x: hidden !important; 
-            overflow-y: visible !important;
-            display: block !important;
+
+          .topbar-title {
+            font-size: 16px !important;
+            font-weight: 800 !important;
+          }
+
+          .topbar-search-container {
+            display: none !important;
+          }
+
+          .qr-quick-btn {
+            padding: 8px !important;
+            border-radius: 12px !important;
+          }
+
+          .qr-quick-label {
+            display: none !important;
+          }
+
+          .main-content {
+            padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+
+          .page {
+            padding: 14px 12px calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-toggle {
+            display: none !important;
           }
 
           .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 56px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 1px solid var(--glass-border);
-            padding-bottom: env(safe-area-inset-bottom);
-            z-index: 1000;
-          }
-          .bottom-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            text-decoration: none;
-            color: var(--text-soft);
-            transition: all 0.2s;
-            flex: 1;
-          }
-          .bottom-nav-item span {
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-          }
-          .bottom-nav-item.active {
-            color: var(--accent);
-          }
-          .bottom-nav-item.active svg {
-            transform: translateY(-1px);
-            filter: drop-shadow(0 2px 6px var(--accent-glow));
-          }
-        }
-        @media (min-width: 769px) {
-          .bottom-nav { display: none; }
-          .topbar.hide-on-dashboard {
             display: none !important;
-          }
-          .dashboard-page-view {
-            padding: 16px var(--page-px) !important;
-            min-height: 100vh !important;
           }
         }
       `}</style>
