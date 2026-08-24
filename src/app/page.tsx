@@ -2128,17 +2128,86 @@ export default function DashboardPage() {
           .dashboard-wrapper {
             width: 100% !important;
             overflow-x: hidden !important;
+            padding-bottom: 24px !important;
+          }
+          .dashboard-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+          }
+          .grid-left, .grid-right {
+            width: 100% !important;
+            min-width: 0 !important;
           }
           .panel-card {
             width: 100% !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
+            border-radius: 16px !important;
           }
           .chart-wrapper {
-            flex-direction: column;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 12px !important;
+            padding: 12px 8px !important;
+          }
+          .chart-legend {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            width: 100% !important;
+          }
+          .legend-item {
+            padding: 4px 10px !important;
+            background: var(--page-bg-soft) !important;
+            border-radius: 20px !important;
+            border: 1px solid var(--glass-border) !important;
+            font-size: 11px !important;
           }
           .assets-scroll-container {
-            max-height: 500px;
+            max-height: 480px;
+          }
+          .asset-list-row {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+          .asset-avatar {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 10px !important;
+          }
+          .asset-code-row {
+            gap: 4px !important;
+          }
+          .asset-code {
+            font-size: 11px !important;
+          }
+          .asset-name {
+            font-size: 12.5px !important;
+          }
+          .asset-meta {
+            font-size: 10px !important;
+          }
+          .semaforo-pill {
+            padding: 3px 8px !important;
+            font-size: 10px !important;
+          }
+          .btn-action-icon {
+            width: 28px !important;
+            height: 28px !important;
+          }
+          .modal-overlay {
+            align-items: flex-end !important;
+            padding: 0 !important;
+          }
+          .dashboard-modal-card {
+            max-width: 100% !important;
+            border-radius: 24px 24px 0 0 !important;
+            max-height: 85vh !important;
+            animation: slideUpBottom 0.25s ease-out !important;
           }
         }
       `}</style>

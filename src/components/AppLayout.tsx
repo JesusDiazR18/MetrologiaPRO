@@ -262,15 +262,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <span className="desktop-only qr-quick-label">QR Galería</span>
             </Link>
 
-            {/* User Pill (Desktop) */}
-            <div className="desktop-only topbar-user-pill">
+            {/* User Pill */}
+            <div className="topbar-user-pill" title={`Usuario: ${user.nombre || user.username} (${user.rol || 'Admin'})`}>
               <div className="user-mini-avatar">
                 {userInitials}
               </div>
-              <span className="user-mini-name">
+              <span className="desktop-only user-mini-name">
                 {user.nombre?.split(' ')[0] || user.username}
               </span>
-              <span className="user-mini-role">
+              <span className="desktop-only user-mini-role">
                 {user.rol || 'Admin'}
               </span>
             </div>
@@ -284,11 +284,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
 
-            {/* Logout button (Desktop) */}
+            {/* Logout button (Accessible on mobile and desktop) */}
             <button
               onClick={() => logout()}
-              className="desktop-only topbar-icon-btn logout-btn"
-              title="Cerrar sesión de usuario"
+              className="topbar-icon-btn logout-btn"
+              title="Cerrar sesión"
+              style={{ color: '#ef4444' }}
             >
               <LogOut size={18} />
             </button>
@@ -326,10 +327,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         .drawer-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(15, 23, 42, 0.65);
+          background: rgba(15, 23, 42, 0.7);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
-          z-index: 105;
+          z-index: 1100 !important;
           animation: fadeIn 0.2s ease-out;
         }
 
