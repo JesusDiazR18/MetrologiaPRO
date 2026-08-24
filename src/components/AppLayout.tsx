@@ -6,17 +6,16 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ClipboardList, CalendarDays,
   FlaskConical, Settings, ChevronRight,
-  Microscope, X, Menu, QrCode, Search, Sun, Moon, BookOpen,
-  LogOut, User as UserIcon, Shield
+  Microscope, X, Menu, QrCode, Search, Sun, Moon,
+  LogOut, User as UserIcon, Shield, Users
 } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
 
-const navItems = [
+const baseNavItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/equipos', label: 'Fichas Técnicas', icon: ClipboardList },
   { href: '/calendario', label: 'Calendario', icon: CalendarDays },
   { href: '/patrones', label: 'Patrones', icon: FlaskConical },
-  { href: '/biblioteca', label: 'Biblioteca', icon: BookOpen },
   { href: '/qrcodes', label: 'Galería QR', icon: QrCode },
 ]
 
@@ -126,7 +125,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return null
   }
 
-  const currentPage = navItems.find(n => n.href === pathname)?.label ?? 'Panel'
+  const navItems = user?.rol === 'Admin'
+    ? [...baseNavItems, { href: '/usuarios', label: 'Usuarios', icon: Users }]
+    : baseNavItems
+
+  const currentPage = navItems.find(n => n.href === pathname)?.label ?? (pathname === '/usuarios' ? 'Gestión de Usuarios' : 'Panel')
   const userInitials = user.nombre ? user.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : (user.username?.slice(0, 2).toUpperCase() || 'U')
 
   return (
