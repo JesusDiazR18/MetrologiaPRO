@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ClipboardList, Search, SlidersHorizontal, Plus, ChevronsDown, 
-  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2, FileText, Edit, RefreshCw, RotateCcw
+  ChevronsUp, CheckCircle2, XCircle, Calendar, User, QrCode, FileDigit, ShieldCheck, Activity, Trash2, FileText, Edit, RefreshCw, RotateCcw, X
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { calcularSemaforo, semaforoHex, semaforoLabel, formatFecha, diasRestantes, getScanUrl } from '@/lib/metrologia'
@@ -48,15 +48,14 @@ interface Equipo {
   Fecha_Vencimiento_Certificado?: string | null
   PDF_Certificado?: string | null
   Foto_Equipo?: string | null
-  historiales: {
+  historiales?: {
     ID_Log: string
     Fecha_Ejecucion: string
-    Variacion_Calculada: number | null
     Resultado_Status: string
     Tecnico_Ejecutor: string
-    Observaciones?: string | null
     Evidencia_Foto?: string | null
-    Magnitud_Controlada?: string | null
+    Variacion_Calculada?: number | null
+    Observaciones?: string | null
     Acciones_Pendientes?: string | null
     Tipo_Verificacion?: string | null
     Mediciones_Puntos?: string | null
@@ -90,10 +89,19 @@ function EquiposContent() {
   const [qrLabelEquipo, setQrLabelEquipo] = useState<Equipo | null>(null)
   const [modalHistorical, setModalHistorical] = useState<Equipo | null>(null)
   const [showHistoricalModal, setShowHistoricalModal] = useState(false)
+  const [editLog, setEditLog] = useState<any>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
-  const [editLog, setEditLog] = useState<any | null>(null)
   const [sortBy, setSortBy] = useState<string>('code-desc')
+  const [showFilters, setShowFilters] = useState(false)
   const searchParams = useSearchParams()
+
+  const activeFiltersCount = [
+    q !== '',
+    tipo !== '',
+    filterEstado !== 'ALL',
+    filterResponsable !== 'ALL',
+    sortBy !== 'code-desc'
+  ].filter(Boolean).length
 
   const getFuzzyKey = (s: string): string => {
     let k = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim()
@@ -420,595 +428,1027 @@ function EquiposContent() {
     })
   }
 
+  const renderExpandedDetails = (e: Equipo) => {
+    if (loadingDetails[e.ID_Equipo]) {
+      return (
+        <div style={{ padding: 40, textAlign: 'center' }}>
+          <div className="spinner" style={{ margin: '0 auto 16px' }} />
+          <p style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 }}>Cargando especificaciones completas e historial...</p>
+        </div>
+      )
+    }
+    const details = expandedDetails[e.ID_Equipo] || e
+    const detailsSemaforo = calcularSemaforo(details.Fecha_Proximo_Control, details.Estado)
+    const detailsStatusColor = semaforoHex(detailsSemaforo)
+
+    return (
+      <div className="expanded-details-container" style={{ borderLeft: `4px solid ${detailsStatusColor}`, padding: 'clamp(14px, 2vw, 24px)', background: 'var(--card-bg)' }}>
+        {(details.Detalles_Estado || details.Requiere_Seguimiento || details.Tiene_Solucion === false) && (
+          <div style={{ 
+            background: details.Tiene_Solucion !== false ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+            border: `1px solid ${details.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444'}`, 
+            borderRadius: 12, 
+            padding: '14px 20px', 
+            marginBottom: 20, 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 16, 
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ fontSize: 24 }}>{details.Tiene_Solucion !== false ? '⚠️' : '🚨'}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: details.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span>ESTADO: {semaforoLabel(detailsSemaforo, details.Estado).toUpperCase()}</span>
+                {details.Requiere_Seguimiento && (
+                  <span style={{ background: '#f59e0b', color: '#000', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SEGUIMIENTO ACTIVO</span>
+                )}
+                {details.Tiene_Solucion === false && (
+                  <span style={{ background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SIN SOLUCIÓN TÉCNICA</span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-main)', marginTop: 4 }}>
+                {details.Detalles_Estado || 'Sin detalles especificados.'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', marginBottom: 20 }}>
+          {details.Tipo === 'EQUIPO' && (
+            <div 
+              className="card" 
+              style={{ padding: 20, background: 'var(--page-bg-soft)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', borderRadius: 14 }}
+              onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(details) }}
+              title="Haz clic para ver e imprimir la etiqueta"
+            >
+              <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)' }}>
+                <QRCodeSVG
+                  value={getScanUrl(details.ID_Equipo)}
+                  size={84}
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                  level="H"
+                  style={{ display: 'block', borderRadius: 4 }}
+                />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', marginBottom: 4 }}>CÓDIGO DIGITAL QR</div>
+                <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 600, background: 'rgba(14, 165, 233, 0.1)', padding: '2px 8px', borderRadius: 999, marginBottom: 8 }}>🖨️ Clic para imprimir</div>
+                <button 
+                  className="btn btn-ghost btn-xs" 
+                  style={{ fontSize: 10, color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }}
+                  onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}
+                >
+                  📄 Descargar Ficha PDF
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="card" style={{ padding: 18, background: 'var(--page-bg-soft)', borderRadius: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <FileDigit size={16} color="var(--accent)" />
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
+            </div>
+            {(details.Modelo || details.Serie) && (details.Modelo !== '—' || details.Serie !== '—') && (
+              <div className="spec-row">
+                <span className="spec-label">Modelo / Serie</span>
+                <span className="spec-value">{details.Modelo || '—'} / {details.Serie || '—'}</span>
+              </div>
+            )}
+            {details.Tolerancia_Aceptable != null && (
+              <div className="spec-row">
+                <span className="spec-label">Tolerancia</span>
+                <span className="spec-value">±{details.Tolerancia_Aceptable} {details.Unidad_Tolerancia ?? 'un'}</span>
+              </div>
+            )}
+            {details.Fecha_Ingreso && (
+              <div className="spec-row">
+                <span className="spec-label">Fecha Ingreso</span>
+                <span className="spec-value">{formatFecha(details.Fecha_Ingreso)}</span>
+              </div>
+            )}
+            <div className="spec-row">
+              <span className="spec-label">Próxima Verif.</span>
+              <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(details.Fecha_Proximo_Control)}</span>
+            </div>
+            <div className="spec-row">
+              <span className="spec-label">Intervalo</span>
+              <span className="spec-value">{details.Periodicidad_Meses} Meses</span>
+            </div>
+            {details.Accesorios && details.Accesorios.trim() !== '' && details.Accesorios.trim() !== '—' && (
+              <div className="spec-row" style={{ alignItems: 'flex-start' }}>
+                <span className="spec-label">Accesorios</span>
+                <span className="spec-value" style={{ fontSize: 11 }}>{details.Accesorios}</span>
+              </div>
+            )}
+            {details.Foto_Equipo && (
+              <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--glass-border)' }}>
+                <span className="spec-label" style={{ display: 'block', marginBottom: 6, fontSize: 11, fontWeight: 700 }}>Foto del Equipo</span>
+                <img 
+                  src={details.Foto_Equipo} 
+                  alt={details.Nombre_Equipo} 
+                  style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 10, cursor: 'pointer', border: '1px solid var(--glass-border)' }} 
+                  onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Equipo || null) }}
+                  title="Clic para ampliar foto"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="card" style={{ padding: 18, background: 'var(--page-bg-soft)', borderRadius: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <ShieldCheck size={16} color="var(--success)" />
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad y Control</span>
+            </div>
+            <div className="spec-row">
+              <span className="spec-label">Ubicación</span>
+              <span className="spec-value">{details.Area_Asignada}</span>
+            </div>
+            <div className="spec-row">
+              <span className="spec-label">Responsable</span>
+              <span className="spec-value">{details.Responsable}</span>
+            </div>
+            <div className="spec-row">
+              <span className="spec-label">Estado Sist.</span>
+              <span className="spec-value" style={{ color: detailsStatusColor }}>{details.Estado}</span>
+            </div>
+            <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'flex-end', borderTop: '1px solid var(--glass-border)', paddingTop: 10, flexWrap: 'wrap' }}>
+              {details.Tipo !== 'EQUIPO' && (
+                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}>
+                  📄 PDF
+                </button>
+              )}
+              <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(details) }}>
+                <Edit size={12} style={{ display: 'inline', marginRight: 2 }} /> Editar
+              </button>
+              {(details.Estado === 'FUERA_DE_SERVICIO' || details.Estado === 'DE_BAJA_OBSOLETO' || details.Estado === 'OBSOLETO' || details.Estado === 'BAJA') ? (
+                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(details.ID_Equipo, details.Nombre_Equipo) }}>Re-habilitar</button>
+              ) : (
+                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(details.ID_Equipo, details.Nombre_Equipo) }}>Dar de Baja</button>
+              )}
+              <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(details.ID_Equipo, details.Nombre_Equipo) }}>
+                <Trash2 size={12} style={{ display: 'inline', marginRight: 2 }} /> Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Historial Table */}
+        <div className="card" style={{ overflow: 'hidden', background: 'var(--page-bg-soft)', borderRadius: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--glass-border)', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FileDigit size={15} color="var(--accent)" />
+              <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase' }}>Historial de Verificaciones</span>
+            </div>
+            <button 
+              className="btn btn-cyan btn-xs" 
+              style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer' }}
+              onClick={(ev) => { ev.stopPropagation(); setModalHistorical(details) }}
+            >
+              ➕ Agregar Verificación Anterior
+            </button>
+          </div>
+          <div className="table-wrap">
+            <table className="data-table" style={{ fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Patrón</th>
+                  <th>Variación</th>
+                  <th>Resultado</th>
+                  <th>Responsable</th>
+                  <th style={{ textAlign: 'center' }}>Evidencia</th>
+                  <th style={{ textAlign: 'center' }}>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {details.historiales && details.historiales.map((h: any, index: number) => (
+                  <tr key={h.ID_Log}>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(h.Fecha_Ejecucion)}</td>
+                    <td>
+                      <span style={{ fontSize: 10, background: h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'rgba(245,158,11,0.12)' : 'rgba(0,229,255,0.08)', padding: '2px 6px', borderRadius: 4, fontWeight: 700, color: h.Tipo_Verificacion === 'OPERATIVIDAD' ? '#f59e0b' : 'var(--accent)' }}>
+                        {h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Calibración'}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                      {h.patron?.Codigo || '—'}
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)' }}>{h.Variacion_Calculada?.toFixed(4) ?? '—'}</td>
+                    <td>
+                      <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' || h.Resultado_Status === 'OPERATIVO' ? 'var(--success)' : h.Resultado_Status === 'ACCION_PENDIENTE' ? '#f59e0b' : 'var(--danger)' }}>
+                        {h.Resultado_Status}
+                      </span>
+                    </td>
+                    <td>{h.Tecnico_Ejecutor}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {h.Evidencia_Foto ? (
+                        <button 
+                          className="btn btn-ghost btn-xs" 
+                          style={{ color: 'var(--accent)', border: '1px solid var(--accent-dim)', padding: '2px 6px', fontSize: 10 }}
+                          onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(h.Evidencia_Foto ?? null) }}
+                        >
+                          📸 Foto
+                        </button>
+                      ) : '—'}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        {index === 0 && (
+                          <button 
+                            className="btn btn-ghost btn-xs" 
+                            style={{ color: 'var(--accent)', padding: '2px 4px' }}
+                            onClick={(ev) => { ev.stopPropagation(); setEditLog({ ...h, FK_ID_Equipo: details.ID_Equipo }) }}
+                            title="Editar última verificación"
+                          >
+                            <Edit size={13} />
+                          </button>
+                        )}
+                        <button 
+                          className="btn btn-ghost btn-xs" 
+                          style={{ color: 'var(--danger)', padding: '2px 4px' }}
+                          onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, details.Nombre_Equipo) }}
+                          title="Eliminar este registro"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {(!details.historiales || details.historiales.length === 0) && (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-dim)', fontSize: 11.5 }}>
+                      No hay verificaciones registradas para este activo.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="page-header">
-        <div className="page-header-icon">
-          <ClipboardList size={22} />
+        <div className="page-header-title-block">
+          <div className="page-header-icon">
+            <ClipboardList size={22} />
+          </div>
+          <div>
+            <h1>Fichas Técnicas e Instrumentos</h1>
+            <p>Catálogo centralizado de activos metrológicos del sistema</p>
+          </div>
         </div>
-        <div>
-          <h1>Fichas Técnicas e Instrumentos</h1>
-          <p>Catálogo centralizado de activos metrológicos del sistema QMS</p>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+
+        <div className="page-header-actions">
           <button className="btn btn-ghost" onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} /> Añadir Activo
+            <Plus size={16} /> <span>Añadir Activo</span>
           </button>
           <button className="btn btn-ghost" style={{ color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)' }} onClick={() => setShowHistoricalModal(true)}>
-            <RotateCcw size={16} /> Verificación Anterior
+            <RotateCcw size={16} /> <span>Verificación Anterior</span>
           </button>
           <button className="btn btn-cyan" onClick={() => setModalEquipo({} as Equipo)}>
-            <Activity size={16} /> Nueva Verificación
+            <Activity size={16} /> <span>Nueva Verificación</span>
           </button>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="card-body" style={{ padding: '10px 14px' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="search-box" style={{ flex: '1 1 240px' }}>
-              <Search size={16} color="var(--text-soft)" />
-              <input 
-                type="text" 
-                placeholder="Buscar por ID, nombre, responsable o código..." 
-                value={q} 
-                onChange={e => setQ(e.target.value)}
-              />
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Tipo:</span>
-                <select 
-                  className="select-filter"
-                  value={tipo} 
-                  onChange={e => setTipo(e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  <option value="EQUIPO">Equipos</option>
-                  <option value="INSTRUMENTO">Instrumentos</option>
-                </select>
+      {/* Barra de Filtros Compacta con Cajón Desplegable */}
+      <div className="filters-card-container">
+        <div className="filters-main-row">
+          <div className="search-box-wrap">
+            <span className="search-icon-box">
+              <Search size={15} />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Buscar activo, código, responsable o área..." 
+              value={q} 
+              onChange={e => setQ(e.target.value)}
+            />
+            {q && (
+              <button onClick={() => setQ('')} className="clear-search-btn">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <button 
+            className={`btn-filter-toggle ${showFilters || activeFiltersCount > 0 ? 'active' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+            title="Mostrar filtros avanzados"
+          >
+            <SlidersHorizontal size={15} />
+            <span>Filtros</span>
+            {activeFiltersCount > 0 && <span className="filter-count-badge">{activeFiltersCount}</span>}
+          </button>
+
+          {hasActiveFilters && (
+            <button 
+              className="btn-filter-reset" 
+              onClick={handleClearFilters}
+              title="Restablecer todos los filtros"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Cajón de Filtros Desplegable */}
+        {showFilters && (
+          <div className="filters-expanded-drawer">
+            <div className="filter-grid-2">
+              <div className="filter-item-group">
+                <label>Tipo de Activo</label>
+                <div className="pills-group">
+                  {[
+                    { id: '', label: 'Todos' },
+                    { id: 'EQUIPO', label: 'Equipos' },
+                    { id: 'INSTRUMENTO', label: 'Instrumentos' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTipo(t.id)}
+                      className={`filter-chip ${tipo === t.id ? 'active' : ''}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Estado:</span>
+              <div className="filter-item-group">
+                <label>Estado Metrológico</label>
                 <select 
-                  className="select-filter"
+                  className="select-filter-modern"
                   value={filterEstado} 
                   onChange={e => setFilterEstado(e.target.value)}
                 >
-                  <option value="ALL">Todos</option>
+                  <option value="ALL">Todos los Estados</option>
                   {uniqueEstados.map(est => (
                     <option key={est} value={est}>{getEstadoLabel(est)}</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase' }}>Responsable:</span>
+              <div className="filter-item-group">
+                <label>Responsable</label>
                 <select 
-                  className="select-filter"
-                  style={{ maxWidth: 150 }}
+                  className="select-filter-modern"
                   value={filterResponsable} 
                   onChange={e => setFilterResponsable(e.target.value)}
                 >
-                  <option value="ALL">Todos</option>
+                  <option value="ALL">Todos los Responsables</option>
                   {uniqueResponsables.map(resp => (
                     <option key={resp.key} value={resp.key}>{resp.display}</option>
                   ))}
                 </select>
               </div>
 
-              {hasActiveFilters && (
-                <button 
-                  className="btn btn-ghost btn-xs" 
-                  style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4, height: 28, padding: '4px 8px' }}
-                  onClick={handleClearFilters}
+              <div className="filter-item-group">
+                <label>Orden de Visualización</label>
+                <select 
+                  className="select-filter-modern"
+                  value={sortBy} 
+                  onChange={e => setSortBy(e.target.value)}
                 >
-                  <RotateCcw size={11} /> Limpiar
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <SlidersHorizontal size={12} /> Orden:
-              </span>
-              <select 
-                className="select-filter"
-                value={sortBy} 
-                onChange={e => setSortBy(e.target.value)}
-              >
-                <option value="code-desc">Código (Z-A)</option>
-                <option value="code-asc">Código (A-Z)</option>
-                <option value="deadline">Próxima Verif. (Cercana)</option>
-              </select>
+                  <option value="code-desc">Código (Z-A)</option>
+                  <option value="code-asc">Código (A-Z)</option>
+                  <option value="deadline">Próxima Verif. (Cercana)</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-
-      <div className="card">
+      <div className="content-assets-card">
         {loading ? (
-          <div className="card-body" style={{ textAlign: 'center', padding: 60 }}>
-            <div className="spinner" style={{ margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--text-dim)' }}>Sincronizando base de datos metrológica...</p>
+          <div className="loading-state-box">
+            <div className="spinner" />
+            <p>Sincronizando base de datos metrológica...</p>
           </div>
         ) : sortedEquipos.length === 0 ? (
-          <div className="card-body" style={{ textAlign: 'center', padding: 80 }}>
-            <ClipboardList size={48} opacity={0.2} style={{ margin: '0 auto 20px' }} />
-            <p style={{ fontSize: 18, fontWeight: 600 }}>No se encontraron registros</p>
-            <p style={{ color: 'var(--text-dim)' }}>Intenta ajustar los filtros de búsqueda</p>
+          <div className="empty-state-box">
+            <ClipboardList size={48} opacity={0.3} />
+            <h3>No se encontraron registros</h3>
+            <p>Intenta ajustar los filtros de búsqueda</p>
           </div>
         ) : (
-          <div className="card-body" style={{ padding: 0 }}>
-            <div className="table-wrap">
-              <table className="data-table" style={{ width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ width: '5%' }}></th>
-                  <th className="desktop-only" style={{ width: '15%' }}>Identificación</th>
-                  <th style={{ width: '30%' }}>Nombre del Equipo</th>
-                  <th className="desktop-only" style={{ width: '20%' }}>Responsable / Estado</th>
-                  <th style={{ width: '15%' }}>Próxima Verif.</th>
-                  <th style={{ textAlign: 'right', width: '15%', minWidth: '150px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedEquipos.map((e) => {
-                  const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
-                  const isExpanded = expanded === e.ID_Equipo
-                  const statusColor = semaforoHex(semaforo)
-                  
-                  return (
-                    <React.Fragment key={e.ID_Equipo}>
-                      <tr 
-                        onClick={() => toggleExpand(e.ID_Equipo)}
-                        style={{ cursor: 'pointer' }}
-                        className="mobile-card-row"
-                      >
-                        <td className="mobile-hide">
-                          <div className="semaforo-dot" style={{ 
-                            background: statusColor,
-                            boxShadow: `0 0 15px ${statusColor}66`
-                          }} />
-                        </td>
-                        <td className="desktop-only">
-                          <span style={{ 
-                            fontFamily: 'var(--font-mono)', 
-                            fontWeight: 700, 
-                            color: 'var(--accent)',
-                            background: 'rgba(0, 229, 255, 0.05)',
-                            padding: '4px 8px',
-                            borderRadius: '4px'
-                          }}>{e.ID_Equipo}</span>
-                        </td>
-                        <td className="mobile-card-title">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <div className="mobile-only semaforo-dot" style={{ background: statusColor, boxShadow: `0 0 15px ${statusColor}66` }} />
-                            <div style={{ fontWeight: 700, fontSize: 15 }}>{e.Nombre_Equipo}</div>
-                            {e.Magnitud && (
-                              <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 600 }}>
-                                {e.Magnitud}
-                              </span>
-                            )}
-                          </div>
-                          <div className="desktop-only" style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
-                          <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{e.ID_Equipo} · {e.Area_Asignada ?? 'Sin área'}</div>
-                        </td>
-                        <td className="desktop-only">
-                          <div style={{ fontSize: 13, fontWeight: 500 }}>{e.Responsable ?? '—'}</div>
-                          <div style={{ 
-                            fontSize: 11, 
-                            fontWeight: 700, 
-                            color: statusColor,
-                            textTransform: 'uppercase',
-                            marginTop: 4
-                          }}>
-                            ● {semaforoLabel(semaforo, e.Estado)}
-                          </div>
-                        </td>
-                        <td className="mobile-card-info">
-                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-main)' }}>{formatFecha(e.Fecha_Proximo_Control)}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{diasRestantes(e.Fecha_Proximo_Control)}</div>
-                        </td>
-                        <td style={{ textAlign: 'right', minWidth: '150px' }} className="mobile-card-actions">
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <button 
-                            className="btn-scan" 
-                            style={{ padding: '6px 14px', fontSize: 11, background: 'var(--accent)', color: 'var(--oxford-blue-dark)', fontWeight: 800, borderRadius: 8, border: 'none', boxShadow: '0 4px 12px var(--accent-glow)' }}
-                            onClick={(ev) => { ev.stopPropagation(); openModalWithFullDetails(e, setModalEquipo); }}
-                            >Verificar</button>
-                            <div style={{ color: 'var(--text-dim)', padding: '0 4px' }}>
-                              {isExpanded ? <ChevronsUp size={18} /> : <ChevronsDown size={18} />}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.1)', maxWidth: 0 }}>
-                            {loadingDetails[e.ID_Equipo] ? (
-                              <div style={{ padding: 40, textAlign: 'center' }}>
-                                <div className="spinner" style={{ margin: '0 auto 16px' }} />
-                                <p style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 }}>Cargando especificaciones completas e historial...</p>
-                              </div>
-                            ) : (() => {
-                              const details = expandedDetails[e.ID_Equipo] || e
-                              const detailsSemaforo = calcularSemaforo(details.Fecha_Proximo_Control, details.Estado)
-                              const detailsStatusColor = semaforoHex(detailsSemaforo)
-                              return (
-                                <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${detailsStatusColor}` }}>
-                              {(details.Detalles_Estado || details.Requiere_Seguimiento || details.Tiene_Solucion === false) && (
-                                <div style={{ 
-                                  background: details.Tiene_Solucion !== false ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
-                                  border: `1px solid ${details.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444'}`, 
-                                  borderRadius: 12, 
-                                  padding: '14px 20px', 
-                                  marginBottom: 20, 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: 16, 
-                                  flexWrap: 'wrap',
-                                  animation: 'fadeIn 0.3s' 
-                                }}>
-                                  <div style={{ fontSize: 24 }}>{details.Tiene_Solucion !== false ? '⚠️' : '🚨'}</div>
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: details.Tiene_Solucion !== false ? '#f59e0b' : '#ef4444', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                      <span>ESTADO: {semaforoLabel(detailsSemaforo, details.Estado).toUpperCase()}</span>
-                                      {details.Requiere_Seguimiento && (
-                                        <span style={{ background: '#f59e0b', color: '#000', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SEGUIMIENTO ACTIVO</span>
-                                      )}
-                                      {details.Tiene_Solucion === false && (
-                                        <span style={{ background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800 }}>SIN SOLUCIÓN TÉCNICA</span>
-                                      )}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-color)', marginTop: 4 }}>
-                                      {details.Detalles_Estado || 'Sin detalles especificados.'}
-                                    </div>
-                                  </div>
-                                </div>
+          <div>
+            {/* 🖥️ DESKTOP VIEW: High-Density Professional Data Table */}
+            <div className="desktop-table-container desktop-only">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '4%' }}></th>
+                    <th style={{ width: '14%' }}>Identificación</th>
+                    <th style={{ width: '32%' }}>Nombre del Equipo</th>
+                    <th style={{ width: '22%' }}>Responsable / Estado</th>
+                    <th style={{ width: '16%' }}>Próxima Verif.</th>
+                    <th style={{ textAlign: 'right', width: '12%' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedEquipos.map((e) => {
+                    const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
+                    const isExpanded = expanded === e.ID_Equipo
+                    const statusColor = semaforoHex(semaforo)
+                    
+                    return (
+                      <React.Fragment key={e.ID_Equipo}>
+                        <tr 
+                          onClick={() => toggleExpand(e.ID_Equipo)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td>
+                            <div className="semaforo-dot" style={{ 
+                              background: statusColor,
+                              boxShadow: `0 0 15px ${statusColor}66`
+                            }} />
+                          </td>
+                          <td>
+                            <span className="code-chip">{e.ID_Equipo}</span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                              <div style={{ fontWeight: 750, fontSize: 14 }}>{e.Nombre_Equipo}</div>
+                              {e.Magnitud && (
+                                <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 700 }}>
+                                  {e.Magnitud}
+                                </span>
                               )}
-
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, width: '100%', animation: 'slideDown 0.3s ease-out' }}>
-                                {details.Tipo === 'EQUIPO' && (
-                                  <div 
-                                    className="card" 
-                                    style={{ padding: 20, background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.2s', minHeight: 180 }}
-                                    onClick={ev => { ev.stopPropagation(); setQrLabelEquipo(details) }}
-                                    title="Haz clic para ver e imprimir la etiqueta"
-                                  >
-                                    <div style={{ background: '#fff', padding: 10, borderRadius: 14, boxShadow: 'var(--shadow-sm)', transition: 'transform 0.2s' }}>
-                                      <QRCodeSVG
-                                        value={getScanUrl(details.ID_Equipo)}
-                                        size={84}
-                                        bgColor="#ffffff"
-                                        fgColor="#0f172a"
-                                        level="H"
-                                        style={{ display: 'block', borderRadius: 4 }}
-                                      />
-                                    </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', marginBottom: 4 }}>CÓDIGO DIGITAL QR</div>
-                                      <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 600, background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, marginBottom: 8 }}>🖨️ Clic para imprimir etiqueta</div>
-                                      <button 
-                                        className="btn btn-ghost btn-xs" 
-                                        style={{ fontSize: 10, color: 'var(--accent)', border: '1px solid var(--accent-dim)' }}
-                                        onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}
-                                      >
-                                        📄 Descargar Ficha PDF
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                    <FileDigit size={16} color="var(--accent)" />
-                                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
-                                  </div>
-                                  {(details.Modelo || details.Serie) && (details.Modelo !== '—' || details.Serie !== '—') && (
-                                    <div className="spec-row">
-                                      <span className="spec-label">Modelo / Serie</span>
-                                      <span className="spec-value">{details.Modelo || '—'} / {details.Serie || '—'}</span>
-                                    </div>
-                                  )}
-                                  {details.Tolerancia_Aceptable != null && (
-                                    <div className="spec-row">
-                                      <span className="spec-label">Tolerancia</span>
-                                      <span className="spec-value">±{details.Tolerancia_Aceptable} {details.Unidad_Tolerancia ?? 'un'}</span>
-                                    </div>
-                                  )}
-                                  {details.Fecha_Ingreso && (
-                                    <div className="spec-row">
-                                      <span className="spec-label">Fecha Ingreso</span>
-                                      <span className="spec-value">{formatFecha(details.Fecha_Ingreso)}</span>
-                                    </div>
-                                  )}
-                                  <div className="spec-row">
-                                    <span className="spec-label">Próxima Verif.</span>
-                                    <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(details.Fecha_Proximo_Control)}</span>
-                                  </div>
-                                  <div className="spec-row" style={{ marginTop: -4 }}>
-                                    <span className="spec-label">Intervalo</span>
-                                    <span className="spec-value">{details.Periodicidad_Meses} Meses</span>
-                                  </div>
-                                  {details.Accesorios && details.Accesorios.trim() !== '' && details.Accesorios.trim() !== '—' && (
-                                    <div className="spec-row" style={{ alignItems: 'flex-start' }}>
-                                      <span className="spec-label" style={{ marginTop: 2 }}>Accesorios</span>
-                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{details.Accesorios}</span>
-                                    </div>
-                                  )}
-                                  {details.Insumos && details.Insumos.trim() !== '' && details.Insumos.trim() !== '—' && (
-                                    <div className="spec-row" style={{ alignItems: 'flex-start' }}>
-                                      <span className="spec-label" style={{ marginTop: 2 }}>Insumos</span>
-                                      <span className="spec-value" style={{ fontSize: 11, whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'right', lineHeight: 1.3 }}>{details.Insumos}</span>
-                                    </div>
-                                  )}
-                                  {details.Foto_Equipo && (
-                                    <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                      <span className="spec-label" style={{ display: 'block', marginBottom: 8, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Foto del Equipo</span>
-                                      <img 
-                                        src={details.Foto_Equipo} 
-                                        alt={details.Nombre_Equipo} 
-                                        style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
-                                        onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Equipo || null) }}
-                                        title="Clic para ampliar foto"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="card" style={{ padding: 20, background: 'rgba(255,255,255,0.02)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                                    <ShieldCheck size={16} color="var(--success)" />
-                                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad y Control</span>
-                                  </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Ubicación</span>
-                                    <span className="spec-value">{details.Area_Asignada}</span>
-                                  </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Responsable</span>
-                                    <span className="spec-value">{details.Responsable}</span>
-                                  </div>
-                                  <div className="spec-row">
-                                    <span className="spec-label">Estado Sist.</span>
-                                    <span className="spec-value" style={{ color: detailsStatusColor }}>{details.Estado}</span>
-                                  </div>
-                                  <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
-                                    {details.Tipo !== 'EQUIPO' && (
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}>
-                                        📄 Ficha PDF
-                                      </button>
-                                    )}
-                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditEquipo(details) }}>
-                                      <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Activo
-                                    </button>
-                                    {(details.Estado === 'FUERA_DE_SERVICIO' || details.Estado === 'DE_BAJA_OBSOLETO' || details.Estado === 'OBSOLETO' || details.Estado === 'BAJA') ? (
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--success)' }} onClick={(ev) => { ev.stopPropagation(); handleHabilitar(details.ID_Equipo, details.Nombre_Equipo) }}>Re-habilitar</button>
-                                    ) : (
-                                      <button className="btn btn-ghost btn-xs" style={{ color: 'var(--warning)' }} onClick={(ev) => { ev.stopPropagation(); handleDeBaja(details.ID_Equipo, details.Nombre_Equipo) }}>Dar de Baja</button>
-                                    )}
-                                    <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(details.ID_Equipo, details.Nombre_Equipo) }}>
-                                      <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
-                                    </button>
-                                  </div>
-                                </div>
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{e.Responsable ?? '—'}</div>
+                            <div style={{ 
+                              fontSize: 11, 
+                              fontWeight: 700, 
+                              color: statusColor,
+                              textTransform: 'uppercase',
+                              marginTop: 2
+                            }}>
+                              ● {semaforoLabel(semaforo, e.Estado)}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 750, fontSize: 13.5, color: 'var(--text-main)' }}>{formatFecha(e.Fecha_Proximo_Control)}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{diasRestantes(e.Fecha_Proximo_Control)}</div>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <button 
+                                className="btn-scan" 
+                                style={{ padding: '6px 14px', fontSize: 11, background: 'var(--accent)', color: '#ffffff', fontWeight: 800, borderRadius: 8, border: 'none', boxShadow: '0 4px 12px var(--accent-glow)' }}
+                                onClick={(ev) => { ev.stopPropagation(); openModalWithFullDetails(e, setModalEquipo); }}
+                              >
+                                Verificar
+                              </button>
+                              <div style={{ color: 'var(--text-dim)', padding: '0 4px' }}>
+                                {isExpanded ? <ChevronsUp size={18} /> : <ChevronsDown size={18} />}
                               </div>
-
-                              <div className="card" style={{ overflow: 'hidden', marginTop: 24, background: 'rgba(255,255,255,0.02)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', gap: 12 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <FileDigit size={16} color="var(--accent)" />
-                                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Historial de Verificaciones</span>
-                                  </div>
-                                  <button 
-                                    className="btn btn-cyan btn-xs" 
-                                    style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}
-                                    onClick={(ev) => { ev.stopPropagation(); setModalHistorical(details) }}
-                                  >
-                                    ➕ Agregar Verificación Anterior
-                                  </button>
-                                </div>
-                                <div className="table-wrap">
-                                  <table className="data-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Fecha</th>
-                                      <th>Tipo</th>
-                                      <th>Magnitud</th>
-                                      <th>Patrón</th>
-                                      <th>Variación</th>
-                                      <th>Resultado</th>
-                                      <th>Responsable</th>
-                                      <th>Observaciones / Acciones Req.</th>
-                                      <th style={{ textAlign: 'center' }}>Evidencia</th>
-                                      <th style={{ textAlign: 'center' }}>Acción</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {details.historiales.map((h, index) => (
-                                      <tr key={h.ID_Log}>
-                                        <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(h.Fecha_Ejecucion)}</td>
-                                        <td>
-                                          <span style={{ fontSize: 10, background: h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'rgba(245,158,11,0.12)' : 'rgba(0,229,255,0.08)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: h.Tipo_Verificacion === 'OPERATIVIDAD' ? '#f59e0b' : 'var(--accent)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                                            {h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Calibración'}
-                                          </span>
-                                        </td>
-                                        <td>
-                                          <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.06)', padding: '3px 8px', borderRadius: 6, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                                            {h.Magnitud_Controlada || '—'}
-                                          </span>
-                                        </td>
-                                        <td title={h.patron?.Nombre_Patron || ''} style={{ fontSize: 11, color: 'var(--text-soft)' }}>
-                                          {h.patron?.Codigo || '—'}
-                                        </td>
-                                        <td style={{ fontFamily: 'var(--font-mono)' }}>{h.Variacion_Calculada?.toFixed(4) ?? '—'}</td>
-                                        <td>
-                                          <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' || h.Resultado_Status === 'OPERATIVO' ? 'var(--success)' : h.Resultado_Status === 'ACCION_PENDIENTE' ? '#f59e0b' : 'var(--danger)' }}>
-                                            {h.Resultado_Status === 'ACCION_PENDIENTE' ? 'ACCIÓN REQUERIDA' : h.Resultado_Status}
-                                          </span>
-                                        </td>
-                                        <td>{h.Tecnico_Ejecutor}</td>
-                                        <td style={{ fontSize: 11, color: 'var(--text-soft)', maxWidth: 220, whiteSpace: 'normal' }}>
-                                          {h.Mediciones_Puntos && (() => {
-                                            try {
-                                              const pts = JSON.parse(h.Mediciones_Puntos)
-                                              if (Array.isArray(pts) && pts.length > 0) {
-                                                return (
-                                                  <div style={{ marginBottom: 6, padding: '6px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
-                                                    <div style={{ fontWeight: 700, fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Mediciones:</div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                                      {pts.map((p: any, idx: number) => {
-                                                        const diff = (p.patron !== null && p.instrumento !== null) ? (p.instrumento - p.patron) : null
-                                                        const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(4))}` : '—'
-                                                        return (
-                                                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontFamily: 'var(--font-mono)' }}>
-                                                            <span>P{idx+1}: P:{p.patron ?? '—'} / I:{p.instrumento ?? '—'}</span>
-                                                            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Var: {diffStr}</span>
-                                                          </div>
-                                                        )
-                                                      })}
-                                                    </div>
-                                                  </div>
-                                                )
-                                              }
-                                            } catch (err) {}
-                                            return null
-                                          })()}
-                                          {h.Observaciones && <div>{h.Observaciones}</div>}
-                                          {h.Acciones_Pendientes && h.Acciones_Pendientes.trim().toLowerCase() !== h.Observaciones?.trim().toLowerCase() && (
-                                            <div style={{ marginTop: h.Observaciones || h.Mediciones_Puntos ? 4 : 0, color: '#f59e0b', fontWeight: 600 }}>
-                                              ⚠️ Acciones Necesarias: {h.Acciones_Pendientes}
-                                            </div>
-                                          )}
-                                          {!h.Observaciones && !h.Acciones_Pendientes && !h.Mediciones_Puntos && '—'}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                          {h.Evidencia_Foto ? (
-                                            <button 
-                                              className="btn btn-ghost btn-xs"
-                                              style={{ color: 'var(--accent)', border: '1px solid var(--accent-dim)', padding: '4px 8px', fontSize: 11, borderRadius: 6 }}
-                                              onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(h.Evidencia_Foto ?? null) }}
-                                              title="Ver Evidencia Fotográfica"
-                                            >
-                                              📸 Ver Foto
-                                            </button>
-                                          ) : (
-                                            <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>—</span>
-                                          )}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                            {index === 0 && (
-                                              <button 
-                                                className="btn btn-ghost btn-xs" 
-                                                style={{ color: 'var(--accent)', padding: '4px' }}
-                                                onClick={(ev) => { ev.stopPropagation(); setEditLog({ ...h, FK_ID_Equipo: details.ID_Equipo }) }}
-                                                title="Editar la última verificación"
-                                              >
-                                                <Edit size={14} />
-                                              </button>
-                                            )}
-                                            <button 
-                                              className="btn btn-ghost btn-xs" 
-                                              style={{ color: 'var(--danger)', padding: '4px' }}
-                                              onClick={(ev) => { ev.stopPropagation(); handleEliminarHistorial(h.ID_Log, details.Nombre_Equipo) }}
-                                              title="Eliminar este registro"
-                                            >
-                                              <Trash2 size={14} />
-                                            </button>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                    {details.historiales.length === 0 && (
-                                      <tr>
-                                        <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 12 }}>
-                                          No hay verificaciones registradas para este activo.
-                                        </td>
-                                      </tr>
-                                    )}
-                                  </tbody>
-                                </table>
-                                </div>
-                              </div>
-                            
-                                </div>
-                              )
-                            })()}
+                            </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={6} style={{ padding: 0, background: 'rgba(0,0,0,0.06)' }}>
+                              {renderExpandedDetails(e)}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 📱 MOBILE VIEW: Native Touch-Friendly Cards (No horizontal overflow!) */}
+            <div className="mobile-equipment-list mobile-only">
+              {sortedEquipos.map((e) => {
+                const semaforo = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
+                const isExpanded = expanded === e.ID_Equipo
+                const statusColor = semaforoHex(semaforo)
+
+                return (
+                  <div key={e.ID_Equipo} className={`mobile-native-card status-${semaforo.toLowerCase()}`}>
+                    {/* Top Row: Tags & Semáforo */}
+                    <div className="mobile-card-top">
+                      <div className="mobile-tag-group">
+                        <span className="code-chip">{e.ID_Equipo}</span>
+                        <span className="type-badge-mini">{e.Tipo}</span>
+                        {e.Magnitud && <span className="magnitud-badge-mini">{e.Magnitud}</span>}
+                      </div>
+
+                      <span className="mobile-semaforo-badge" style={{ 
+                        background: `${statusColor}14`, 
+                        color: statusColor, 
+                        border: `1px solid ${statusColor}28` 
+                      }}>
+                        <span className="dot" style={{ background: statusColor }} />
+                        {semaforoLabel(semaforo, e.Estado)}
+                      </span>
+                    </div>
+
+                    {/* Title & Location */}
+                    <div className="mobile-card-body" onClick={() => toggleExpand(e.ID_Equipo)}>
+                      <h3 className="mobile-card-name">{e.Nombre_Equipo}</h3>
+                      <div className="mobile-card-meta">
+                        <span>📍 {e.Area_Asignada || 'Sin área asignada'}</span>
+                        {e.Responsable && <span> · 👤 {e.Responsable}</span>}
+                      </div>
+                      
+                      <div className="mobile-card-due-row">
+                        <span className="due-label">Próximo Control:</span>
+                        <span className="due-value" style={{ color: statusColor }}>
+                          {formatFecha(e.Fecha_Proximo_Control)} ({diasRestantes(e.Fecha_Proximo_Control)})
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Action Buttons Bar */}
+                    <div className="mobile-card-actions">
+                      <button 
+                        className="mobile-action-btn primary"
+                        onClick={() => openModalWithFullDetails(e, setModalEquipo)}
+                      >
+                        <Activity size={14} />
+                        <span>Verificar</span>
+                      </button>
+
+                      <button 
+                        className="mobile-action-btn secondary"
+                        onClick={() => generateTechnicalSheetPDF(e)}
+                        title="Descargar Ficha PDF"
+                      >
+                        <FileText size={14} />
+                        <span>PDF</span>
+                      </button>
+
+                      <button 
+                        className="mobile-action-btn secondary"
+                        onClick={() => openModalWithFullDetails(e, setQrLabelEquipo)}
+                        title="Ver Código QR"
+                      >
+                        <QrCode size={14} />
+                        <span>QR</span>
+                      </button>
+
+                      <button 
+                        className="mobile-action-btn secondary"
+                        onClick={() => openModalWithFullDetails(e, setEditEquipo)}
+                        title="Editar Activo"
+                      >
+                        <Edit size={14} />
+                        <span>Editar</span>
+                      </button>
+
+                      <button 
+                        className={`mobile-action-btn expand ${isExpanded ? 'active' : ''}`}
+                        onClick={() => toggleExpand(e.ID_Equipo)}
+                        title="Expandir detalles"
+                      >
+                        {isExpanded ? <ChevronsUp size={16} /> : <ChevronsDown size={16} />}
+                      </button>
+                    </div>
+
+                    {/* Mobile Expanded Content */}
+                    {isExpanded && (
+                      <div className="mobile-expanded-wrapper">
+                        {renderExpandedDetails(e)}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
 
       <style jsx>{`
+        .page-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .page-header-title-block {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .page-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .filters-card-container {
+          background: var(--card-bg);
+          border: 1.5px solid var(--glass-border);
+          border-radius: var(--radius-lg);
+          padding: 12px 16px;
+          margin-bottom: 16px;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .filters-main-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .search-box-wrap {
+          position: relative;
+          flex: 1;
+        }
+
+        .search-icon-box {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--text-soft);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 2;
+        }
+
+        .search-box-wrap input {
+          width: 100%;
+          background: var(--page-bg-soft);
+          border: 1.5px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          padding: 8px 30px 8px 34px;
+          font-size: 13px;
+          color: var(--text-main);
+          outline: none;
+          transition: all 0.2s;
+          box-sizing: border-box;
+        }
+
+        .search-box-wrap input:focus {
+          background: var(--card-bg);
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn-filter-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--page-bg-soft);
+          border: 1.5px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          padding: 8px 14px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--text-dim);
+          cursor: pointer;
+          transition: all 0.2s;
+          flex-shrink: 0;
+        }
+
+        .btn-filter-toggle.active {
+          background: rgba(14, 165, 233, 0.12);
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+
+        .filter-count-badge {
+          background: var(--accent);
+          color: #fff;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 1px 6px;
+          border-radius: 10px;
+        }
+
+        .btn-filter-reset {
+          background: var(--page-bg-soft);
+          border: 1.5px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--text-dim);
+          flex-shrink: 0;
+          transition: all 0.2s;
+        }
+        .btn-filter-reset:hover {
+          color: var(--danger);
+          border-color: rgba(239, 68, 68, 0.3);
+          background: rgba(239, 68, 68, 0.08);
+        }
+
+        .filters-expanded-drawer {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid var(--glass-border);
+          animation: fadeIn 0.2s ease;
+        }
+
+        .filter-grid-2 {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 12px;
+        }
+
+        .filter-item-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .filter-item-group label {
+          font-size: 10.5px;
+          font-weight: 800;
+          color: var(--text-soft);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .pills-group {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .filter-chip {
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          border-radius: 8px;
+          padding: 5px 10px;
+          font-size: 11.5px;
+          font-weight: 700;
+          color: var(--text-dim);
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .filter-chip.active {
+          background: var(--accent);
+          color: #fff;
+          border-color: var(--accent);
+        }
+
+        .select-filter-modern {
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          border-radius: 8px;
+          padding: 6px 10px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-main);
+          outline: none;
+          cursor: pointer;
+        }
+
+        .content-assets-card {
+          background: var(--card-bg);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-lg);
+          overflow: hidden;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .code-chip {
+          font-family: var(--font-mono);
+          font-weight: 800;
+          font-size: 11.5px;
+          color: var(--accent);
+          background: rgba(14, 165, 233, 0.08);
+          border: 1px solid rgba(14, 165, 233, 0.2);
+          padding: 2px 7px;
+          border-radius: 6px;
+          display: inline-block;
+        }
+
+        /* 📱 Mobile Native Asset Cards */
+        .mobile-equipment-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .mobile-native-card {
+          background: var(--card-bg);
+          border: 1.5px solid var(--glass-border);
+          border-radius: 16px;
+          padding: 14px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          box-shadow: var(--shadow-sm);
+          position: relative;
+          transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .mobile-native-card:active {
+          transform: scale(0.99);
+        }
+
+        .mobile-card-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .mobile-tag-group {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .type-badge-mini {
+          font-size: 10px;
+          font-weight: 800;
+          color: var(--text-soft);
+          background: var(--alpha-04);
+          padding: 2px 6px;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+
+        .magnitud-badge-mini {
+          font-size: 9.5px;
+          font-weight: 700;
+          color: var(--accent);
+          background: rgba(14, 165, 233, 0.08);
+          border: 1px solid rgba(14, 165, 233, 0.2);
+          padding: 2px 6px;
+          border-radius: 10px;
+        }
+
+        .mobile-semaforo-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 10.5px;
+          font-weight: 800;
+          padding: 3px 8px;
+          border-radius: 20px;
+          text-transform: uppercase;
+        }
+
+        .mobile-semaforo-badge .dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+        }
+
+        .mobile-card-body {
+          cursor: pointer;
+        }
+
+        .mobile-card-name {
+          font-size: 14.5px;
+          font-weight: 800;
+          color: var(--text-main);
+          margin: 0 0 4px 0;
+          line-height: 1.3;
+        }
+
+        .mobile-card-meta {
+          font-size: 11.5px;
+          color: var(--text-dim);
+          margin-bottom: 6px;
+        }
+
+        .mobile-card-due-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+        }
+
+        .due-label {
+          font-weight: 700;
+          color: var(--text-soft);
+        }
+
+        .due-value {
+          font-weight: 800;
+        }
+
+        .mobile-card-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding-top: 8px;
+          border-top: 1px solid var(--glass-border);
+        }
+
+        .mobile-action-btn {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          height: 36px;
+          border-radius: 10px;
+          font-size: 11.5px;
+          font-weight: 750;
+          cursor: pointer;
+          transition: all 0.15s;
+          border: none;
+        }
+
+        .mobile-action-btn.primary {
+          background: var(--accent);
+          color: #ffffff;
+          box-shadow: 0 2px 8px var(--accent-glow);
+          flex: 1.4;
+        }
+
+        .mobile-action-btn.secondary {
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          color: var(--text-main);
+        }
+
+        .mobile-action-btn.secondary:hover {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+
+        .mobile-action-btn.expand {
+          flex: 0 0 36px;
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          color: var(--text-dim);
+        }
+
+        .mobile-action-btn.expand.active {
+          background: var(--alpha-08);
+          color: var(--accent);
+        }
+
+        .mobile-expanded-wrapper {
+          margin-top: 10px;
+          border-top: 1px solid var(--glass-border);
+          padding-top: 10px;
+        }
+
         .spec-row {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          padding: 8px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.03);
-          gap: 16px;
+          padding: 6px 0;
+          border-bottom: 1px solid var(--glass-border);
+          gap: 12px;
         }
         .spec-row:last-child {
           border-bottom: none;
         }
         .spec-label {
-          font-size: 12px;
-          color: var(--text-dim);
-          flex-shrink: 0;
-          min-width: 100px;
+          font-size: 11.5px;
+          color: var(--text-soft);
+          font-weight: 600;
         }
         .spec-value {
-          font-size: 12px;
-          font-weight: 600;
+          font-size: 11.5px;
+          font-weight: 700;
           color: var(--text-main);
           text-align: right;
-          word-break: break-word;
-          flex-grow: 1;
         }
-        .btn-xs {
-          font-size: 10px;
-          padding: 4px 8px;
-        }
+
         @media (max-width: 768px) {
-          .mobile-only { display: block !important; }
-          .desktop-only { display: none !important; }
-          .page-header { 
-            flex-direction: column; 
-            align-items: flex-start !important; 
-            gap: 16px;
-            margin-bottom: 20px !important;
+          .page-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
           }
-          .page-header div:last-child {
+          .page-header-actions {
             width: 100%;
-            justify-content: space-between;
           }
-          .table-container {
-             border-radius: 12px;
-             margin: 0 -4px;
-          }
-          .data-table th { padding: 12px 8px !important; font-size: 11px !important; }
-          .data-table td { padding: 12px 8px !important; }
-          .mobile-card-title { max-width: 140px; }
-          .mobile-card-info { font-size: 12px !important; }
-          .btn-scan {
-            padding: 8px 10px !important;
-            font-size: 10px !important;
-          }
-          .expanded-details .card {
-            padding: 16px !important;
+          .page-header-actions .btn {
+            flex: 1;
+            justify-content: center;
+            font-size: 11.5px;
+            padding: 8px 10px;
           }
         }
       `}</style>

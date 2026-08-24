@@ -187,6 +187,75 @@ export default function PatronesPage() {
     }
   }
 
+  const renderPatronDetails = (p: Patron) => {
+    if (loadingDetails[p.ID_Patron]) {
+      return (
+        <div style={{ padding: 30, textAlign: 'center' }}>
+          <div className="spinner" style={{ margin: '0 auto 12px' }} />
+          <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>Cargando detalles...</p>
+        </div>
+      )
+    }
+    const details = expandedDetails[p.ID_Patron] || p
+    const detailsStatusColor = details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'
+
+    return (
+      <div style={{ padding: 'clamp(12px, 2vw, 20px)', borderLeft: `4px solid ${detailsStatusColor}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+          <h4 style={{ margin: 0, fontSize: 13.5, fontWeight: 750, color: 'var(--text-main)' }}>Especificaciones y Trazabilidad</h4>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }} onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(details); }}>
+              📄 Ficha PDF
+            </button>
+            <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(details) }}>
+              <History size={12} style={{ display: 'inline', marginRight: 4 }} /> Historial
+            </button>
+            <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)' }} onClick={(ev) => { ev.stopPropagation(); setEditPatron(details) }}>
+              <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar
+            </button>
+            <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarPatron(details.ID_Patron, details.Nombre_Patron) }}>
+              <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          <div className="spec-item">
+            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Magnitud Física</label>
+            <div style={{ fontSize: 12.5, fontWeight: 750, color: 'var(--accent)' }}>{details.Magnitud || 'General'}</div>
+          </div>
+          <div className="spec-item">
+            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Laboratorio</label>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-main)' }}>{details.Proveedor_Laboratorio || 'No especificado'}</div>
+          </div>
+          <div className="spec-item">
+            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Última Calibración</label>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-main)' }}>{formatFecha(details.Fecha_Calibracion_Externa)}</div>
+          </div>
+          <div className="spec-item">
+            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Vencimiento Certificado</label>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--text-main)' }}>
+              {formatFecha(details.Fecha_Vencimiento_Certificado)}
+            </div>
+          </div>
+        </div>
+
+        {details.Foto_Patron && (
+          <div style={{ marginTop: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 750, color: 'var(--text-soft)', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Fotografía del Patrón</label>
+            <img 
+              src={details.Foto_Patron} 
+              alt={details.Nombre_Patron} 
+              style={{ maxWidth: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--glass-border)', cursor: 'pointer' }} 
+              onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Patron ?? null) }}
+              title="Clic para ampliar foto"
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -202,21 +271,24 @@ export default function PatronesPage() {
         </button>
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
+      <div className="card" style={{ marginBottom: 12, background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: 14 }}>
         <div className="card-body" style={{ padding: '10px 14px' }}>
-          <div className="search-box">
-            <Search size={16} color="var(--text-soft)" />
+          <div className="search-box-wrap" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span className="search-icon-box" style={{ position: 'absolute', left: 12, display: 'flex', alignItems: 'center', pointerEvents: 'none', color: 'var(--text-soft)', zIndex: 2 }}>
+              <Search size={15} />
+            </span>
             <input 
               type="text" 
               placeholder="Buscar patrón por ID, nombre, código o laboratorio..." 
               value={q} 
               onChange={e => setQ(e.target.value)}
+              style={{ width: '100%', padding: '8px 30px 8px 34px', background: 'var(--page-bg-soft)', border: '1.5px solid var(--glass-border)', borderRadius: 'var(--radius-md)', outline: 'none', color: 'var(--text-main)', fontSize: 13, boxSizing: 'border-box' }}
             />
           </div>
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" style={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)', borderRadius: 16 }}>
         {loading ? (
           <div className="card-body" style={{ textAlign: 'center', padding: 60 }}>
             <div className="spinner" style={{ margin: '0 auto 16px' }} />
@@ -229,181 +301,316 @@ export default function PatronesPage() {
             <p style={{ color: 'var(--text-dim)' }}>Intenta ajustar los filtros de búsqueda o agrega un nuevo patrón</p>
           </div>
         ) : (
-          <div className="card-body" style={{ padding: 0 }}>
-            <div className="table-wrap">
+          <div>
+            {/* 🖥️ DESKTOP VIEW: High-Density Professional Data Table */}
+            <div className="table-wrap desktop-only">
               <table className="data-table" style={{ width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ width: '40%' }}>Patrón / Referencia</th>
-                  <th className="desktop-only" style={{ width: '15%' }}>Certificado N°</th>
-                  <th className="desktop-only" style={{ width: '15%' }}>Vencimiento</th>
-                  <th style={{ width: '15%', minWidth: '135px' }}>Estado Vigencia</th>
-                  <th style={{ textAlign: 'right', width: '15%', minWidth: '180px' }}>Certificado Digital</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPatrones.map(p => (
-                  <React.Fragment key={p.ID_Patron}>
-                  <tr 
-                    onClick={() => toggleExpand(p.ID_Patron)}
-                    style={{ cursor: 'pointer' }}
-                    className="mobile-card-row"
-                  >
-                    <td style={{ fontWeight: 600, padding: '12px 16px' }} className="mobile-card-title" title={p.Nombre_Patron}>
-                      {/* Código encima del nombre */}
-                      <div style={{ marginBottom: 6 }}>
-                        <span style={{ 
-                          fontFamily: 'var(--font-mono)', 
-                          fontWeight: 700, 
-                          color: 'var(--cyan)',
-                          background: 'rgba(0, 229, 255, 0.05)',
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          letterSpacing: '0.5px'
-                        }}>{p.Codigo}</span>
-                      </div>
-                      
-                      {/* Nombre y Magnitud */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                        <div className="mobile-only semaforo-dot" style={{ background: p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)', boxShadow: `0 0 15px ${p.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}66` }} />
-                        <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-main)' }}>{p.Nombre_Patron}</div>
-                        {p.Magnitud && (
-                          <span style={{ fontSize: 11, background: 'rgba(0, 229, 255, 0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--cyan)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 600 }}>
-                            {p.Magnitud}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mobile-only" style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.Proveedor_Laboratorio || 'Sin proveedor'}</div>
-                    </td>
-                    <td className="desktop-only" style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.N_Certificado || ''}>
-                      {p.N_Certificado || '—'}
-                    </td>
-                    <td className="desktop-only" style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap' }}>
-                      {formatFecha(p.Fecha_Vencimiento_Certificado)}
-                    </td>
-                    <td className="mobile-card-info" style={{ whiteSpace: 'nowrap', minWidth: '135px' }}>
-                      {p.Estado_Vigencia === 'VIGENTE' ? (
-                        <span className="status-badge status-badge-vigente">
-                          <CheckCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VIGENTE
-                        </span>
-                      ) : p.Estado_Vigencia === 'SIN CERTIFICADO' ? (
-                        <span className="status-badge status-badge-sincert">
-                          <AlertCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> SIN CERTIFICADO
-                        </span>
-                      ) : (
-                        <span className="status-badge status-badge-vencido">
-                          <XCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VENCIDO
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap', minWidth: '180px' }} className="mobile-card-actions">
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-                        {p.PDF_Certificado && (
-                          <button 
-                            className="btn btn-ghost btn-xs" 
-                            onClick={(e) => { e.stopPropagation(); handleOpenPdf(p.ID_Patron, p.PDF_Certificado!) }}
-                            title="Ver Certificado PDF"
-                            style={{ color: 'var(--cyan)', border: '1px solid var(--cyan-dim)', padding: '6px 10px', fontSize: 11 }}
-                          >
-                            <FileText size={14} style={{ display: 'inline', marginRight: 4 }} /> Ver PDF
-                          </button>
-                        )}
-                        <button 
-                          className="btn-scan" 
-                          style={{ padding: '6px 12px', fontSize: 11, background: 'var(--success)', color: '#fff', fontWeight: 700, borderRadius: 8, border: 'none' }}
-                          onClick={(ev) => { ev.stopPropagation(); openModalWithFullDetails(p, setRenewPatron) }}
-                        >
-                          <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> {p.PDF_Certificado ? 'Renovar' : 'Subir Cert'}
-                        </button>
-                      </div>
-                    </td>
+                <thead>
+                  <tr>
+                    <th style={{ width: '40%' }}>Patrón / Referencia</th>
+                    <th style={{ width: '15%' }}>Certificado N°</th>
+                    <th style={{ width: '15%' }}>Vencimiento</th>
+                    <th style={{ width: '15%', minWidth: '135px' }}>Estado Vigencia</th>
+                    <th style={{ textAlign: 'right', width: '15%', minWidth: '180px' }}>Certificado Digital</th>
                   </tr>
-                  {expandedId === p.ID_Patron && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: 0, background: 'rgba(0,0,0,0.1)' }}>
-                        {loadingDetails[p.ID_Patron] ? (
-                          <div style={{ padding: 40, textAlign: 'center' }}>
-                            <div className="spinner" style={{ margin: '0 auto 16px' }} />
-                            <p style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 600 }}>Cargando especificaciones completas e historial...</p>
+                </thead>
+                <tbody>
+                  {filteredPatrones.map(p => (
+                    <React.Fragment key={p.ID_Patron}>
+                      <tr 
+                        onClick={() => toggleExpand(p.ID_Patron)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td style={{ fontWeight: 600, padding: '12px 16px' }} title={p.Nombre_Patron}>
+                          <div style={{ marginBottom: 6 }}>
+                            <span style={{ 
+                              fontFamily: 'var(--font-mono)', 
+                              fontWeight: 700, 
+                              color: 'var(--accent)',
+                              background: 'rgba(14, 165, 233, 0.08)',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              letterSpacing: '0.5px'
+                            }}>{p.Codigo}</span>
                           </div>
-                        ) : (() => {
-                          const details = expandedDetails[p.ID_Patron] || p
-                          const detailsStatusColor = details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'
-                          return (
-                            <div style={{ padding: 'clamp(12px, 2vw, 24px) clamp(16px, 3vw, 40px)', borderLeft: `4px solid ${details.Estado_Vigencia === 'VIGENTE' ? 'var(--success)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--danger)'}`, display: 'flex', gap: 'clamp(20px, 4vw, 40px)', flexWrap: 'wrap', width: '100%' }}>
-                          <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 12 }}>
-                              <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>Especificaciones y Trazabilidad</h4>
-                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(details); }}>
-                                  📄 Ficha PDF
-                                </button>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)', border: '1px solid rgba(0,229,255,0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(details) }}>
-                                  <History size={12} style={{ display: 'inline', marginRight: 4 }} /> Historial Cal.
-                                </button>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--cyan)' }} onClick={(ev) => { ev.stopPropagation(); setEditPatron(details) }}>
-                                  <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar Patrón
-                                </button>
-                                <button className="btn btn-ghost btn-xs" style={{ color: 'var(--danger)' }} onClick={(ev) => { ev.stopPropagation(); handleEliminarPatron(details.ID_Patron, details.Nombre_Patron) }}>
-                                  <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
-                                </button>
-                              </div>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                              <div className="spec-item">
-                                <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Magnitud Física</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cyan)' }}>{details.Magnitud || 'General'}</div>
-                              </div>
-                              <div className="spec-item">
-                                <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Laboratorio</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{details.Proveedor_Laboratorio || 'No especificado'}</div>
-                              </div>
-                              <div className="spec-item">
-                                <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Última Calibración</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{formatFecha(details.Fecha_Calibracion_Externa)}</div>
-                              </div>
-                              <div className="spec-item">
-                                <label style={{ fontSize: 11, color: 'var(--text-dim)' }}>Vencimiento Certificado</label>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--text-main)' }}>
-                                  {formatFecha(details.Fecha_Vencimiento_Certificado)}
-                                </div>
-                              </div>
-                            </div>
-                            {details.Foto_Patron && (
-                              <div style={{ marginTop: 8 }}>
-                                <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>Fotografía del Patrón</label>
-                                <img 
-                                  src={details.Foto_Patron} 
-                                  alt={details.Nombre_Patron} 
-                                  style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 12, border: '1px solid var(--snow-3)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'pointer' }} 
-                                  onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Patron ?? null) }}
-                                  title="Clic para ampliar foto"
-                                />
-                              </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                            <div style={{ fontWeight: 700, fontSize: 14.5, overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-main)' }}>{p.Nombre_Patron}</div>
+                            {p.Magnitud && (
+                              <span style={{ fontSize: 10.5, background: 'rgba(14, 165, 233, 0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)', fontWeight: 600 }}>
+                                {p.Magnitud}
+                              </span>
                             )}
                           </div>
-                        </div>
-                      )
-                    })()}
-                  </td>
-                </tr>
-              )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                        </td>
+                        <td style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600, whiteSpace: 'nowrap' }} title={p.N_Certificado || ''}>
+                          {p.N_Certificado || '—'}
+                        </td>
+                        <td style={{ fontSize: 13, color: 'var(--text-soft)', whiteSpace: 'nowrap' }}>
+                          {formatFecha(p.Fecha_Vencimiento_Certificado)}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap', minWidth: '135px' }}>
+                          {p.Estado_Vigencia === 'VIGENTE' ? (
+                            <span className="status-badge status-badge-vigente">
+                              <CheckCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VIGENTE
+                            </span>
+                          ) : p.Estado_Vigencia === 'SIN CERTIFICADO' ? (
+                            <span className="status-badge status-badge-sincert">
+                              <AlertCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> SIN CERTIFICADO
+                            </span>
+                          ) : (
+                            <span className="status-badge status-badge-vencido">
+                              <XCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> VENCIDO
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap', minWidth: '180px' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {p.PDF_Certificado && (
+                              <button 
+                                className="btn btn-ghost btn-xs" 
+                                onClick={(e) => { e.stopPropagation(); handleOpenPdf(p.ID_Patron, p.PDF_Certificado!) }}
+                                title="Ver Certificado PDF"
+                                style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.3)', padding: '6px 10px', fontSize: 11 }}
+                              >
+                                <FileText size={14} style={{ display: 'inline', marginRight: 4 }} /> Ver PDF
+                              </button>
+                            )}
+                            <button 
+                              className="btn-scan" 
+                              style={{ padding: '6px 12px', fontSize: 11, background: 'var(--accent)', color: '#fff', fontWeight: 700, borderRadius: 8, border: 'none' }}
+                              onClick={(ev) => { ev.stopPropagation(); openModalWithFullDetails(p, setRenewPatron) }}
+                            >
+                              <RefreshCw size={12} style={{ display: 'inline', marginRight: 4 }} /> {p.PDF_Certificado ? 'Renovar' : 'Subir Cert'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedId === p.ID_Patron && (
+                        <tr>
+                          <td colSpan={5} style={{ padding: 0, background: 'rgba(0,0,0,0.06)' }}>
+                            {renderPatronDetails(p)}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 📱 MOBILE VIEW: Native Mobile Cards */}
+            <div className="mobile-patron-list mobile-only">
+              {filteredPatrones.map(p => (
+                <div key={p.ID_Patron} className="mobile-patron-card">
+                  <div className="mobile-card-header-row">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="patron-code-chip">{p.Codigo}</span>
+                      {p.Magnitud && <span className="patron-mag-chip">{p.Magnitud}</span>}
+                    </div>
+
+                    <span className={`status-pill-mini ${p.Estado_Vigencia === 'VIGENTE' ? 'vigente' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? 'sincert' : 'vencido'}`}>
+                      {p.Estado_Vigencia === 'VIGENTE' ? '🟢 VIGENTE' : p.Estado_Vigencia === 'SIN CERTIFICADO' ? '🟡 SIN CERT' : '🔴 VENCIDO'}
+                    </span>
+                  </div>
+
+                  <div className="mobile-card-title-block" onClick={() => toggleExpand(p.ID_Patron)}>
+                    <h3 className="mobile-patron-title">{p.Nombre_Patron}</h3>
+                    <div className="mobile-patron-sub">
+                      <span>🏢 {p.Proveedor_Laboratorio || 'Laboratorio no declarado'}</span>
+                      {p.N_Certificado && <span> · Cert: {p.N_Certificado}</span>}
+                    </div>
+                    <div className="mobile-patron-venc">
+                      <span>Vencimiento: <strong>{formatFecha(p.Fecha_Vencimiento_Certificado)}</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="mobile-patron-actions-row">
+                    {p.PDF_Certificado && (
+                      <button 
+                        className="mobile-action-btn secondary"
+                        onClick={() => handleOpenPdf(p.ID_Patron, p.PDF_Certificado!)}
+                      >
+                        <FileText size={14} />
+                        <span>Ver PDF</span>
+                      </button>
+                    )}
+
+                    <button 
+                      className="mobile-action-btn primary"
+                      onClick={() => openModalWithFullDetails(p, setRenewPatron)}
+                    >
+                      <RefreshCw size={14} />
+                      <span>{p.PDF_Certificado ? 'Renovar' : 'Subir Cert'}</span>
+                    </button>
+
+                    <button 
+                      className="mobile-action-btn secondary"
+                      onClick={() => generatePatronSheetPDF(p)}
+                      title="Descargar Ficha Técnica PDF"
+                    >
+                      <span>Ficha</span>
+                    </button>
+
+                    <button 
+                      className={`mobile-action-btn expand ${expandedId === p.ID_Patron ? 'active' : ''}`}
+                      onClick={() => toggleExpand(p.ID_Patron)}
+                    >
+                      {expandedId === p.ID_Patron ? '▲' : '▼'}
+                    </button>
+                  </div>
+
+                  {expandedId === p.ID_Patron && (
+                    <div className="mobile-patron-expanded-content">
+                      {renderPatronDetails(p)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
 
       <style jsx>{`
         .spec-item {
-          background: rgba(255,255,255,0.02);
-          padding: 12px 16px;
+          background: var(--page-bg-soft);
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid var(--glass-border);
+        }
+
+        .patron-code-chip {
+          font-family: var(--font-mono);
+          font-weight: 800;
+          font-size: 11px;
+          color: var(--accent);
+          background: rgba(14, 165, 233, 0.08);
+          border: 1px solid rgba(14, 165, 233, 0.2);
+          padding: 2px 7px;
+          border-radius: 6px;
+        }
+
+        .patron-mag-chip {
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--accent);
+          background: rgba(14, 165, 233, 0.06);
+          border: 1px solid rgba(14, 165, 233, 0.15);
+          padding: 2px 6px;
           border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .status-pill-mini {
+          font-size: 10.5px;
+          font-weight: 800;
+          padding: 3px 8px;
+          border-radius: 20px;
+        }
+        .status-pill-mini.vigente { background: rgba(34, 197, 94, 0.1); color: var(--success); }
+        .status-pill-mini.sincert { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .status-pill-mini.vencido { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        .mobile-patron-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        .mobile-patron-card {
+          background: var(--card-bg);
+          border: 1.5px solid var(--glass-border);
+          border-radius: 16px;
+          padding: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .mobile-card-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .mobile-card-title-block {
+          cursor: pointer;
+        }
+
+        .mobile-patron-title {
+          font-size: 14.5px;
+          font-weight: 800;
+          color: var(--text-main);
+          margin: 0 0 4px 0;
+          line-height: 1.3;
+        }
+
+        .mobile-patron-sub {
+          font-size: 11.5px;
+          color: var(--text-dim);
+          margin-bottom: 4px;
+        }
+
+        .mobile-patron-venc {
+          font-size: 11.5px;
+          color: var(--text-main);
+        }
+
+        .mobile-patron-actions-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding-top: 8px;
+          border-top: 1px solid var(--glass-border);
+        }
+
+        .mobile-action-btn {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          height: 36px;
+          border-radius: 10px;
+          font-size: 11.5px;
+          font-weight: 750;
+          cursor: pointer;
+          transition: all 0.15s;
+          border: none;
+        }
+
+        .mobile-action-btn.primary {
+          background: var(--accent);
+          color: #ffffff;
+          box-shadow: 0 2px 8px var(--accent-glow);
+          flex: 1.3;
+        }
+
+        .mobile-action-btn.secondary {
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          color: var(--text-main);
+        }
+
+        .mobile-action-btn.expand {
+          flex: 0 0 36px;
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          color: var(--text-dim);
+        }
+
+        .mobile-action-btn.expand.active {
+          background: var(--alpha-08);
+          color: var(--accent);
+        }
+
+        .mobile-patron-expanded-content {
+          margin-top: 8px;
+          border-top: 1px solid var(--glass-border);
+          padding-top: 8px;
         }
       `}</style>
       {showCreateModal && (

@@ -600,23 +600,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           bottom: 0;
           left: 0;
           right: 0;
-          height: calc(60px + env(safe-area-inset-bottom, 0px));
+          height: calc(64px + env(safe-area-inset-bottom, 0px));
           padding-bottom: env(safe-area-inset-bottom, 0px);
-          background: var(--glass-bg, rgba(255, 255, 255, 0.85));
-          backdrop-filter: blur(28px) saturate(190%);
-          -webkit-backdrop-filter: blur(28px) saturate(190%);
+          background: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
           display: flex;
-          justify-content: space-around;
           align-items: center;
           border-top: 1px solid var(--glass-border, rgba(15, 23, 42, 0.08));
           z-index: 1000;
-          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
         }
 
         [data-theme="dark"] .bottom-nav {
-          background: rgba(14, 20, 36, 0.88);
+          background: rgba(14, 20, 36, 0.96);
           border-top: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+          box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
         }
 
         .bottom-nav-item {

@@ -227,7 +227,9 @@ export default function UsuariosPage() {
       {/* Filter and Search Toolbar */}
       <div className="toolbar">
         <div className="search-box">
-          <Search size={18} className="search-icon" />
+          <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-soft)', marginRight: 8, pointerEvents: 'none' }}>
+            <Search size={16} />
+          </span>
           <input
             type="text"
             placeholder="Buscar por nombre, usuario o correo..."
@@ -1201,6 +1203,58 @@ export default function UsuariosPage() {
 
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+          .page-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+          }
+          .header-actions {
+            width: 100%;
+          }
+          .btn-create {
+            flex: 1;
+            justify-content: center;
+          }
+          .stats-row {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+          }
+          .stat-card {
+            min-width: 0 !important;
+            padding: 8px 6px !important;
+            border-radius: 12px !important;
+            text-align: center;
+          }
+          .stat-label {
+            font-size: 8.5px !important;
+            white-space: normal;
+            line-height: 1.15;
+          }
+          .stat-val {
+            font-size: 16px !important;
+          }
+          .toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .search-box {
+            max-width: 100% !important;
+          }
+          .role-filters {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 4px;
+          }
+          .filter-btn {
+            white-space: nowrap;
+            font-size: 12px;
+            padding: 6px 12px;
+          }
         }
       `}</style>
     </div>

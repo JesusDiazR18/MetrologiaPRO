@@ -6,7 +6,7 @@ import {
   Clock, FlaskConical, Activity, ArrowRight, TrendingUp,
   Zap, Database, Bell, ShieldCheck, AlertCircle, Download,
   FileText, Search, Filter, Eye, RotateCcw, Plus, Calendar,
-  Info, ExternalLink, Award, Sparkles, SlidersHorizontal, FileSpreadsheet
+  Info, ExternalLink, Award, Sparkles, SlidersHorizontal, FileSpreadsheet, X
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatFecha, semaforoHex, calcularSemaforo, formatFechaLarga } from '@/lib/metrologia'
@@ -60,6 +60,14 @@ export default function DashboardPage() {
   const [responsableFilter, setResponsableFilter] = useState<string | null>(null)
   const [fechaDesdeFilter, setFechaDesdeFilter] = useState('')
   const [fechaHastaFilter, setFechaHastaFilter] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const activeFiltersCount = [
+    statusFilter,
+    tipoFilter,
+    fechaDesdeFilter,
+    fechaHastaFilter
+  ].filter(Boolean).length
 
   // Modales de detalle
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null)
@@ -380,7 +388,7 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-wrapper">
       
-      {/* 1. KPIs Ribbon (Ultra-Compacto & Premium) */}
+      {/* 1. KPIs Grid (Ultra-Compact, Responsive 4-col PC / 2x2 Mobile) */}
       <div className="kpi-glass-bar">
         {/* KPI 1 */}
         <div className="kpi-bar-item clickable" onClick={() => { setTipoFilter(null); setStatusFilter(null); setFechaDesdeFilter(''); setFechaHastaFilter(''); }}>
@@ -394,14 +402,9 @@ export default function DashboardPage() {
               Eq: {filteredAssetsForChart.filter(a => a.status !== 'GRIS' && a.categoria === 'equipo' && a.tipoActivo === 'EQUIPO').length} · 
               Ins: {filteredAssetsForChart.filter(a => a.status !== 'GRIS' && a.categoria === 'equipo' && a.tipoActivo === 'INSTRUMENTO').length} · 
               Pat: {filteredAssetsForChart.filter(a => a.status !== 'GRIS' && a.categoria === 'patron').length}
-              {dynamicStats?.dadosDeBaja && dynamicStats.dadosDeBaja > 0 ? (
-                <span style={{ color: '#94a3b8', marginLeft: 6, fontWeight: 700 }}>({dynamicStats.dadosDeBaja} de baja)</span>
-              ) : null}
             </span>
           </div>
         </div>
-
-        <div className="kpi-bar-divider" />
 
         {/* KPI 2 */}
         <div className="kpi-bar-item">
@@ -415,10 +418,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="kpi-bar-divider" />
-
         {/* KPI 3 */}
-        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter('ROJO')}>
+        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter(statusFilter === 'ROJO' ? null : 'ROJO')}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-red blinking" />
             <span className="kpi-bar-label" style={{ color: (dynamicStats?.vencidos ?? 0) > 0 ? 'var(--danger)' : 'inherit' }}>Alertas Críticas</span>
@@ -427,21 +428,19 @@ export default function DashboardPage() {
             <span className="kpi-bar-val" style={{ color: (dynamicStats?.vencidos ?? 0) > 0 ? 'var(--danger)' : 'inherit' }}>
               {dynamicStats?.vencidos ?? 0}
             </span>
-            <span className="kpi-bar-sub">Requieren acción inmediata</span>
+            <span className="kpi-bar-sub">Acción inmediata</span>
           </div>
         </div>
 
-        <div className="kpi-bar-divider" />
-
         {/* KPI 4 */}
-        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter('AMARILLO')}>
+        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter(statusFilter === 'AMARILLO' ? null : 'AMARILLO')}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-yellow" />
             <span className="kpi-bar-label">Advertencia</span>
           </div>
           <div className="kpi-bar-value-row">
             <span className="kpi-bar-val">{dynamicStats?.proximos ?? 0}</span>
-            <span className="kpi-bar-sub">Controles o detalles</span>
+            <span className="kpi-bar-sub">Próximos controles</span>
           </div>
         </div>
       </div>
@@ -453,9 +452,9 @@ export default function DashboardPage() {
         <div className="grid-left">
           <div className="panel-card">
             <div className="panel-card-header">
-              <div>
+              <div className="panel-header-titles">
                 <h2>Explorador Inteligente de Activos</h2>
-                <p className="card-subtitle">Búsqueda rápida de equipos, instrumentos y patrones de referencia</p>
+                <p className="card-subtitle">Búsqueda rápida de equipos, instrumentos y patrones</p>
               </div>
               <div className="header-actions">
                 <button 
@@ -464,17 +463,16 @@ export default function DashboardPage() {
                   title="Generar Reporte Ejecutivo General en PDF según filtros"
                 >
                   <Download size={13} />
-                  <span>Reporte Ejecutivo PDF</span>
+                  <span>Reporte Ejecutivo</span>
                 </button>
                 <button 
                   className="btn-compact-pdf" 
                   onClick={handleExportReporteMetrologico}
                   disabled={reporteLoading}
                   title="Exportar listado completo de documentos, equipos y patrones en PDF"
-                  style={{ marginLeft: '8px' }}
                 >
                   <Download size={13} />
-                  <span>Reporte Metrológico PDF</span>
+                  <span>Reporte Metrológico</span>
                 </button>
                 <div className="panel-badge-count">
                   {filteredAssets.length} de {allAssets.length}
@@ -482,94 +480,116 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Filtros e Input de búsqueda */}
-            <div className="filters-section">
+            {/* Filtros Compactos con Cajón Contraíble */}
+            <div className="filters-toolbar">
               <div className="search-bar-wrapper">
-                <Search size={14} className="search-icon" />
+                <span className="search-icon-box">
+                  <Search size={14} />
+                </span>
                 <input 
                   type="text" 
-                  placeholder="Buscar por código, nombre, marca o responsable..." 
+                  placeholder="Buscar activo, código o responsable..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="clear-search-btn">
+                    <X size={12} />
+                  </button>
+                )}
               </div>
 
-              {/* Selector de Tipo */}
-              <div className="filter-select-group">
-                <select 
-                  value={tipoFilter || ''} 
-                  onChange={(e) => setTipoFilter(e.target.value || null)}
-                  className="filter-dropdown"
-                >
-                  <option value="">Todos los Tipos</option>
-                  <option value="EQUIPO">Equipos</option>
-                  <option value="INSTRUMENTO">Instrumentos</option>
-                  <option value="PATRON">Patrones de Referencia</option>
-                </select>
-              </div>
-
-              {/* Rango de Fechas */}
-              <div className="filter-date-range">
-                <input 
-                  type="date" 
-                  value={fechaDesdeFilter} 
-                  onChange={(e) => setFechaDesdeFilter(e.target.value)}
-                  className="filter-date-input"
-                  title="Fecha Desde (Vencimiento/Próximo Control)"
-                />
-                <span className="filter-date-to-separator">a</span>
-                <input 
-                  type="date" 
-                  value={fechaHastaFilter} 
-                  onChange={(e) => setFechaHastaFilter(e.target.value)}
-                  className="filter-date-input"
-                  title="Fecha Hasta (Vencimiento/Próximo Control)"
-                />
-              </div>
-            </div>
-
-            {/* Filtros Rápidos por Color / Semáforo */}
-            <div className="status-pills-row">
               <button 
-                onClick={() => setStatusFilter(null)} 
-                className={`status-pill ${statusFilter === null ? 'active' : ''}`}
+                className={`btn-toggle-filters ${showFilters || activeFiltersCount > 0 ? 'active' : ''}`}
+                onClick={() => setShowFilters(!showFilters)}
+                title="Mostrar u ocultar filtros avanzados"
               >
-                Todos
-              </button>
-              <button 
-                onClick={() => setStatusFilter('VERDE')} 
-                className={`status-pill pill-green ${statusFilter === 'VERDE' ? 'active' : ''}`}
-              >
-                <span className="dot" /> Al Día
-              </button>
-              <button 
-                onClick={() => setStatusFilter('AMARILLO')} 
-                className={`status-pill pill-yellow ${statusFilter === 'AMARILLO' ? 'active' : ''}`}
-              >
-                <span className="dot" /> Advertencia
-              </button>
-              <button 
-                onClick={() => setStatusFilter('ROJO')} 
-                className={`status-pill pill-red ${statusFilter === 'ROJO' ? 'active' : ''}`}
-              >
-                <span className="dot" /> Críticos
-              </button>
-              <button 
-                onClick={() => setStatusFilter('GRIS')} 
-                className={`status-pill pill-grey ${statusFilter === 'GRIS' ? 'active' : ''}`}
-              >
-                <span className="dot" /> De Baja
+                <SlidersHorizontal size={14} />
+                <span>Filtros</span>
+                {activeFiltersCount > 0 && <span className="filters-count-pill">{activeFiltersCount}</span>}
               </button>
 
-              {(statusFilter || searchQuery || tipoFilter || fechaDesdeFilter || fechaHastaFilter) && (
+              {activeFiltersCount > 0 && (
                 <button 
                   onClick={() => { setStatusFilter(null); setSearchQuery(''); setTipoFilter(null); setFechaDesdeFilter(''); setFechaHastaFilter(''); }} 
-                  className="btn-clear-filters"
+                  className="btn-reset-filters"
+                  title="Restablecer todos los filtros"
                 >
-                  <RotateCcw size={10} /> Restablecer filtros
+                  <RotateCcw size={13} />
                 </button>
               )}
             </div>
+
+            {/* Cajón de Filtros Desplegable */}
+            {showFilters && (
+              <div className="collapsible-filters-panel">
+                {/* Tipo Selector */}
+                <div className="filter-group-block">
+                  <span className="filter-group-label">Tipo de Activo:</span>
+                  <div className="filter-pills-wrap">
+                    {[
+                      { id: '', label: 'Todos' },
+                      { id: 'EQUIPO', label: 'Equipos' },
+                      { id: 'INSTRUMENTO', label: 'Instrumentos' },
+                      { id: 'PATRON', label: 'Patrones' }
+                    ].map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTipoFilter(t.id ? t.id : null)}
+                        className={`filter-chip ${tipoFilter === (t.id || null) ? 'active' : ''}`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Estado / Semáforo Selector */}
+                <div className="filter-group-block">
+                  <span className="filter-group-label">Estado Metrológico:</span>
+                  <div className="filter-pills-wrap">
+                    {[
+                      { id: null, label: 'Todos', dot: '' },
+                      { id: 'VERDE', label: 'Al Día', dot: 'bg-green' },
+                      { id: 'AMARILLO', label: 'Advertencia', dot: 'bg-yellow' },
+                      { id: 'ROJO', label: 'Crítico', dot: 'bg-red' },
+                      { id: 'GRIS', label: 'De Baja', dot: 'bg-grey' }
+                    ].map(s => (
+                      <button
+                        key={s.label}
+                        onClick={() => setStatusFilter(s.id)}
+                        className={`filter-chip ${statusFilter === s.id ? 'active' : ''}`}
+                      >
+                        {s.dot && <span className={`dot ${s.dot}`} />}
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rango de Fechas */}
+                <div className="filter-group-block">
+                  <span className="filter-group-label">Vencimiento / Próximo Control:</span>
+                  <div className="date-inputs-row">
+                    <input 
+                      type="date" 
+                      value={fechaDesdeFilter} 
+                      onChange={(e) => setFechaDesdeFilter(e.target.value)}
+                      className="filter-date-input"
+                      title="Desde"
+                    />
+                    <span className="date-sep">a</span>
+                    <input 
+                      type="date" 
+                      value={fechaHastaFilter} 
+                      onChange={(e) => setFechaHastaFilter(e.target.value)}
+                      className="filter-date-input"
+                      title="Hasta"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Lista de Activos */}
             <div className="assets-scroll-container">
@@ -1192,39 +1212,43 @@ export default function DashboardPage() {
           box-shadow: none;
         }
 
-        /* Seccion Filtros */
-        .filters-section {
+        /* Seccion Filtros Compactos */
+        .filters-toolbar {
           display: flex;
-          gap: 10px;
-          margin-bottom: 12px;
           align-items: center;
-          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
         }
 
         .search-bar-wrapper {
           position: relative;
           flex: 1;
-          min-width: 200px;
         }
 
-        .search-icon {
+        .search-icon-box {
           position: absolute;
           left: 12px;
           top: 50%;
           transform: translateY(-50%);
           color: var(--text-soft);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 2;
         }
 
         .search-bar-wrapper input {
           width: 100%;
           background: var(--page-bg-soft);
-          border: 1px solid var(--glass-border);
+          border: 1.5px solid var(--glass-border);
           border-radius: var(--radius-md);
-          padding: 8px 12px 8px 32px;
-          font-size: 12.5px;
+          padding: 8px 30px 8px 32px;
+          font-size: 13px;
           color: var(--text-main);
           outline: none;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          box-sizing: border-box;
         }
 
         .search-bar-wrapper input:focus {
@@ -1233,131 +1257,175 @@ export default function DashboardPage() {
           box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
-        .filter-select-group {
-          flex-shrink: 0;
-        }
-
-        .filter-dropdown {
-          background: var(--page-bg-soft);
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-md);
-          padding: 7.5px 12px;
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--text-dim);
-          outline: none;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .filter-dropdown:focus {
-          background: var(--card-bg);
-          border-color: var(--accent);
-          box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .filter-date-range {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          flex-shrink: 0;
-        }
-
-        .filter-date-input {
-          background: var(--page-bg-soft);
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-md);
-          padding: 7px 10px;
-          font-size: 11.5px;
-          font-weight: 600;
-          color: var(--text-dim);
-          outline: none;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-
-        .filter-date-input:focus {
-          background: var(--card-bg);
-          border-color: var(--accent);
-          box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .filter-date-to-separator {
-          font-size: 10px;
-          font-weight: 700;
-          color: var(--text-soft);
-          text-transform: uppercase;
-        }
-
-        /* Pills de estado */
-        .status-pills-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-bottom: 14px;
-          border-bottom: 1px solid var(--glass-border);
-          padding-bottom: 12px;
-        }
-
-        .status-pill {
-          background: var(--alpha-04);
+        .clear-search-btn {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: var(--alpha-08);
           border: none;
-          color: var(--text-dim);
-          font-size: 11px;
-          font-weight: 700;
-          padding: 6px 12px;
-          border-radius: 9px;
+          border-radius: 50%;
+          padding: 3px;
           cursor: pointer;
+          color: var(--text-dim);
+          display: flex;
+        }
+
+        .btn-toggle-filters {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          background: var(--page-bg-soft);
+          border: 1.5px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          padding: 8px 14px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--text-dim);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
         }
 
-        .status-pill:hover {
+        .btn-toggle-filters:hover {
           background: var(--alpha-08);
+          color: var(--text-main);
         }
 
-        .status-pill.active {
-          background: var(--oxford-blue);
-          color: var(--card-bg);
+        .btn-toggle-filters.active {
+          background: rgba(14, 165, 233, 0.12);
+          border-color: var(--accent);
+          color: var(--accent);
         }
 
-        .status-pill .dot {
+        .filters-count-pill {
+          background: var(--accent);
+          color: #ffffff;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 1px 6px;
+          border-radius: 10px;
+        }
+
+        .btn-reset-filters {
+          background: var(--page-bg-soft);
+          border: 1.5px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--text-dim);
+          flex-shrink: 0;
+          transition: all 0.2s;
+        }
+
+        .btn-reset-filters:hover {
+          color: var(--danger);
+          border-color: rgba(239, 68, 68, 0.3);
+          background: rgba(239, 68, 68, 0.08);
+        }
+
+        /* Cajon de Filtros Desplegable */
+        .collapsible-filters-panel {
+          background: var(--page-bg-soft);
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-md);
+          padding: 12px 14px;
+          margin-bottom: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .filter-group-block {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .filter-group-label {
+          font-size: 10.5px;
+          font-weight: 800;
+          color: var(--text-soft);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .filter-pills-wrap {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .filter-chip {
+          background: var(--card-bg);
+          border: 1px solid var(--glass-border);
+          border-radius: 8px;
+          padding: 5px 10px;
+          font-size: 11.5px;
+          font-weight: 700;
+          color: var(--text-dim);
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          transition: all 0.15s;
+        }
+
+        .filter-chip:hover {
+          border-color: var(--accent);
+          color: var(--text-main);
+        }
+
+        .filter-chip.active {
+          background: var(--accent);
+          border-color: var(--accent);
+          color: #ffffff;
+        }
+
+        .filter-chip .dot {
           width: 6px;
           height: 6px;
           border-radius: 50%;
         }
 
-        .pill-green .dot { background: var(--success); }
-        .pill-yellow .dot { background: var(--warning); }
-        .pill-red .dot { background: var(--danger); }
-        .pill-grey .dot { background: #94a3b8; }
+        .bg-green { background: var(--success); }
+        .bg-yellow { background: var(--warning); }
+        .bg-red { background: var(--danger); }
+        .bg-grey { background: #94a3b8; }
 
-        .pill-green.active { background: var(--success); color: var(--card-bg); }
-        .pill-yellow.active { background: var(--warning); color: var(--card-bg); }
-        .pill-red.active { background: var(--danger); color: var(--card-bg); }
-        .pill-grey.active { background: #64748b; color: var(--card-bg); }
-
-        .btn-clear-filters {
-          background: var(--alpha-02);
-          border: none;
-          color: var(--text-dim);
-          font-size: 10px;
-          font-weight: 700;
-          padding: 5px 10px;
-          border-radius: 8px;
-          cursor: pointer;
+        .date-inputs-row {
           display: flex;
           align-items: center;
-          gap: 4px;
-          transition: all 0.2s;
+          gap: 8px;
+          flex-wrap: wrap;
         }
 
-        .btn-clear-filters:hover {
-          background: var(--alpha-08);
+        .date-sep {
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--text-soft);
+        }
+
+        .filter-date-input {
+          background: var(--card-bg);
+          border: 1px solid var(--glass-border);
+          border-radius: 8px;
+          padding: 6px 10px;
+          font-size: 12px;
           color: var(--text-main);
+          font-weight: 600;
+          outline: none;
         }
 
         /* Lista de Activos */
@@ -2001,48 +2069,76 @@ export default function DashboardPage() {
           color: var(--accent) !important;
         }
 
-        /* Responsive */
+        /* Responsive Layout Overhauls */
         @media (max-width: 1024px) {
-          .kpi-glass-bar {
-            flex-wrap: wrap;
-            gap: 16px 8px;
-          }
-          .kpi-bar-divider {
-            display: none;
-          }
-          .kpi-bar-item {
-            flex: 1 1 40%;
-          }
           .dashboard-grid {
             grid-template-columns: 1fr;
           }
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           .kpi-glass-bar {
-            flex-direction: column;
-            align-items: stretch;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            padding: 8px !important;
           }
           .kpi-bar-item {
-            flex: 1 1 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            padding: 10px 12px;
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
           }
-          .filters-section {
+          .kpi-bar-val {
+            font-size: 19px !important;
+          }
+          .panel-card-header {
             flex-direction: column;
+            gap: 10px;
             align-items: stretch;
           }
-          .filter-dropdown {
+          .panel-header-titles h2 {
+            font-size: 15px !important;
+          }
+          .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
             width: 100%;
+            align-items: center;
+          }
+          .btn-compact-pdf {
+            flex: 1 1 130px;
+            justify-content: center;
+            padding: 8px 10px !important;
+            font-size: 11px !important;
+            white-space: nowrap;
+          }
+          .panel-badge-count {
+            margin-left: auto;
+          }
+          .search-bar-wrapper {
+            min-width: 0 !important;
+          }
+          .filters-toolbar {
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-wrapper {
+            width: 100% !important;
+            overflow-x: hidden !important;
+          }
+          .panel-card {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
           }
           .chart-wrapper {
             flex-direction: column;
           }
-          .panel-card-header {
-            flex-direction: column;
-            gap: 8px;
-          }
-          .header-actions {
-            width: 100%;
-            justify-content: space-between;
+          .assets-scroll-container {
+            max-height: 500px;
           }
         }
       `}</style>
