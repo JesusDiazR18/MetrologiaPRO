@@ -506,45 +506,45 @@ function EquiposContent() {
           )}
 
           <div className="card" style={{ padding: 18, background: 'var(--page-bg-soft)', borderRadius: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--glass-border)' }}>
               <FileDigit size={16} color="var(--accent)" />
-              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Especificaciones</span>
+              <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-main)' }}>Especificaciones</span>
             </div>
             {(details.Modelo || details.Serie) && (details.Modelo !== '—' || details.Serie !== '—') && (
-              <div className="spec-row">
-                <span className="spec-label">Modelo / Serie</span>
-                <span className="spec-value">{details.Modelo || '—'} / {details.Serie || '—'}</span>
+              <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+                <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Modelo / Serie:</span>
+                <span className="spec-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textAlign: 'right' }}>{details.Modelo || '—'} / {details.Serie || '—'}</span>
               </div>
             )}
             {details.Tolerancia_Aceptable != null && (
-              <div className="spec-row">
-                <span className="spec-label">Tolerancia</span>
-                <span className="spec-value">±{details.Tolerancia_Aceptable} {details.Unidad_Tolerancia ?? 'un'}</span>
+              <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+                <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Tolerancia:</span>
+                <span className="spec-value" style={{ fontSize: 12, fontWeight: 750, color: 'var(--accent)', textAlign: 'right' }}>±{details.Tolerancia_Aceptable} {details.Unidad_Tolerancia ?? 'un'}</span>
               </div>
             )}
             {details.Fecha_Ingreso && (
-              <div className="spec-row">
-                <span className="spec-label">Fecha Ingreso</span>
-                <span className="spec-value">{formatFecha(details.Fecha_Ingreso)}</span>
+              <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+                <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Fecha Ingreso:</span>
+                <span className="spec-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textAlign: 'right' }}>{formatFecha(details.Fecha_Ingreso)}</span>
               </div>
             )}
-            <div className="spec-row">
-              <span className="spec-label">Próxima Verif.</span>
-              <span className="spec-value" style={{ fontWeight: 800, color: 'var(--accent)' }}>{formatFecha(details.Fecha_Proximo_Control)}</span>
+            <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+              <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Próxima Verif.:</span>
+              <span className="spec-value" style={{ fontWeight: 800, fontSize: 12.5, color: 'var(--accent)', textAlign: 'right' }}>{formatFecha(details.Fecha_Proximo_Control)}</span>
             </div>
-            <div className="spec-row">
-              <span className="spec-label">Intervalo</span>
-              <span className="spec-value">{details.Periodicidad_Meses} Meses</span>
+            <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+              <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Intervalo:</span>
+              <span className="spec-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textAlign: 'right' }}>{details.Periodicidad_Meses} Meses</span>
             </div>
             {details.Accesorios && details.Accesorios.trim() !== '' && details.Accesorios.trim() !== '—' && (
-              <div className="spec-row" style={{ alignItems: 'flex-start' }}>
-                <span className="spec-label">Accesorios</span>
-                <span className="spec-value" style={{ fontSize: 11 }}>{details.Accesorios}</span>
+              <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+                <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Accesorios:</span>
+                <span className="spec-value" style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-soft)', textAlign: 'right' }}>{details.Accesorios}</span>
               </div>
             )}
             {details.Foto_Equipo && (
               <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--glass-border)' }}>
-                <span className="spec-label" style={{ display: 'block', marginBottom: 6, fontSize: 11, fontWeight: 700 }}>Foto del Equipo</span>
+                <span className="spec-label" style={{ display: 'block', marginBottom: 6, fontSize: 11.5, fontWeight: 800, color: 'var(--text-main)' }}>Foto del Equipo:</span>
                 <img 
                   src={details.Foto_Equipo} 
                   alt={details.Nombre_Equipo} 
@@ -557,21 +557,21 @@ function EquiposContent() {
           </div>
 
           <div className="card" style={{ padding: 18, background: 'var(--page-bg-soft)', borderRadius: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--glass-border)' }}>
               <ShieldCheck size={16} color="var(--success)" />
-              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad y Control</span>
+              <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-main)' }}>Seguridad y Control</span>
             </div>
-            <div className="spec-row">
-              <span className="spec-label">Ubicación</span>
-              <span className="spec-value">{details.Area_Asignada}</span>
+            <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+              <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Ubicación:</span>
+              <span className="spec-value" style={{ fontSize: 12, fontWeight: 650, color: 'var(--text-main)', textAlign: 'right' }}>{details.Area_Asignada || 'No asignada'}</span>
             </div>
-            <div className="spec-row">
-              <span className="spec-label">Responsable</span>
-              <span className="spec-value">{details.Responsable}</span>
+            <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+              <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Responsable:</span>
+              <span className="spec-value" style={{ fontSize: 12, fontWeight: 650, color: 'var(--text-main)', textAlign: 'right' }}>{details.Responsable || 'No asignado'}</span>
             </div>
-            <div className="spec-row">
-              <span className="spec-label">Estado Sist.</span>
-              <span className="spec-value" style={{ color: detailsStatusColor }}>{details.Estado}</span>
+            <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+              <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Estado Sist.:</span>
+              <span className="spec-value" style={{ color: detailsStatusColor, fontWeight: 800, fontSize: 12, textAlign: 'right' }}>{details.Estado}</span>
             </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 6, justifyContent: 'flex-end', borderTop: '1px solid var(--glass-border)', paddingTop: 10, flexWrap: 'wrap' }}>
               {details.Tipo !== 'EQUIPO' && (
@@ -1415,24 +1415,27 @@ function EquiposContent() {
         .spec-row {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          padding: 6px 0;
+          align-items: center;
+          padding: 8px 0;
           border-bottom: 1px solid var(--glass-border);
-          gap: 12px;
+          gap: 16px;
         }
         .spec-row:last-child {
           border-bottom: none;
         }
         .spec-label {
-          font-size: 11.5px;
-          color: var(--text-soft);
-          font-weight: 600;
+          font-size: 12px;
+          color: var(--text-main);
+          font-weight: 800;
+          letter-spacing: 0.01em;
+          flex-shrink: 0;
         }
         .spec-value {
-          font-size: 11.5px;
-          font-weight: 700;
-          color: var(--text-main);
+          font-size: 12px;
+          font-weight: 650;
+          color: var(--text-soft);
           text-align: right;
+          word-break: break-word;
         }
 
         @media (max-width: 768px) {

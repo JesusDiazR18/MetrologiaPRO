@@ -219,22 +219,22 @@ export default function PatronesPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-          <div className="spec-item">
-            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Magnitud Física</label>
-            <div style={{ fontSize: 12.5, fontWeight: 750, color: 'var(--accent)' }}>{details.Magnitud || 'General'}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div className="spec-item" style={{ background: 'var(--page-bg-soft)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+            <label style={{ fontSize: 11, color: 'var(--text-main)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>Magnitud Física:</label>
+            <div style={{ fontSize: 13, fontWeight: 750, color: 'var(--accent)' }}>{details.Magnitud || 'General'}</div>
           </div>
-          <div className="spec-item">
-            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Laboratorio</label>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-main)' }}>{details.Proveedor_Laboratorio || 'No especificado'}</div>
+          <div className="spec-item" style={{ background: 'var(--page-bg-soft)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+            <label style={{ fontSize: 11, color: 'var(--text-main)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>Laboratorio:</label>
+            <div style={{ fontSize: 13, fontWeight: 650, color: 'var(--text-main)' }}>{details.Proveedor_Laboratorio || 'No especificado'}</div>
           </div>
-          <div className="spec-item">
-            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Última Calibración</label>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-main)' }}>{formatFecha(details.Fecha_Calibracion_Externa)}</div>
+          <div className="spec-item" style={{ background: 'var(--page-bg-soft)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+            <label style={{ fontSize: 11, color: 'var(--text-main)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>Última Calibración:</label>
+            <div style={{ fontSize: 13, fontWeight: 650, color: 'var(--text-main)' }}>{formatFecha(details.Fecha_Calibracion_Externa)}</div>
           </div>
-          <div className="spec-item">
-            <label style={{ fontSize: 10.5, color: 'var(--text-soft)', fontWeight: 700 }}>Vencimiento Certificado</label>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--text-main)' }}>
+          <div className="spec-item" style={{ background: 'var(--page-bg-soft)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+            <label style={{ fontSize: 11, color: 'var(--text-main)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>Vencimiento Certificado:</label>
+            <div style={{ fontSize: 13, fontWeight: 800, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--success)' }}>
               {formatFecha(details.Fecha_Vencimiento_Certificado)}
             </div>
           </div>
