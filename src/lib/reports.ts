@@ -817,10 +817,53 @@ export async function generatePatronSheetPDF(patron: any) {
 
   currY += 75;
 
-  // --- 3. HISTORIAL DE USO ---
+  // --- 3. HISTORIAL DE CALIBRACIONES EXTERNAS ---
+  if (patron.calibraciones && patron.calibraciones.length > 0) {
+    if (currY + 40 > 280) { doc.addPage(); currY = 20; }
+    currY = renderSectionTitle(doc, '3. Historial de Calibraciones Externas (Laboratorios Acreditados)', currY, [168, 85, 247]);
+
+    doc.setFillColor(88, 28, 135);
+    doc.rect(margin, currY, printableWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('F. Calibración', margin + 4, currY + 5.5);
+    doc.text('Laboratorio', margin + 30, currY + 5.5);
+    doc.text('N° Certificado', margin + 80, currY + 5.5);
+    doc.text('Vence Cert.', margin + 120, currY + 5.5);
+    doc.text('Resultado', margin + 155, currY + 5.5);
+    currY += 8;
+
+    patron.calibraciones.slice(0, 10).forEach((c: any, idx: number) => {
+      if (currY + 10 > 280) { doc.addPage(); currY = 20; }
+      const bg = idx % 2 === 0 ? 255 : 249;
+      doc.setFillColor(bg, bg, bg);
+      doc.rect(margin, currY, printableWidth, 8, 'F');
+      doc.setDrawColor(230, 230, 230);
+      doc.line(margin, currY + 8, margin + printableWidth, currY + 8);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(formatFecha(c.Fecha_Calibracion), margin + 4, currY + 5.2);
+      doc.text((c.Laboratorio || '—').substring(0, 24), margin + 30, currY + 5.2);
+      doc.text((c.N_Certificado || '—').substring(0, 20), margin + 80, currY + 5.2);
+      doc.text(formatFecha(c.Fecha_Vencimiento), margin + 120, currY + 5.2);
+
+      const isAprob = c.Resultado === 'APROBADO';
+      doc.setTextColor(isAprob ? 22 : 220, isAprob ? 163 : 38, isAprob ? 74 : 38);
+      doc.setFont('helvetica', 'bold');
+      doc.text(c.Resultado || 'APROBADO', margin + 155, currY + 5.2);
+
+      currY += 8;
+    });
+  }
+
+  // --- 4. HISTORIAL DE USO ---
   if (patron.historiales && patron.historiales.length > 0) {
     if (currY + 40 > 280) { doc.addPage(); currY = 20; }
-    currY = renderSectionTitle(doc, '3. Historial de Uso en Verificaciones Metrológicas', currY, [168, 85, 247]);
+    const sectionNum = (patron.calibraciones && patron.calibraciones.length > 0) ? '4' : '3';
+    currY = renderSectionTitle(doc, `${sectionNum}. Historial de Uso en Verificaciones Metrológicas`, currY, [168, 85, 247]);
 
     doc.setFillColor(88, 28, 135);
     doc.rect(margin, currY, printableWidth, 8, 'F');
