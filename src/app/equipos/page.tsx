@@ -443,6 +443,45 @@ function EquiposContent() {
 
     return (
       <div className="expanded-details-container" style={{ borderLeft: `4px solid ${detailsStatusColor}`, padding: 'clamp(14px, 2vw, 24px)', background: 'var(--card-bg)' }}>
+        {/* Header con Acciones Principales */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: 12, marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+          <h4 style={{ margin: 0, fontSize: 13.5, fontWeight: 750, color: 'var(--text-main)' }}>
+            Ficha Técnica & Especificaciones ({details.Codigo_Interno || details.ID_Equipo})
+          </h4>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button 
+              className="btn btn-ghost btn-xs" 
+              style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }}
+              onClick={(ev) => { ev.stopPropagation(); generateTechnicalSheetPDF(details); }}
+            >
+              📄 Ficha PDF
+            </button>
+            {details.Tipo === 'EQUIPO' && (
+              <button 
+                className="btn btn-ghost btn-xs" 
+                style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }}
+                onClick={(ev) => { ev.stopPropagation(); setQrLabelEquipo(details); }}
+              >
+                <QrCode size={12} style={{ display: 'inline', marginRight: 4 }} /> Etiqueta QR
+              </button>
+            )}
+            <button 
+              className="btn btn-ghost btn-xs" 
+              style={{ color: 'var(--accent)' }}
+              onClick={(ev) => { ev.stopPropagation(); setEditEquipo(details); }}
+            >
+              <Edit size={12} style={{ display: 'inline', marginRight: 4 }} /> Editar
+            </button>
+            <button 
+              className="btn btn-ghost btn-xs" 
+              style={{ color: 'var(--danger)' }}
+              onClick={(ev) => { ev.stopPropagation(); handleEliminarActivo(details.ID_Equipo, details.Nombre_Equipo); }}
+            >
+              <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Eliminar
+            </button>
+          </div>
+        </div>
+
         {(details.Detalles_Estado || details.Requiere_Seguimiento || details.Tiene_Solucion === false) && (
           <div style={{ 
             background: details.Tiene_Solucion !== false ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
@@ -993,14 +1032,16 @@ function EquiposContent() {
                         <span>PDF</span>
                       </button>
 
-                      <button 
-                        className="mobile-action-btn secondary"
-                        onClick={() => openModalWithFullDetails(e, setQrLabelEquipo)}
-                        title="Ver Código QR"
-                      >
-                        <QrCode size={14} />
-                        <span>QR</span>
-                      </button>
+                      {e.Tipo === 'EQUIPO' && (
+                        <button 
+                          className="mobile-action-btn secondary"
+                          onClick={() => openModalWithFullDetails(e, setQrLabelEquipo)}
+                          title="Ver Código QR"
+                        >
+                          <QrCode size={14} />
+                          <span>QR</span>
+                        </button>
+                      )}
 
                       <button 
                         className="mobile-action-btn secondary"

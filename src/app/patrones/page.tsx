@@ -1,8 +1,9 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { FlaskConical, Plus, CheckCircle, XCircle, AlertCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit, History } from 'lucide-react'
+import { FlaskConical, Plus, CheckCircle, XCircle, AlertCircle, FileText, Upload, Trash2, RefreshCw, Search, Edit, History, QrCode } from 'lucide-react'
 import { formatFecha, getScanUrl } from '@/lib/metrologia'
 import { generatePatronSheetPDF } from '@/lib/reports'
+import { QRCodeSVG } from 'qrcode.react'
 import CreatePatronModal from '@/components/CreatePatronModal'
 import EditPatronModal from '@/components/EditPatronModal'
 import RenewCertModal from '@/components/RenewCertModal'
@@ -240,18 +241,34 @@ export default function PatronesPage() {
           </div>
         </div>
 
-        {details.Foto_Patron && (
-          <div style={{ marginTop: 4 }}>
-            <label style={{ fontSize: 11, fontWeight: 750, color: 'var(--text-soft)', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Fotografía del Patrón</label>
-            <img 
-              src={details.Foto_Patron} 
-              alt={details.Nombre_Patron} 
-              style={{ maxWidth: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--glass-border)', cursor: 'pointer' }} 
-              onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Patron ?? null) }}
-              title="Clic para ampliar foto"
-            />
+        {/* Evidencia y Código QR */}
+        <div style={{ display: 'grid', gridTemplateColumns: details.Foto_Patron ? 'repeat(auto-fit, minmax(220px, 1fr))' : '1fr', gap: 14, marginTop: 4 }}>
+          {details.Foto_Patron && (
+            <div style={{ background: 'var(--page-bg-soft)', padding: 12, borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+              <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Fotografía del Patrón</label>
+              <img 
+                src={details.Foto_Patron} 
+                alt={details.Nombre_Patron} 
+                style={{ width: '100%', maxHeight: 150, objectFit: 'contain', borderRadius: 8, background: '#fff', border: '1px solid var(--glass-border)', cursor: 'pointer' }} 
+                onClick={(ev) => { ev.stopPropagation(); setSelectedPhoto(details.Foto_Patron ?? null) }}
+                title="Clic para ampliar foto"
+              />
+            </div>
+          )}
+          
+          <div style={{ background: 'var(--page-bg-soft)', padding: 12, borderRadius: 10, border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ background: '#fff', padding: 8, borderRadius: 8, border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <QRCodeSVG value={getScanUrl(details.Codigo)} size={80} level="H" />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Trazabilidad Digital</div>
+              <div style={{ fontSize: 13, fontWeight: 850, color: 'var(--text-main)' }}>{details.Codigo}</div>
+              <p style={{ margin: '4px 0 0 0', fontSize: 11, color: 'var(--text-soft)', lineHeight: 1.3 }}>
+                Código QR oficial para auditoría en terreno y verificación inmediata.
+              </p>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     )
   }

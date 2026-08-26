@@ -11,8 +11,23 @@ export async function GET(
       where: { ID_Patron: id },
       include: {
         historiales: {
+          include: {
+            equipo: {
+              select: {
+                ID_Equipo: true,
+                Codigo_Interno: true,
+                Nombre_Equipo: true,
+                Tipo: true,
+                Area_Asignada: true
+              }
+            }
+          },
           orderBy: { Fecha_Ejecucion: 'desc' },
-          take: 10
+          take: 15
+        },
+        calibraciones: {
+          orderBy: { Fecha_Calibracion: 'desc' },
+          take: 15
         }
       }
     })

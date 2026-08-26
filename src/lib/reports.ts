@@ -284,9 +284,20 @@ function renderGroupOfItems(doc: jsPDF, items: any[], startY: number, printableW
 }
 
 /**
- * Genera una Ficha Técnica profesional en formato PDF para un equipo específico.
+ * Genera una Ficha Técnica profesional en formato PDF para un equipo o instrumento específico.
  */
 export async function generateTechnicalSheetPDF(equipo: any) {
+  let targetEquipo = equipo;
+  if (typeof window !== 'undefined' && (!targetEquipo.historiales || targetEquipo.historiales.length === 0)) {
+    try {
+      const res = await fetch(`/api/equipos/${equipo.ID_Equipo || equipo.Codigo_Interno}`);
+      if (res.ok) {
+        const full = await res.json();
+        if (full && full.ID_Equipo) targetEquipo = full;
+      }
+    } catch (e) {}
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -296,39 +307,42 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   const pageWidth = 210;
   const margin = 16;
   const printableWidth = 178;
+  const isInstrumento = targetEquipo.Tipo === 'INSTRUMENTO';
 
   // Cargar Logo e imágenes
   const logoBase64 = await getBase64FromUrl('/logo.png');
-  const fotoBase64 = equipo.Foto_Equipo ? await getBase64FromUrl(equipo.Foto_Equipo) : null;
+  const fotoBase64 = targetEquipo.Foto_Equipo ? await getBase64FromUrl(targetEquipo.Foto_Equipo) : null;
   
-  // Generar QR
-  const qrUrl = getScanUrl(equipo.Codigo_Interno);
+  // Generar QR SOLO SI ES EQUIPO (Los instrumentos NO llevan QR)
   let qrBase64 = null;
-  try {
-    qrBase64 = await QRCode.toDataURL(qrUrl, { margin: 1, width: 180, color: { dark: '#0f172a', light: '#ffffff' } });
-  } catch(e) {
-    console.error("Error generando QR:", e);
+  if (!isInstrumento) {
+    const qrUrl = getScanUrl(targetEquipo.Codigo_Interno);
+    try {
+      qrBase64 = await QRCode.toDataURL(qrUrl, { margin: 1, width: 180, color: { dark: '#0f172a', light: '#ffffff' } });
+    } catch(e) {
+      console.error("Error generando QR:", e);
+    }
   }
 
   // --- Encabezado Moderno con Fondo Azul Profundo ---
   doc.setFillColor(15, 23, 42); // Azul profundo (Slate 900)
-  doc.rect(16, 15, 178, 30, 'F');
+  doc.rect(margin, 14, printableWidth, 28, 'F');
   
   // Línea de acento Cyan en la parte inferior del encabezado
   doc.setFillColor(0, 229, 255);
-  doc.rect(16, 45, 178, 1.5, 'F');
+  doc.rect(margin, 42, printableWidth, 1.2, 'F');
 
   // Separadores verticales sutiles en el encabezado
   doc.setDrawColor(51, 65, 85); // Slate 700
   doc.setLineWidth(0.3);
-  doc.line(60, 17, 60, 43);
-  doc.line(146, 17, 146, 43);
+  doc.line(52, 16, 52, 40);
+  doc.line(152, 16, 152, 40);
   
   // Celda Izquierda: Logo de la Empresa
   if (logoBase64) {
     try {
-      const maxLogoW = 34;
-      const maxLogoH = 20;
+      const maxLogoW = 32;
+      const maxLogoH = 18;
       const aspect = logoBase64.width / logoBase64.height;
       let logoW = maxLogoW;
       let logoH = maxLogoW / aspect;
@@ -336,8 +350,8 @@ export async function generateTechnicalSheetPDF(equipo: any) {
         logoH = maxLogoH;
         logoW = maxLogoH * aspect;
       }
-      const logoX = 16 + (44 - logoW) / 2;
-      const logoY = 15 + (30 - logoH) / 2;
+      const logoX = margin + (36 - logoW) / 2;
+      const logoY = 14 + (28 - logoH) / 2;
       doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error("Error dibujando logo:", e);
@@ -346,58 +360,60 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.setTextColor(255, 255, 255); // Blanco
-  doc.text('FICHA TÉCNICA DE ACTIVO', 103, 26, { align: 'center' });
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  const docTitle = isInstrumento ? 'FICHA TÉCNICA DE INSTRUMENTO' : 'FICHA TÉCNICA DE EQUIPO';
+  doc.text(docTitle, 102, 24, { align: 'center' });
   
-  doc.line(68, 29, 138, 29); // Divisor horizontal sutil
+  doc.setDrawColor(51, 65, 85);
+  doc.line(65, 27, 139, 27);
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(0, 229, 255); // Cyan
-  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setTextColor(0, 229, 255);
+  doc.text('SISTEMA DE CONTROL METROLÓGICO · POLIFUSIÓN', 102, 34, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184); // Gris claro
-  doc.text('CÓDIGO:', 148, 23);
+  doc.setFontSize(7);
+  doc.setTextColor(148, 163, 184);
+  doc.text('CÓDIGO:', 155, 21);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text(equipo.Codigo_Interno, 192, 23, { align: 'right' });
+  doc.text(targetEquipo.Codigo_Interno || '—', 191, 21, { align: 'right' });
   
-  doc.line(148, 26, 192, 26);
+  doc.line(155, 24, 191, 24);
   
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(148, 163, 184);
-  doc.text('EMISIÓN:', 148, 31);
+  doc.text('EMISIÓN:', 155, 29);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
+  doc.text(formatFecha(new Date().toISOString()), 191, 29, { align: 'right' });
   
-  doc.line(148, 34, 192, 34);
+  doc.line(155, 32, 191, 32);
   
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(148, 163, 184);
-  doc.text('REVISIÓN:', 148, 39);
+  doc.text('REVISIÓN:', 155, 37);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text('01', 192, 39, { align: 'right' });
+  doc.text('01', 191, 37, { align: 'right' });
 
-  let currY = 52;
+  let currY = 48;
 
   // --- 1. DATOS GENERALES E IDENTIFICACIÓN ---
   const rawIdentItems = [
-    { label: 'Nombre Activo:', value: equipo.Nombre_Equipo, isNameField: true },
-    { label: 'Tipo de Activo:', value: equipo.Tipo },
-    { label: 'Marca:', value: equipo.Marca },
-    { label: 'Modelo:', value: equipo.Modelo },
-    { label: 'Número Serie:', value: equipo.Serie },
-    { label: 'Rango Medida:', value: equipo.Rango_Medida },
-    { label: 'Resolución:', value: equipo.Resolucion },
-    { label: 'Magnitud:', value: equipo.Magnitud },
-    { label: 'Ubicación / Área:', value: equipo.Area_Asignada },
-    { label: 'Responsable:', value: equipo.Responsable }
+    { label: 'Nombre Activo:', value: targetEquipo.Nombre_Equipo, isNameField: true },
+    { label: 'Tipo de Activo:', value: targetEquipo.Tipo },
+    { label: 'Marca:', value: targetEquipo.Marca },
+    { label: 'Modelo:', value: targetEquipo.Modelo },
+    { label: 'Número Serie:', value: targetEquipo.Serie },
+    { label: 'Rango Medida:', value: targetEquipo.Rango_Medida },
+    { label: 'Resolución:', value: targetEquipo.Resolucion },
+    { label: 'Magnitud:', value: targetEquipo.Magnitud },
+    { label: 'Ubicación / Área:', value: targetEquipo.Area_Asignada },
+    { label: 'Responsable:', value: targetEquipo.Responsable }
   ];
 
   const identItems = rawIdentItems.filter(item => hasValue(item.value));
@@ -408,13 +424,13 @@ export async function generateTechnicalSheetPDF(equipo: any) {
   }
 
   // --- 2. ESPECIFICACIONES TÉCNICAS Y METROLÓGICAS ---
-  const semaforo = calcularSemaforo(equipo.Fecha_Proximo_Control, equipo.Estado);
-  const estadoTxt = semaforoLabel(semaforo, equipo.Estado);
+  const semaforo = calcularSemaforo(targetEquipo.Fecha_Proximo_Control, targetEquipo.Estado);
+  const estadoTxt = semaforoLabel(semaforo, targetEquipo.Estado);
 
-  let tolValue = equipo.Tolerancia_Aceptable != null ? `+/- ${equipo.Tolerancia_Aceptable} ${equipo.Unidad_Tolerancia ?? ''}` : null;
-  if (equipo.Tolerancias_Multimagnitud) {
+  let tolValue = targetEquipo.Tolerancia_Aceptable != null ? `+/- ${targetEquipo.Tolerancia_Aceptable} ${targetEquipo.Unidad_Tolerancia ?? ''}` : null;
+  if (targetEquipo.Tolerancias_Multimagnitud) {
     try {
-      const map = JSON.parse(equipo.Tolerancias_Multimagnitud);
+      const map = JSON.parse(targetEquipo.Tolerancias_Multimagnitud);
       const entries = Object.entries(map).map(([mag, info]: [string, any]) => {
         return `${mag}: +/- ${info.tolerancia} ${info.unidad ?? ''}`;
       });
@@ -426,17 +442,17 @@ export async function generateTechnicalSheetPDF(equipo: any) {
 
   const rawMetrologyItems = [
     { label: 'Tolerancia Admitida:', value: tolValue },
-    { label: 'Intervalo de Control:', value: equipo.Periodicidad_Meses ? `${equipo.Periodicidad_Meses} Meses` : null },
-    { label: 'Fecha de Ingreso:', value: formatFecha(equipo.Fecha_Ingreso) },
-    { label: 'Última Verificación:', value: formatFecha(equipo.Fecha_Ultima_Verificacion) },
-    { label: 'Próximo Control:', value: formatFecha(equipo.Fecha_Proximo_Control) },
+    { label: 'Intervalo de Control:', value: targetEquipo.Periodicidad_Meses ? `${targetEquipo.Periodicidad_Meses} Meses` : null },
+    { label: 'Fecha de Ingreso:', value: formatFecha(targetEquipo.Fecha_Ingreso) },
+    { label: 'Última Verificación:', value: formatFecha(targetEquipo.Fecha_Ultima_Verificacion) },
+    { label: 'Próximo Control:', value: formatFecha(targetEquipo.Fecha_Proximo_Control) },
     { label: 'Estado del Activo:', value: estadoTxt, isStatus: true },
-    { label: 'Detalles de Estado:', value: equipo.Detalles_Estado },
-    { label: 'N° Certificado:', value: equipo.N_Certificado },
-    { label: 'Proveedor Servicio:', value: equipo.Proveedor_Servicio },
-    { label: 'Vence Certificado:', value: formatFecha(equipo.Fecha_Vencimiento_Certificado) },
-    { label: 'Accesorios:', value: equipo.Accesorios, colSpan: 2 },
-    { label: 'Insumos:', value: equipo.Insumos, colSpan: 2 }
+    { label: 'Detalles de Estado:', value: targetEquipo.Detalles_Estado },
+    { label: 'N° Certificado:', value: targetEquipo.N_Certificado },
+    { label: 'Proveedor Servicio:', value: targetEquipo.Proveedor_Servicio },
+    { label: 'Vence Certificado:', value: formatFecha(targetEquipo.Fecha_Vencimiento_Certificado) },
+    { label: 'Accesorios:', value: targetEquipo.Accesorios, colSpan: 2 },
+    { label: 'Insumos:', value: targetEquipo.Insumos, colSpan: 2 }
   ];
 
   const metrologyItems = rawMetrologyItems.filter(item => hasValue(item.value));
@@ -446,20 +462,88 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     currY = renderGroupOfItems(doc, metrologyItems, currY, printableWidth, margin);
   }
 
-  // --- 3. EVIDENCIA FOTOGRÁFICA Y CÓDIGO QR ---
-  if (currY + 70 > 275) { doc.addPage(); currY = 20; }
-  currY = renderSectionTitle(doc, '3. Evidencia Fotográfica y Trazabilidad Digital QR', currY);
+  // --- 3. EVIDENCIA FOTOGRÁFICA Y/O CÓDIGO QR ---
+  let section3Rendered = false;
+  if (!isInstrumento) {
+    // EQUIPOS TIENEN QR
+    if (currY + 65 > 275) { doc.addPage(); currY = 20; }
+    currY = renderSectionTitle(doc, '3. Evidencia Fotográfica y Trazabilidad Digital QR', currY);
 
-  doc.setFillColor(248, 250, 252);
-  doc.rect(margin, currY, printableWidth, 65, 'F');
-  doc.setDrawColor(226, 232, 240);
-  doc.rect(margin, currY, printableWidth, 65, 'S');
+    if (fotoBase64) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(margin, currY, printableWidth, 60, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(margin, currY, printableWidth, 60, 'S');
 
-  // Foto a la izquierda respetando aspect ratio
-  if (fotoBase64) {
+      try {
+        const maxPhotoW = 95;
+        const maxPhotoH = 50;
+        const aspect = fotoBase64.width / fotoBase64.height;
+        let photoW = maxPhotoW;
+        let photoH = maxPhotoW / aspect;
+        if (photoH > maxPhotoH) {
+          photoH = maxPhotoH;
+          photoW = maxPhotoH * aspect;
+        }
+        const photoX = margin + 5 + (95 - photoW) / 2;
+        const photoY = currY + 5 + (50 - photoH) / 2;
+        doc.addImage(fotoBase64.data, fotoBase64.format, photoX, photoY, photoW, photoH);
+      } catch(e) {}
+
+      if (qrBase64) {
+        try {
+          doc.addImage(qrBase64, 'PNG', margin + 122, currY + 5, 38, 38);
+        } catch(e) {}
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 141, currY + 48, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Escanee para verificar autenticidad\ny registros en tiempo real.', margin + 141, currY + 53, { align: 'center' });
+
+      currY += 66;
+    } else {
+      // Sin foto: Caja centrada y elegante para el QR
+      const boxW = 100;
+      const boxX = margin + (printableWidth - boxW) / 2;
+      doc.setFillColor(248, 250, 252);
+      doc.rect(boxX, currY, boxW, 58, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(boxX, currY, boxW, 58, 'S');
+
+      if (qrBase64) {
+        try {
+          doc.addImage(qrBase64, 'PNG', boxX + (boxW - 36) / 2, currY + 4, 36, 36);
+        } catch(e) {}
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('CÓDIGO QR DE TRAZABILIDAD DIGITAL', boxX + boxW / 2, currY + 46, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Escanee para verificar autenticidad y registros en tiempo real.', boxX + boxW / 2, currY + 51, { align: 'center' });
+
+      currY += 64;
+    }
+    section3Rendered = true;
+  } else if (fotoBase64) {
+    // INSTRUMENTOS CON FOTO (SIN QR)
+    if (currY + 65 > 275) { doc.addPage(); currY = 20; }
+    currY = renderSectionTitle(doc, '3. Evidencia Fotográfica del Instrumento', currY);
+
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, currY, printableWidth, 60, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(margin, currY, printableWidth, 60, 'S');
+
     try {
-      const maxPhotoW = 95;
-      const maxPhotoH = 55;
+      const maxPhotoW = 150;
+      const maxPhotoH = 50;
       const aspect = fotoBase64.width / fotoBase64.height;
       let photoW = maxPhotoW;
       let photoH = maxPhotoW / aspect;
@@ -467,60 +551,33 @@ export async function generateTechnicalSheetPDF(equipo: any) {
         photoH = maxPhotoH;
         photoW = maxPhotoH * aspect;
       }
-      const photoX = margin + 5 + (95 - photoW) / 2;
-      const photoY = currY + 5 + (55 - photoH) / 2;
+      const photoX = margin + (printableWidth - photoW) / 2;
+      const photoY = currY + 5 + (50 - photoH) / 2;
       doc.addImage(fotoBase64.data, fotoBase64.format, photoX, photoY, photoW, photoH);
-    } catch(e) {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(9);
-      doc.setTextColor(148, 163, 184);
-      doc.text('[Fotografía disponible en sistema]', margin + 30, currY + 33);
-    }
-  } else {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184);
-    doc.text('[Sin fotografía registrada en el activo]', margin + 25, currY + 33);
+    } catch(e) {}
+
+    currY += 66;
+    section3Rendered = true;
   }
 
-  // QR a la derecha
-  if (qrBase64) {
-    try {
-      doc.addImage(qrBase64, 'PNG', margin + 120, currY + 6, 42, 42);
-    } catch(e) {
-      console.error(e);
-    }
-  }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(15, 23, 42);
-  doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 141, currY + 52, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Escanee para verificar autenticidad\ny registros en tiempo real.', margin + 141, currY + 57, { align: 'center' });
-
-  currY += 75;
-
-  // --- 4. HISTORIAL DE VERIFICACIONES ---
-  if (equipo.historiales && equipo.historiales.length > 0) {
+  // --- HISTORIAL DE VERIFICACIONES ---
+  const sectionTitleNum = section3Rendered ? '4' : '3';
+  if (targetEquipo.historiales && targetEquipo.historiales.length > 0) {
     if (currY + 40 > 275) { doc.addPage(); currY = 20; }
-    currY = renderSectionTitle(doc, '4. Historial de Controles y Verificaciones Metrológicas', currY);
+    currY = renderSectionTitle(doc, `${sectionTitleNum}. Historial de Controles y Verificaciones Metrológicas`, currY);
 
-    // Column layout - tighter to fit more info
-    // F.Control | Tipo | Magnitud | Patrón | Variación | Resultado | Observaciones
     const colX = {
       fecha:     margin + 2,
-      tipo:      margin + 20,
-      magnitud:  margin + 40,
-      patron:    margin + 58,
-      variacion: margin + 86,
-      resultado: margin + 108,
-      notas:     margin + 133
-    }
+      tipo:      margin + 22,
+      magnitud:  margin + 42,
+      patron:    margin + 62,
+      variacion: margin + 88,
+      resultado: margin + 110,
+      notas:     margin + 135
+    };
     const colWidths = {
-      notas: printableWidth - (133 - 2)  // remaining width for notes column
-    }
+      notas: printableWidth - (135 - 2)
+    };
 
     // Header
     doc.setFillColor(15, 23, 42);
@@ -537,49 +594,42 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     doc.text('Observaciones', colX.notas, currY + 5.5);
     currY += 8;
 
-    equipo.historiales.slice(0, 10).forEach((h: any, idx: number) => {
-      let ptsString = ''
+    targetEquipo.historiales.slice(0, 10).forEach((h: any, idx: number) => {
+      let ptsString = '';
       if (h.Mediciones_Puntos) {
         try {
-          const pts = JSON.parse(h.Mediciones_Puntos)
+          const pts = JSON.parse(h.Mediciones_Puntos);
           if (Array.isArray(pts) && pts.length > 0) {
             const formattedPts = pts.map((p: any, i: number) => {
-              const diff = (p.patron !== null && p.instrumento !== null) ? (p.instrumento - p.patron) : null
-              const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(3))}` : '—'
-              return `P${i+1}(${diffStr})`
-            }).join(', ')
-            ptsString = `Pts: ${formattedPts}`
+              const diff = (p.patron !== null && p.instrumento !== null) ? (p.instrumento - p.patron) : null;
+              const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(3))}` : '—';
+              return `P${i+1}(${diffStr})`;
+            }).join(', ');
+            ptsString = `Pts: ${formattedPts}`;
           }
         } catch (e) {}
       }
 
-      // Build notes text combining observations and acciones
       const obsText = h.Observaciones ? h.Observaciones.trim() : '';
       let accionText = h.Acciones_Pendientes ? h.Acciones_Pendientes.trim() : '';
-      
-      // Deduplicate if observations and actions are identical
       if (accionText && obsText && accionText.toLowerCase() === obsText.toLowerCase()) {
         accionText = '';
       }
       const accionPart = accionText ? `Acciones: ${accionText}` : '';
       const fullNotes = [ptsString, obsText, accionPart].filter(Boolean).join(' | ') || '—';
 
-      // Determine result label
       let resultLabel = h.Resultado_Status;
       if (h.Resultado_Status === 'ACCION_PENDIENTE') resultLabel = 'ACCIÓN REQUERIDA';
       else if (h.Resultado_Status === 'NO_APTO') resultLabel = 'NO APTO';
 
-      // Calculate needed text lines for the notes column (max width ~45mm)
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       const notesMaxWidth = colWidths.notas - 2;
       const notesLines = doc.splitTextToSize(fullNotes, notesMaxWidth);
       const rowH = Math.max(8, notesLines.length * 4 + 3);
 
-      // Page break check
       if (currY + rowH > 280) { doc.addPage(); currY = 20; }
 
-      // Row background
       const bg = idx % 2 === 0 ? 255 : 248;
       doc.setFillColor(bg, bg, bg);
       doc.rect(margin, currY, printableWidth, rowH, 'F');
@@ -588,40 +638,32 @@ export async function generateTechnicalSheetPDF(equipo: any) {
 
       const cellY = currY + 4.5;
 
-      // Date
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
       doc.text(formatFecha(h.Fecha_Ejecucion), colX.fecha, cellY);
 
-      // Tipo badge text
       const tipoLabel = h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operativ.' : 'Calibrac.';
       doc.setTextColor(h.Tipo_Verificacion === 'OPERATIVIDAD' ? 180 : 14, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 120 : 165, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 0 : 233);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
       doc.text(tipoLabel, colX.tipo, cellY);
 
-      // Magnitud
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
       doc.text((h.Magnitud_Controlada || '—').substring(0, 10), colX.magnitud, cellY);
-
-      // Patron
       doc.text((h.patron?.Codigo || '—').substring(0, 10), colX.patron, cellY);
 
-      // Variacion
       doc.setTextColor(100, 116, 139);
-      doc.text(h.Variacion_Calculada?.toFixed(4) || '—', colX.variacion, cellY);
+      doc.text(h.Variacion_Calculada != null ? h.Variacion_Calculada.toFixed(4) : '—', colX.variacion, cellY);
 
-      // Resultado - color coded
       const colorStatus = getStatusColor(h.Resultado_Status);
       doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
       doc.text(resultLabel, colX.resultado, cellY);
 
-      // Notes - wrapped, multi-line
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(80, 100, 120);
@@ -647,13 +689,24 @@ export async function generateTechnicalSheetPDF(equipo: any) {
     doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 287, { align: 'right' });
   }
 
-  doc.save(`FICHA_TECNICA_${equipo.Codigo_Interno}.pdf`);
+  doc.save(`FICHA_TECNICA_${targetEquipo.Codigo_Interno || 'ACTIVO'}.pdf`);
 }
 
 /**
  * Genera una Ficha Técnica profesional para un Patrón de Referencia.
  */
 export async function generatePatronSheetPDF(patron: any) {
+  let targetPatron = patron;
+  if (typeof window !== 'undefined' && (!targetPatron.historiales || targetPatron.historiales.length === 0 || !targetPatron.historiales[0]?.equipo)) {
+    try {
+      const res = await fetch(`/api/patrones/${patron.ID_Patron || patron.Codigo}`);
+      if (res.ok) {
+        const full = await res.json();
+        if (full && full.ID_Patron) targetPatron = full;
+      }
+    } catch (e) {}
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -665,35 +718,35 @@ export async function generatePatronSheetPDF(patron: any) {
   const printableWidth = 178;
 
   const logoBase64 = await getBase64FromUrl('/logo.png');
-  const fotoBase64 = patron.Foto_Patron ? await getBase64FromUrl(patron.Foto_Patron) : null;
+  const fotoBase64 = targetPatron.Foto_Patron ? await getBase64FromUrl(targetPatron.Foto_Patron) : null;
   
-  const qrUrl = getScanUrl(patron.Codigo);
+  const qrUrl = getScanUrl(targetPatron.Codigo);
   let qrBase64 = null;
   try {
-    qrBase64 = await QRCode.toDataURL(qrUrl, { margin: 1, width: 180, color: { dark: '#581c87', light: '#ffffff' } });
+    qrBase64 = await QRCode.toDataURL(qrUrl, { margin: 1, width: 180, color: { dark: '#0f172a', light: '#ffffff' } });
   } catch(e) {
     console.error(e);
   }
 
-  // --- Encabezado Moderno con Fondo Púrpura Oscuro ---
-  doc.setFillColor(76, 29, 149); // Púrpura profundo (Purple 900)
-  doc.rect(16, 15, 178, 30, 'F');
+  // --- Encabezado Moderno con Fondo Azul Profundo ---
+  doc.setFillColor(15, 23, 42); // Slate 900
+  doc.rect(margin, 14, printableWidth, 28, 'F');
   
-  // Línea de acento lila
-  doc.setFillColor(192, 132, 252);
-  doc.rect(16, 45, 178, 1.5, 'F');
+  // Línea de acento Cyan
+  doc.setFillColor(0, 229, 255);
+  doc.rect(margin, 42, printableWidth, 1.2, 'F');
 
   // Separadores verticales sutiles en el encabezado
-  doc.setDrawColor(124, 58, 237); // Purple 600
+  doc.setDrawColor(51, 65, 85);
   doc.setLineWidth(0.3);
-  doc.line(60, 17, 60, 43);
-  doc.line(146, 17, 146, 43);
+  doc.line(52, 16, 52, 40);
+  doc.line(152, 16, 152, 40);
   
   // Celda Izquierda: Logo
   if (logoBase64) {
     try {
-      const maxLogoW = 34;
-      const maxLogoH = 20;
+      const maxLogoW = 32;
+      const maxLogoH = 18;
       const aspect = logoBase64.width / logoBase64.height;
       let logoW = maxLogoW;
       let logoH = maxLogoW / aspect;
@@ -701,8 +754,8 @@ export async function generatePatronSheetPDF(patron: any) {
         logoH = maxLogoH;
         logoW = maxLogoH * aspect;
       }
-      const logoX = 16 + (44 - logoW) / 2;
-      const logoY = 15 + (30 - logoH) / 2;
+      const logoX = margin + (36 - logoW) / 2;
+      const logoY = 14 + (28 - logoH) / 2;
       doc.addImage(logoBase64.data, logoBase64.format, logoX, logoY, logoW, logoH);
     } catch(e) {
       console.error(e);
@@ -711,78 +764,79 @@ export async function generatePatronSheetPDF(patron: any) {
   
   // Celda Central: Título
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(10.5);
   doc.setTextColor(255, 255, 255);
-  doc.text('CERTIFICADO DE PATRÓN', 103, 26, { align: 'center' });
+  doc.text('FICHA TÉCNICA DE PATRÓN DE REFERENCIA', 102, 24, { align: 'center' });
   
-  doc.line(68, 29, 138, 29); // Divisor horizontal sutil
+  doc.setDrawColor(51, 65, 85);
+  doc.line(65, 27, 139, 27);
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(192, 132, 252); // Lila
-  doc.text('SISTEMA DE CONTROL METROLÓGICO', 103, 35, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setTextColor(0, 229, 255);
+  doc.text('SISTEMA DE CONTROL METROLÓGICO · POLIFUSIÓN', 102, 34, { align: 'center' });
   
   // Celda Derecha: Metadatos
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(216, 180, 254); // Lila claro
-  doc.text('CÓDIGO:', 148, 23);
+  doc.setFontSize(7);
+  doc.setTextColor(148, 163, 184);
+  doc.text('CÓDIGO:', 155, 21);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text(patron.Codigo, 192, 23, { align: 'right' });
+  doc.text(targetPatron.Codigo || '—', 191, 21, { align: 'right' });
   
-  doc.line(148, 26, 192, 26);
+  doc.line(155, 24, 191, 24);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(216, 180, 254);
-  doc.text('EMISIÓN:', 148, 31);
+  doc.setTextColor(148, 163, 184);
+  doc.text('EMISIÓN:', 155, 29);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text(formatFecha(new Date().toISOString()), 192, 31, { align: 'right' });
+  doc.text(formatFecha(new Date().toISOString()), 191, 29, { align: 'right' });
   
-  doc.line(148, 34, 192, 34);
+  doc.line(155, 32, 191, 32);
   
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(216, 180, 254);
-  doc.text('REVISIÓN:', 148, 39);
+  doc.setTextColor(148, 163, 184);
+  doc.text('REVISIÓN:', 155, 37);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  doc.text('01', 192, 39, { align: 'right' });
+  doc.text('01', 191, 37, { align: 'right' });
 
-  let currY = 52;
+  let currY = 48;
 
   // --- 1. INFORMACIÓN DEL PATRÓN ---
   const rawPItems = [
-    { label: 'Nombre Patrón:', value: patron.Nombre_Patron, isNameField: true },
-    { label: 'Código Interno:', value: patron.Codigo },
-    { label: 'Magnitud:', value: patron.Magnitud },
-    { label: 'Laboratorio Calib.:', value: patron.Proveedor_Laboratorio },
-    { label: 'N° Certificado:', value: patron.N_Certificado },
-    { label: 'Fecha Calibración:', value: formatFecha(patron.Fecha_Calibracion_Externa) },
-    { label: 'Vencimiento Cert.:', value: formatFecha(patron.Fecha_Vencimiento_Certificado) },
-    { label: 'Estado Vigencia:', value: patron.Estado_Vigencia, isStatus: true }
+    { label: 'Nombre Patrón:', value: targetPatron.Nombre_Patron, isNameField: true },
+    { label: 'Código Interno:', value: targetPatron.Codigo },
+    { label: 'Magnitud Física:', value: targetPatron.Magnitud },
+    { label: 'Laboratorio Calib.:', value: targetPatron.Proveedor_Laboratorio },
+    { label: 'N° Certificado:', value: targetPatron.N_Certificado },
+    { label: 'Fecha Calibración:', value: formatFecha(targetPatron.Fecha_Calibracion_Externa) },
+    { label: 'Vencimiento Cert.:', value: formatFecha(targetPatron.Fecha_Vencimiento_Certificado) },
+    { label: 'Estado Vigencia:', value: targetPatron.Estado_Vigencia, isStatus: true }
   ];
 
   const pItems = rawPItems.filter(item => hasValue(item.value));
 
   if (pItems.length > 0) {
-    currY = renderSectionTitle(doc, '1. Especificaciones y Datos del Patrón', currY, [168, 85, 247]);
+    currY = renderSectionTitle(doc, '1. Especificaciones y Datos del Patrón', currY);
     currY = renderGroupOfItems(doc, pItems, currY, printableWidth, margin);
   }
 
   // --- 2. EVIDENCIA FOTOGRÁFICA Y QR ---
-  if (currY + 70 > 280) { doc.addPage(); currY = 20; }
-  currY = renderSectionTitle(doc, '2. Evidencia Fotográfica y Trazabilidad QR', currY, [168, 85, 247]);
-
-  doc.setFillColor(250, 250, 250);
-  doc.rect(margin, currY, printableWidth, 65, 'F');
-  doc.setDrawColor(230, 230, 230);
-  doc.rect(margin, currY, printableWidth, 65, 'S');
+  if (currY + 65 > 280) { doc.addPage(); currY = 20; }
+  currY = renderSectionTitle(doc, '2. Evidencia Fotográfica y Trazabilidad Digital QR', currY);
 
   if (fotoBase64) {
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, currY, printableWidth, 60, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(margin, currY, printableWidth, 60, 'S');
+
     try {
       const maxPhotoW = 95;
-      const maxPhotoH = 55;
+      const maxPhotoH = 50;
       const aspect = fotoBase64.width / fotoBase64.height;
       let photoW = maxPhotoW;
       let photoH = maxPhotoW / aspect;
@@ -791,42 +845,61 @@ export async function generatePatronSheetPDF(patron: any) {
         photoW = maxPhotoH * aspect;
       }
       const photoX = margin + 5 + (95 - photoW) / 2;
-      const photoY = currY + 5 + (55 - photoH) / 2;
+      const photoY = currY + 5 + (50 - photoH) / 2;
       doc.addImage(fotoBase64.data, fotoBase64.format, photoX, photoY, photoW, photoH);
     } catch(e) {}
+
+    if (qrBase64) {
+      try {
+        doc.addImage(qrBase64, 'PNG', margin + 122, currY + 5, 38, 38);
+      } catch(e) {}
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 141, currY + 48, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Escanee para verificar autenticidad\ny uso metrológico en tiempo real.', margin + 141, currY + 53, { align: 'center' });
+
+    currY += 66;
   } else {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184);
-    doc.text('[Sin fotografía registrada en el patrón]', margin + 25, currY + 33);
-  }
+    // Sin foto: Caja centrada y elegante para el QR del Patrón
+    const boxW = 100;
+    const boxX = margin + (printableWidth - boxW) / 2;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(boxX, currY, boxW, 58, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(boxX, currY, boxW, 58, 'S');
 
-  if (qrBase64) {
-    try {
-      doc.addImage(qrBase64, 'PNG', margin + 120, currY + 6, 42, 42);
-    } catch(e) {}
-  }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(15, 23, 42);
-  doc.text('CÓDIGO QR DE TRAZABILIDAD', margin + 141, currY + 52, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Escanee para verificar autenticidad\ny uso metrológico en tiempo real.', margin + 141, currY + 57, { align: 'center' });
+    if (qrBase64) {
+      try {
+        doc.addImage(qrBase64, 'PNG', boxX + (boxW - 36) / 2, currY + 4, 36, 36);
+      } catch(e) {}
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text('CÓDIGO QR DE TRAZABILIDAD DIGITAL', boxX + boxW / 2, currY + 46, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Escanee para verificar certificados y calibración en tiempo real.', boxX + boxW / 2, currY + 51, { align: 'center' });
 
-  currY += 75;
+    currY += 64;
+  }
 
   // --- 3. HISTORIAL DE CALIBRACIONES EXTERNAS ---
-  if (patron.calibraciones && patron.calibraciones.length > 0) {
+  if (targetPatron.calibraciones && targetPatron.calibraciones.length > 0) {
     if (currY + 40 > 280) { doc.addPage(); currY = 20; }
-    currY = renderSectionTitle(doc, '3. Historial de Calibraciones Externas (Laboratorios Acreditados)', currY, [168, 85, 247]);
+    currY = renderSectionTitle(doc, '3. Historial de Calibraciones Externas (Laboratorios Acreditados)', currY);
 
-    doc.setFillColor(88, 28, 135);
+    doc.setFillColor(15, 23, 42);
     doc.rect(margin, currY, printableWidth, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.text('F. Calibración', margin + 4, currY + 5.5);
     doc.text('Laboratorio', margin + 30, currY + 5.5);
     doc.text('N° Certificado', margin + 80, currY + 5.5);
@@ -834,7 +907,7 @@ export async function generatePatronSheetPDF(patron: any) {
     doc.text('Resultado', margin + 155, currY + 5.5);
     currY += 8;
 
-    patron.calibraciones.slice(0, 10).forEach((c: any, idx: number) => {
+    targetPatron.calibraciones.slice(0, 10).forEach((c: any, idx: number) => {
       if (currY + 10 > 280) { doc.addPage(); currY = 20; }
       const bg = idx % 2 === 0 ? 255 : 249;
       doc.setFillColor(bg, bg, bg);
@@ -859,24 +932,36 @@ export async function generatePatronSheetPDF(patron: any) {
     });
   }
 
-  // --- 4. HISTORIAL DE USO ---
-  if (patron.historiales && patron.historiales.length > 0) {
+  // --- 4. HISTORIAL DE USO EN VERIFICACIONES ---
+  if (targetPatron.historiales && targetPatron.historiales.length > 0) {
     if (currY + 40 > 280) { doc.addPage(); currY = 20; }
-    const sectionNum = (patron.calibraciones && patron.calibraciones.length > 0) ? '4' : '3';
-    currY = renderSectionTitle(doc, `${sectionNum}. Historial de Uso en Verificaciones Metrológicas`, currY, [168, 85, 247]);
+    const sectionNum = (targetPatron.calibraciones && targetPatron.calibraciones.length > 0) ? '4' : '3';
+    currY = renderSectionTitle(doc, `${sectionNum}. Historial de Uso en Verificaciones Metrológicas`, currY);
 
-    doc.setFillColor(88, 28, 135);
+    const colX = {
+      fecha: margin + 3,
+      codigo: margin + 26,
+      activo: margin + 48,
+      area: margin + 108,
+      variacion: margin + 138,
+      resultado: margin + 158
+    };
+
+    doc.setFillColor(15, 23, 42);
     doc.rect(margin, currY, printableWidth, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.text('Fecha', margin + 4, currY + 5.5);
-    doc.text('Equipo / Instrumento Verificado', margin + 35, currY + 5.5);
-    doc.text('Resultado Control', margin + 135, currY + 5.5);
+    doc.setFontSize(7.5);
+    doc.text('Fecha', colX.fecha, currY + 5.5);
+    doc.text('Código', colX.codigo, currY + 5.5);
+    doc.text('Activo Verificado', colX.activo, currY + 5.5);
+    doc.text('Área / Ubicación', colX.area, currY + 5.5);
+    doc.text('Variación', colX.variacion, currY + 5.5);
+    doc.text('Resultado', colX.resultado, currY + 5.5);
 
     currY += 8;
 
-    patron.historiales.slice(0, 10).forEach((h: any, idx: number) => {
+    targetPatron.historiales.slice(0, 15).forEach((h: any, idx: number) => {
       if (currY + 10 > 280) { doc.addPage(); currY = 20; }
       const bg = idx % 2 === 0 ? 255 : 249;
       doc.setFillColor(bg, bg, bg);
@@ -884,16 +969,31 @@ export async function generatePatronSheetPDF(patron: any) {
       doc.setDrawColor(230, 230, 230);
       doc.line(margin, currY + 8, margin + printableWidth, currY + 8);
 
+      const eqCodigo = h.equipo?.Codigo_Interno || h.FK_ID_Equipo || '—';
+      const eqNombre = h.equipo?.Nombre_Equipo || 'Activo verificado';
+      const eqArea = h.equipo?.Area_Asignada || '—';
+
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(formatFecha(h.Fecha_Ejecucion), margin + 4, currY + 5.5);
-      doc.text(h.equipo?.Nombre_Equipo?.substring(0, 50) || 'Equipo no vinculado', margin + 35, currY + 5.5);
+      doc.text(formatFecha(h.Fecha_Ejecucion), colX.fecha, currY + 5.3);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(2, 132, 199);
+      doc.text(eqCodigo, colX.codigo, currY + 5.3);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      doc.text(eqNombre.substring(0, 30), colX.activo, currY + 5.3);
+
+      doc.setTextColor(100, 116, 139);
+      doc.text(eqArea.substring(0, 16), colX.area, currY + 5.3);
+      doc.text(h.Variacion_Calculada != null ? h.Variacion_Calculada.toFixed(4) : '—', colX.variacion, currY + 5.3);
 
       const colorStatus = getStatusColor(h.Resultado_Status);
       doc.setTextColor(colorStatus[0], colorStatus[1], colorStatus[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text(h.Resultado_Status, margin + 135, currY + 5.5);
+      doc.text(h.Resultado_Status || 'APTO', colX.resultado, currY + 5.3);
 
       currY += 8;
     });
@@ -912,7 +1012,7 @@ export async function generatePatronSheetPDF(patron: any) {
     doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 287, { align: 'right' });
   }
 
-  doc.save(`PATRON_${patron.Codigo}.pdf`);
+  doc.save(`FICHA_PATRON_${targetPatron.Codigo || 'PATRON'}.pdf`);
 }
 
 /**

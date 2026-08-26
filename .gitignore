@@ -49,3 +49,7 @@ next-env.d.ts
 # Ensure source code under src/lib is tracked
 !src/lib/
 !src/lib/**
+
+# Scratch and test files
+/scratch/
+
