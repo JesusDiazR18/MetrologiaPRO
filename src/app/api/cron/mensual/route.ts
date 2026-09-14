@@ -36,8 +36,9 @@ export async function GET(request: Request) {
       orderBy: { Codigo: 'asc' }
     })
 
-    // 3. Identificar PENDIENTES del mes anterior o anteriores
+    // 3. Identificar PENDIENTES del mes anterior o anteriores y ACTIVOS FUERA DE SERVICIO
     const pendientesMesAnterior: AssetAlertItem[] = []
+    const activosFueraDeServicio: AssetAlertItem[] = []
     const programadosMesActual: AssetAlertItem[] = []
     const activosSeguimiento: AssetAlertItem[] = []
 
@@ -55,6 +56,7 @@ export async function GET(request: Request) {
           fechaProximoControl: e.Fecha_Proximo_Control,
           diasRestantes: e.Fecha_Proximo_Control ? differenceInDays(new Date(e.Fecha_Proximo_Control), today) : 0,
           estado: e.Estado,
+          detallesEstado: e.Detalles_Estado,
           requiereSeguimiento: e.Requiere_Seguimiento,
           periodicidadSeguimiento: e.Periodicidad_Seguimiento
         })
@@ -65,8 +67,25 @@ export async function GET(request: Request) {
       const fProx = new Date(e.Fecha_Proximo_Control)
       const dias = differenceInDays(fProx, today)
 
+      // Activos fuera de servicio por falla física/mecánica o no aptos
+      if (e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'NO_APTO') {
+        activosFueraDeServicio.push({
+          id: e.ID_Equipo,
+          codigo: e.Codigo_Interno,
+          nombre: e.Nombre_Equipo,
+          tipo: e.Tipo,
+          area: e.Area_Asignada,
+          responsable: e.Responsable,
+          fechaProximoControl: e.Fecha_Proximo_Control,
+          diasRestantes: dias,
+          estado: e.Estado,
+          detallesEstado: e.Detalles_Estado
+        })
+        return
+      }
+
       // Si la fecha programada era anterior al inicio del mes actual y el equipo no está verificado/al día
-      if (fProx < currentMonthStart || dias < 0 || e.Estado === 'VENCIDO' || e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO') {
+      if (fProx < currentMonthStart || dias < 0 || e.Estado === 'VENCIDO') {
         pendientesMesAnterior.push({
           id: e.ID_Equipo,
           codigo: e.Codigo_Interno,
@@ -76,7 +95,8 @@ export async function GET(request: Request) {
           responsable: e.Responsable,
           fechaProximoControl: e.Fecha_Proximo_Control,
           diasRestantes: dias,
-          estado: e.Estado
+          estado: e.Estado,
+          detallesEstado: e.Detalles_Estado
         })
       } else if (fProx >= currentMonthStart && fProx <= currentMonthEnd) {
         // Programado para el mes actual
@@ -89,7 +109,8 @@ export async function GET(request: Request) {
           responsable: e.Responsable,
           fechaProximoControl: e.Fecha_Proximo_Control,
           diasRestantes: dias,
-          estado: e.Estado
+          estado: e.Estado,
+          detallesEstado: e.Detalles_Estado
         })
       } else {
         alDiaCount++
@@ -142,13 +163,14 @@ export async function GET(request: Request) {
       fechaGeneracion: today.toISOString(),
       kpis: {
         totalActivos,
-        alDia: totalActivos - pendientesMesAnterior.length,
+        alDia: totalActivos - pendientesMesAnterior.length - activosFueraDeServicio.length,
         pendientesMesAnterior: pendientesMesAnterior.length,
         programadosMesActual: programadosMesActual.length,
         patronesPorVencer: patronesMes.length,
         complianceGlobal
       },
       pendientesMesAnterior,
+      activosFueraDeServicio,
       programadosMesActual,
       patronesMes,
       activosSeguimiento
@@ -156,7 +178,8 @@ export async function GET(request: Request) {
 
     // 6. Generar HTML y Enviar Correo
     const html = generateMonthlyReportHtml(reportData)
-    const subject = `📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Programados`
+    const fueraServicioText = activosFueraDeServicio.length > 0 ? ` · ${activosFueraDeServicio.length} Fuera de Servicio` : ''
+    const subject = `📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Programados${fueraServicioText}`
 
     const sendResult = await sendQmsEmail({
       subject,

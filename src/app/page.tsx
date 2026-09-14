@@ -9,7 +9,8 @@ import {
   Info, ExternalLink, Award, Sparkles, SlidersHorizontal, FileSpreadsheet, X
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { formatFecha, semaforoHex, calcularSemaforo, formatFechaLarga } from '@/lib/metrologia'
+import { formatFecha, semaforoHex, calcularSemaforo, semaforoLabel, formatFechaLarga } from '@/lib/metrologia'
+import { differenceInDays } from 'date-fns'
 import { generateExecutiveSummaryPDF, generateTechnicalSheetPDF, generatePatronSheetPDF, generateGeneralMetrologicalReportPDF } from '@/lib/reports'
 import { toast } from 'react-hot-toast'
 
@@ -631,7 +632,7 @@ export default function DashboardPage() {
                             border: `1px solid ${semColor}18`
                           }}>
                             <span className="semaforo-dot" style={{ background: semColor }} />
-                            {asset.status === 'VERDE' ? 'Al día' : asset.status === 'AMARILLO' ? 'Advertencia' : asset.status === 'GRIS' ? 'De Baja' : 'Crítico'}
+                            {semaforoLabel(asset.status, asset.Estado || asset.Estado_Vigencia)}
                           </span>
 
                           <button 
@@ -884,7 +885,14 @@ export default function DashboardPage() {
                 <div className="specs-row">
                   <span className="spec-lbl">Próximo Control</span>
                   <span className="spec-val font-bold" style={{
-                    color: selectedAsset.status === 'VERDE' ? 'var(--success)' : selectedAsset.status === 'AMARILLO' ? 'var(--warning)' : 'var(--danger)'
+                    color: (() => {
+                      const dVal = selectedAsset.Fecha_Vencimiento_Certificado || selectedAsset.Fecha_Proximo_Control
+                      if (!dVal) return 'var(--danger)'
+                      const diff = differenceInDays(new Date(dVal), new Date())
+                      if (diff < 0) return 'var(--danger)'
+                      if (diff <= 30) return 'var(--warning)'
+                      return 'var(--success)'
+                    })()
                   }}>
                     {formatFecha(selectedAsset.Fecha_Vencimiento_Certificado || selectedAsset.Fecha_Proximo_Control)}
                   </span>
@@ -896,10 +904,18 @@ export default function DashboardPage() {
                       background: selectedAsset.status === 'VERDE' ? 'rgba(16, 185, 129, 0.1)' : selectedAsset.status === 'AMARILLO' ? 'rgba(245, 158, 11, 0.1)' : selectedAsset.status === 'GRIS' ? 'rgba(148, 163, 184, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                       color: selectedAsset.status === 'VERDE' ? 'var(--success)' : selectedAsset.status === 'AMARILLO' ? 'var(--warning)' : selectedAsset.status === 'GRIS' ? '#64748b' : 'var(--danger)',
                     }}>
-                      {selectedAsset.status === 'VERDE' ? 'Al día' : selectedAsset.status === 'AMARILLO' ? 'Advertencia' : selectedAsset.status === 'GRIS' ? 'De Baja' : 'Crítico'}
+                      {semaforoLabel(selectedAsset.status, selectedAsset.Estado || selectedAsset.Estado_Vigencia)}
                     </span>
                   </span>
                 </div>
+                {selectedAsset.Detalles_Estado && (
+                  <div className="specs-row" style={{ alignItems: 'flex-start' }}>
+                    <span className="spec-lbl" style={{ color: '#b91c1c', fontWeight: 600 }}>Detalle Condición</span>
+                    <span className="spec-val" style={{ color: '#b91c1c', fontSize: '0.82rem', lineHeight: '1.3' }}>
+                      {selectedAsset.Detalles_Estado}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

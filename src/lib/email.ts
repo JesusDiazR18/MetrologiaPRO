@@ -11,6 +11,7 @@ export interface AssetAlertItem {
   fechaProximoControl: string | Date | null
   diasRestantes: number
   estado: string
+  detallesEstado?: string | null
   requiereSeguimiento?: boolean | null
   periodicidadSeguimiento?: number | null
 }
@@ -42,6 +43,7 @@ export interface MonthlyReportData {
   programadosMesActual: AssetAlertItem[]
   patronesMes: PatronAlertItem[]
   activosSeguimiento: AssetAlertItem[]
+  activosFueraDeServicio?: AssetAlertItem[]
 }
 
 export interface WeeklyAlertsData {
@@ -50,6 +52,7 @@ export interface WeeklyAlertsData {
   equiposProximos: AssetAlertItem[]
   patronesProximos: PatronAlertItem[]
   equiposSeguimiento: AssetAlertItem[]
+  equiposFueraDeServicio?: AssetAlertItem[]
 }
 
 /**
@@ -311,7 +314,7 @@ export function generateWeeklyAlertsHtml(data: WeeklyAlertsData): string {
               🔴 EQUIPOS E INSTRUMENTOS CON CONTROL VENCIDO (${data.equiposVencidos.length})
             </div>
             <div style="font-family: Arial, sans-serif; font-size: 11.5px; color: #b91c1c; margin-top: 3px; margin-bottom: 10px;">
-              Requieren verificación o calibración inmediata:
+              Requieren verificación o calibración inmediata (fecha de control superada):
             </div>
           </td>
         </tr>
@@ -330,7 +333,51 @@ export function generateWeeklyAlertsHtml(data: WeeklyAlertsData): string {
                   <td style="border-bottom: 1px solid #fee2e2; color: #1e293b;"><strong>${e.nombre}</strong></td>
                   <td style="border-bottom: 1px solid #fee2e2; color: #475569;">${e.area || '—'} · ${e.responsable || 'Sin asignar'}</td>
                   <td style="border-bottom: 1px solid #fee2e2; color: #dc2626; font-weight: bold;">
-                    ${formatFecha(e.fechaProximoControl)} (hace ${Math.abs(e.diasRestantes)}d)
+                    ${formatFecha(e.fechaProximoControl)} ${e.diasRestantes < 0 ? `(hace ${Math.abs(e.diasRestantes)}d)` : '(Vencido)'}
+                  </td>
+                </tr>
+              `).join('')}
+            </table>
+          </td>
+        </tr>
+      </table>
+    `
+  }
+
+  // 2.1 Equipos Fuera de Servicio / En Reparación (no vencidos por fecha)
+  if (data.equiposFueraDeServicio && data.equiposFueraDeServicio.length > 0) {
+    content += `
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 5px solid #64748b; border-radius: 6px; margin-bottom: 18px;">
+        <tr>
+          <td style="padding: 14px 14px 8px 14px;">
+            <div style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #334155;">
+              ⚠️ ACTIVOS FUERA DE SERVICIO / EN REPARACIÓN (${data.equiposFueraDeServicio.length})
+            </div>
+            <div style="font-family: Arial, sans-serif; font-size: 11.5px; color: #64748b; margin-top: 3px; margin-bottom: 10px;">
+              Inoperativos por condición física o mecánica (su fecha metrológica se mantiene para cuando retorne):
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 10px 12px 10px;">
+            <table width="100%" cellpadding="6" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; font-family: Arial, sans-serif; font-size: 11.5px;">
+              <tr bgcolor="#f1f5f9">
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">CÓDIGO</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">ACTIVO</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">ÁREA / RESPONSABLE</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">PRÓXIMO CONTROL</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">DETALLE DE ESTADO</th>
+              </tr>
+              ${data.equiposFueraDeServicio.map((e, idx) => `
+                <tr bgcolor="${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}">
+                  <td style="border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0284c7;">${e.codigo}</td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #1e293b;"><strong>${e.nombre}</strong></td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #475569;">${e.area || '—'} · ${e.responsable || 'Sin asignar'}</td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #334155; font-weight: bold;">
+                    ${formatFecha(e.fechaProximoControl)}
+                  </td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #b91c1c; font-size: 11px;">
+                    ${e.detallesEstado || 'Fuera de servicio'}
                   </td>
                 </tr>
               `).join('')}
@@ -511,7 +558,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
                 <td style="border-bottom: 1px solid #fee2e2; color: #475569;">${e.area || '—'} · ${e.responsable || 'Sin asignar'}</td>
                 <td style="border-bottom: 1px solid #fee2e2; color: #334155;">${formatFecha(e.fechaProximoControl)}</td>
                 <td style="border-bottom: 1px solid #fee2e2; color: #dc2626; font-weight: bold;">
-                  Pendiente (${Math.abs(e.diasRestantes)}d)
+                  ${e.diasRestantes < 0 ? `Atrasado (${Math.abs(e.diasRestantes)}d)` : 'Pendiente'}
                 </td>
               </tr>
             `).join('')}
@@ -521,6 +568,57 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
     `
   }
   content += `</table>`
+
+  // SECCIÓN 1.1: ACTIVOS FUERA DE SERVICIO (SI APLICA)
+  if (data.activosFueraDeServicio && data.activosFueraDeServicio.length > 0) {
+    content += `
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 5px solid #64748b; border-radius: 6px; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 14px 14px 8px 14px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="left" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: 900; color: #334155;">
+                  ⚠️ 1.1 ACTIVOS FUERA DE SERVICIO / EN REPARACIÓN
+                </td>
+                <td align="right">
+                  <span style="font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; background-color: #64748b; color: #ffffff; padding: 3px 8px; border-radius: 10px;">
+                    ${data.activosFueraDeServicio.length} Activos
+                  </span>
+                </td>
+              </tr>
+            </table>
+            <div style="font-family: Arial, sans-serif; font-size: 11.5px; color: #64748b; margin-top: 4px; margin-bottom: 8px;">
+              Equipos detenidos por falla técnica o mantención mecánica (no confundir con control metrológico vencido):
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 10px 12px 10px;">
+            <table width="100%" cellpadding="6" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; font-family: Arial, sans-serif; font-size: 11.5px;">
+              <tr bgcolor="#f1f5f9">
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">CÓDIGO</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">ACTIVO</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">RESPONSABLE</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">PRÓXIMO CONTROL</th>
+                <th align="left" style="color: #334155; font-size: 10.5px; border-bottom: 1px solid #cbd5e1;">CONDICIÓN / DETALLE</th>
+              </tr>
+              ${data.activosFueraDeServicio.map((e, idx) => `
+                <tr bgcolor="${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}">
+                  <td style="border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0284c7;">${e.codigo}</td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #1e293b;"><strong>${e.nombre}</strong></td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #475569;">${e.responsable || 'Sin asignar'}</td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #334155;">${formatFecha(e.fechaProximoControl)}</td>
+                  <td style="border-bottom: 1px solid #e2e8f0; color: #b91c1c; font-size: 11px;">
+                    ${e.detallesEstado || 'Fuera de servicio'}
+                  </td>
+                </tr>
+              `).join('')}
+            </table>
+          </td>
+        </tr>
+      </table>
+    `
+  }
 
   // SECCIÓN 2: PROGRAMACIÓN DEL MES ACTUAL
   content += `

@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       const anio = today.getFullYear()
 
       const pendientesMesAnterior: AssetAlertItem[] = []
+      const activosFueraDeServicio: AssetAlertItem[] = []
       const programadosMesActual: AssetAlertItem[] = []
       const activosSeguimiento: AssetAlertItem[] = []
 
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
             fechaProximoControl: e.Fecha_Proximo_Control,
             diasRestantes: e.Fecha_Proximo_Control ? differenceInDays(new Date(e.Fecha_Proximo_Control), today) : 0,
             estado: e.Estado,
+            detallesEstado: e.Detalles_Estado,
             requiereSeguimiento: e.Requiere_Seguimiento,
             periodicidadSeguimiento: e.Periodicidad_Seguimiento
           })
@@ -76,7 +78,24 @@ export async function POST(request: Request) {
         const fProx = new Date(e.Fecha_Proximo_Control)
         const dias = differenceInDays(fProx, today)
 
-        if (fProx < currentMonthStart || dias < 0 || e.Estado === 'VENCIDO' || e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO') {
+        // Activos fuera de servicio o no aptos
+        if (e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'NO_APTO') {
+          activosFueraDeServicio.push({
+            id: e.ID_Equipo,
+            codigo: e.Codigo_Interno,
+            nombre: e.Nombre_Equipo,
+            tipo: e.Tipo,
+            area: e.Area_Asignada,
+            responsable: e.Responsable,
+            fechaProximoControl: e.Fecha_Proximo_Control,
+            diasRestantes: dias,
+            estado: e.Estado,
+            detallesEstado: e.Detalles_Estado
+          })
+          return
+        }
+
+        if (fProx < currentMonthStart || dias < 0 || e.Estado === 'VENCIDO') {
           pendientesMesAnterior.push({
             id: e.ID_Equipo,
             codigo: e.Codigo_Interno,
@@ -86,7 +105,8 @@ export async function POST(request: Request) {
             responsable: e.Responsable,
             fechaProximoControl: e.Fecha_Proximo_Control,
             diasRestantes: dias,
-            estado: e.Estado
+            estado: e.Estado,
+            detallesEstado: e.Detalles_Estado
           })
         } else if (fProx >= currentMonthStart && fProx <= currentMonthEnd) {
           programadosMesActual.push({
@@ -98,7 +118,8 @@ export async function POST(request: Request) {
             responsable: e.Responsable,
             fechaProximoControl: e.Fecha_Proximo_Control,
             diasRestantes: dias,
-            estado: e.Estado
+            estado: e.Estado,
+            detallesEstado: e.Detalles_Estado
           })
         }
       })
@@ -147,20 +168,22 @@ export async function POST(request: Request) {
         fechaGeneracion: today.toISOString(),
         kpis: {
           totalActivos,
-          alDia: totalActivos - pendientesMesAnterior.length,
+          alDia: totalActivos - pendientesMesAnterior.length - activosFueraDeServicio.length,
           pendientesMesAnterior: pendientesMesAnterior.length,
           programadosMesActual: programadosMesActual.length,
           patronesPorVencer: patronesMes.length,
           complianceGlobal
         },
         pendientesMesAnterior,
+        activosFueraDeServicio,
         programadosMesActual,
         patronesMes,
         activosSeguimiento
       }
 
       const html = generateMonthlyReportHtml(reportData)
-      const subject = `[PRUEBA] 📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Programados`
+      const fueraServicioText = activosFueraDeServicio.length > 0 ? ` · ${activosFueraDeServicio.length} Fuera de Servicio` : ''
+      const subject = `[PRUEBA] 📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Programados${fueraServicioText}`
 
       let emailResult = null
       if (sendLive) {
@@ -182,6 +205,7 @@ export async function POST(request: Request) {
     } else {
       // type === 'alertas'
       const equiposVencidos: AssetAlertItem[] = []
+      const equiposFueraDeServicio: AssetAlertItem[] = []
       const equiposProximos: AssetAlertItem[] = []
       const equiposSeguimiento: AssetAlertItem[] = []
 
@@ -197,6 +221,7 @@ export async function POST(request: Request) {
             fechaProximoControl: e.Fecha_Proximo_Control,
             diasRestantes: e.Fecha_Proximo_Control ? differenceInDays(new Date(e.Fecha_Proximo_Control), today) : 0,
             estado: e.Estado,
+            detallesEstado: e.Detalles_Estado,
             requiereSeguimiento: e.Requiere_Seguimiento,
             periodicidadSeguimiento: e.Periodicidad_Seguimiento
           })
@@ -206,7 +231,24 @@ export async function POST(request: Request) {
 
         const dias = differenceInDays(new Date(e.Fecha_Proximo_Control), today)
 
-        if (dias < 0 || e.Estado === 'VENCIDO' || e.Estado === 'NO_APTO' || e.Estado === 'FUERA_DE_SERVICIO') {
+        // Activos fuera de servicio por falla física/mecánica o no aptos
+        if (e.Estado === 'FUERA_DE_SERVICIO' || e.Estado === 'NO_APTO') {
+          equiposFueraDeServicio.push({
+            id: e.ID_Equipo,
+            codigo: e.Codigo_Interno,
+            nombre: e.Nombre_Equipo,
+            tipo: e.Tipo,
+            area: e.Area_Asignada,
+            responsable: e.Responsable,
+            fechaProximoControl: e.Fecha_Proximo_Control,
+            diasRestantes: dias,
+            estado: e.Estado,
+            detallesEstado: e.Detalles_Estado
+          })
+          return
+        }
+
+        if (dias < 0 || e.Estado === 'VENCIDO') {
           equiposVencidos.push({
             id: e.ID_Equipo,
             codigo: e.Codigo_Interno,
@@ -216,7 +258,8 @@ export async function POST(request: Request) {
             responsable: e.Responsable,
             fechaProximoControl: e.Fecha_Proximo_Control,
             diasRestantes: dias,
-            estado: e.Estado
+            estado: e.Estado,
+            detallesEstado: e.Detalles_Estado
           })
         } else if (dias <= 30) {
           equiposProximos.push({
@@ -228,7 +271,8 @@ export async function POST(request: Request) {
             responsable: e.Responsable,
             fechaProximoControl: e.Fecha_Proximo_Control,
             diasRestantes: dias,
-            estado: e.Estado
+            estado: e.Estado,
+            detallesEstado: e.Detalles_Estado
           })
         }
       })
@@ -269,13 +313,15 @@ export async function POST(request: Request) {
       const alertsData: WeeklyAlertsData = {
         fechaGeneracion: today.toISOString(),
         equiposVencidos,
+        equiposFueraDeServicio,
         equiposProximos,
         patronesProximos,
         equiposSeguimiento
       }
 
       const html = generateWeeklyAlertsHtml(alertsData)
-      const subject = `[PRUEBA] ⚠️ Alertas Metrológicas: ${equiposVencidos.length} Vencidos · ${equiposProximos.length} Próximos (≤30d) · ${patronesProximos.length} Patrones`
+      const fueraServicioText = equiposFueraDeServicio.length > 0 ? ` · ${equiposFueraDeServicio.length} Fuera de Servicio` : ''
+      const subject = `[PRUEBA] ⚠️ Alertas Metrológicas: ${equiposVencidos.length} Vencidos · ${equiposProximos.length} Próximos (≤30d)${fueraServicioText} · ${patronesProximos.length} Patrones`
 
       let emailResult = null
       if (sendLive) {
