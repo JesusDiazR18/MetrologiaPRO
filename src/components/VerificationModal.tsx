@@ -187,9 +187,12 @@ interface Props {
 export default function VerificationModal({ equipo, equipos, onClose, onSaved }: Props) {
   const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
   const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo ?? '')
-  const [mediciones, setMediciones] = useState<{ patron: string, instrumento: string }[]>([
+  const [mediciones, setMediciones] = useState<{ patron: string, instrumento: string, masaInput?: string }[]>([
     { patron: '', instrumento: '' }
   ])
+  const [customUnidad, setCustomUnidad] = useState('')
+  const [formulaActiva, setFormulaActiva] = useState<'NINGUNA' | 'MASA_A_NEWTONS_KG' | 'MASA_A_NEWTONS_G' | 'KGF_A_NEWTONS' | 'NEWTONS_A_KN'>('NINGUNA')
+  const [customTolerancia, setCustomTolerancia] = useState('')
   const [tecnico, setTecnico] = useState('')
   const [obs, setObs] = useState('')
   const [accionesPendientes, setAccionesPendientes] = useState('')
@@ -227,6 +230,20 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         }
       })
       setMultimagnitudData(init)
+
+      // Inicializar unidad y tolerancia
+      setCustomUnidad(selectedEquipo.Unidad_Tolerancia || '')
+      setCustomTolerancia(selectedEquipo.Tolerancia_Aceptable != null ? String(selectedEquipo.Tolerancia_Aceptable) : '')
+
+      // Si el equipo es Universal o Fuerza, preconfigurar Newtons y fórmula de masa automáticamente
+      const isUniversalOrFuerza = (selectedEquipo.Nombre_Equipo || '').toLowerCase().includes('universal') || 
+                                  (selectedEquipo.Magnitud || '').toLowerCase().includes('fuerza')
+      if (isUniversalOrFuerza) {
+        setFormulaActiva('MASA_A_NEWTONS_KG')
+        setCustomUnidad('N')
+      } else {
+        setFormulaActiva('NINGUNA')
+      }
     }
   }, [selectedId, selectedEquipo])
 
@@ -295,8 +312,14 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
     }
   }
 
+  const effectiveTolerance = (customTolerancia && !isNaN(parseFloat(customTolerancia)))
+    ? parseFloat(customTolerancia)
+    : (selectedEquipo?.Tolerancia_Aceptable ?? 0)
+
+  const effectiveUnidad = customUnidad || selectedEquipo?.Unidad_Tolerancia || ''
+
   const singleCalcs = selectedEquipo
-    ? calculateMultipointCalcs(mediciones, selectedEquipo.Tolerancia_Aceptable)
+    ? calculateMultipointCalcs(mediciones, effectiveTolerance)
     : null
 
   const varNum = singleCalcs?.worstVar ?? null
@@ -475,6 +498,30 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         finalStatus = hasNoApto ? 'NO_APTO' : 'APTO'
       }
 
+      let formulaNote = ''
+      if (formulaActiva === 'MASA_A_NEWTONS_KG') {
+        formulaNote = '[Fórmula: F = m(kg) × 9.80665 N | Unidad: N]'
+      } else if (formulaActiva === 'MASA_A_NEWTONS_G') {
+        formulaNote = '[Fórmula: F = (m/1000) × 9.80665 N | Unidad: N]'
+      } else if (formulaActiva === 'KGF_A_NEWTONS') {
+        formulaNote = '[Fórmula: 1 kgf = 9.80665 N | Unidad: N]'
+      } else if (formulaActiva === 'NEWTONS_A_KN') {
+        formulaNote = '[Fórmula: 1 kN = 1000 N | Unidad: kN]'
+      } else if (effectiveUnidad && effectiveUnidad !== selectedEquipo?.Unidad_Tolerancia) {
+        formulaNote = `[Unidad: ${effectiveUnidad}]`
+      }
+
+      const finalObs = [formulaNote, obs].filter(Boolean).join(' ').trim() || null
+
+      const enhancedPoints = (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs)
+        ? singleCalcs.points.map((p, idx) => ({
+            ...p,
+            unidad: effectiveUnidad,
+            formula: formulaActiva !== 'NINGUNA' ? formulaActiva : undefined,
+            masaInput: mediciones[idx]?.masaInput || undefined
+          }))
+        : null
+
       const payload = {
         FK_ID_Equipo: selectedId,
         FK_ID_Patron_Usado: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1) ? selectedPatronId : null,
@@ -482,14 +529,14 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstInstrumento : null,
         Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstVar : null,
         Tecnico_Ejecutor: tecnico,
-        Observaciones: obs || null,
+        Observaciones: finalObs,
         Tipo_Verificacion: tipoVerif,
         Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
         Resultado_Status: tipoVerif === 'OPERATIVIDAD' ? resultadoStatusOperatividad : finalStatus,
         Evidencia_Foto: photoBase64 || null,
         Magnitud_Controlada: equipoMags.length <= 1 ? (selectedEquipo?.Magnitud || null) : null,
         multimagnitudData: multimagnitudPayload,
-        Mediciones_Puntos: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? JSON.stringify(singleCalcs.points) : null
+        Mediciones_Puntos: enhancedPoints ? JSON.stringify(enhancedPoints) : null
       }
 
       const r = await fetch('/api/historial', {
@@ -514,6 +561,9 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const patronesFiltrados = patrones.filter(p => {
     if (equipoMags.length === 0) return true
     if (!p.Magnitud) return true
+    if (formulaActiva.includes('MASA') || equipoMags.includes('FUERZA')) {
+      if (p.Magnitud?.includes('MASA') || p.Magnitud?.includes('FUERZA')) return true
+    }
     return equipoMags.some(mag => p.Magnitud?.includes(mag))
   })
 
@@ -853,9 +903,183 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                       )}
                     </div>
 
+                    {/* Configuración Opcional: Unidad de Medición y Asistente de Fórmula */}
+                    <div style={{
+                      background: 'rgba(248, 250, 252, 0.8)',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: 12,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#334155' }}>
+                          <span>📐 Unidad de Medición & Conversor</span>
+                          <span style={{ fontSize: 10, background: '#e0f2fe', color: '#0284c7', padding: '2px 6px', borderRadius: 10, fontWeight: 700 }}>
+                            OPCIONAL
+                          </span>
+                        </div>
+                        {formulaActiva !== 'NINGUNA' && (
+                          <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            ⚡ Conversor activo ({effectiveUnidad})
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                            Asistente de Fórmula / Conversión:
+                          </label>
+                          <select
+                            value={formulaActiva}
+                            onChange={e => {
+                              const val = e.target.value as any
+                              setFormulaActiva(val)
+                              if (val === 'MASA_A_NEWTONS_KG' || val === 'MASA_A_NEWTONS_G' || val === 'KGF_A_NEWTONS') {
+                                setCustomUnidad('N')
+                              } else if (val === 'NEWTONS_A_KN') {
+                                setCustomUnidad('kN')
+                              }
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: 8,
+                              border: '1.5px solid #cbd5e1',
+                              background: '#fff',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: '#1e293b',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="NINGUNA">Entrada directa (Sin conversión)</option>
+                            <option value="MASA_A_NEWTONS_KG">⚡ Masa (kg) ➔ Newtons (N) [F = m × 9.80665]</option>
+                            <option value="MASA_A_NEWTONS_G">⚡ Masa (g) ➔ Newtons (N) [F = (g/1000) × 9.80665]</option>
+                            <option value="KGF_A_NEWTONS">⚡ kgf ➔ Newtons (N) [1 kgf = 9.80665 N]</option>
+                            <option value="NEWTONS_A_KN">⚡ Newtons (N) ➔ kiloNewtons (kN) [1 kN = 1000 N]</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                            Unidad de Medición ({effectiveUnidad || 'N/A'}):
+                          </label>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input
+                              type="text"
+                              placeholder="Ej: N, kN, kgf, mm"
+                              value={customUnidad}
+                              onChange={e => setCustomUnidad(e.target.value)}
+                              style={{
+                                flex: 1,
+                                padding: '8px 10px',
+                                borderRadius: 8,
+                                border: '1.5px solid #cbd5e1',
+                                background: '#fff',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: '#1e293b',
+                                outline: 'none'
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: 3 }}>
+                              {['N', 'kN', 'kgf', 'mm'].map(u => (
+                                <button
+                                  key={u}
+                                  type="button"
+                                  onClick={() => setCustomUnidad(u)}
+                                  style={{
+                                    border: '1px solid #cbd5e1',
+                                    background: customUnidad === u ? '#0ea5e9' : '#fff',
+                                    color: customUnidad === u ? '#fff' : '#475569',
+                                    borderRadius: 6,
+                                    padding: '0 6px',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  {u}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botones de acceso rápido para masas patrón (E-17 / Máquina Universal) */}
+                      {formulaActiva === 'MASA_A_NEWTONS_KG' && (
+                        <div style={{ 
+                          background: 'rgba(14, 165, 233, 0.07)', 
+                          border: '1px dashed #38bdf8', 
+                          borderRadius: 8, 
+                          padding: '8px 10px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 6
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#0369a1' }}>
+                              ⚖️ Cargas Patrón de Laboratorio (PAT-008):
+                            </span>
+                            <span style={{ fontSize: 10, color: '#0284c7', fontFamily: 'var(--font-mono)' }}>g = 9.80665 m/s²</span>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {[
+                              { kg: 1, n: '9.807' },
+                              { kg: 2, n: '19.613' },
+                              { kg: 5, n: '49.033' },
+                              { kg: 10, n: '98.067' },
+                              { kg: 20, n: '196.133' },
+                              { kg: 50, n: '490.333' }
+                            ].map(item => (
+                              <button
+                                key={item.kg}
+                                type="button"
+                                onClick={() => {
+                                  setMediciones(prev => {
+                                    const cleaned = prev.filter(p => (p.patron && p.patron.trim() !== '') || (p.instrumento && p.instrumento.trim() !== ''))
+                                    return [
+                                      ...cleaned,
+                                      {
+                                        masaInput: String(item.kg),
+                                        patron: item.n,
+                                        instrumento: ''
+                                      }
+                                    ]
+                                  })
+                                }}
+                                style={{
+                                  background: '#fff',
+                                  border: '1px solid #7dd3fc',
+                                  color: '#0369a1',
+                                  padding: '4px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}
+                              >
+                                <span>+{item.kg} kg</span>
+                                <span style={{ fontSize: 9.5, opacity: 0.75 }}>({item.n} N)</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Puntos de Medición</span>
+                        <span>
+                          Puntos de Medición {effectiveUnidad ? `(${effectiveUnidad})` : ''}
+                        </span>
                         <button
                           type="button"
                           onClick={() => {
@@ -883,36 +1107,90 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                         const pVal = parseFloat(med.patron)
                         const iVal = parseFloat(med.instrumento)
                         const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
+                        const isMassFormula = formulaActiva === 'MASA_A_NEWTONS_KG' || formulaActiva === 'MASA_A_NEWTONS_G'
+
                         return (
-                          <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 75px 36px', gap: 8, alignItems: 'center' }}>
+                          <div key={index} style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: isMassFormula 
+                              ? 'minmax(0, 1.25fr) minmax(0, 1fr) 75px 36px' 
+                              : 'minmax(0, 1fr) minmax(0, 1fr) 75px 36px', 
+                            gap: 8, 
+                            alignItems: 'flex-start' 
+                          }}>
+                            {isMassFormula ? (
+                              <div>
+                                <input
+                                  type="number"
+                                  step="any"
+                                  placeholder={formulaActiva === 'MASA_A_NEWTONS_KG' ? 'Masa Patrón (kg)' : 'Masa Patrón (g)'}
+                                  value={med.masaInput ?? ''}
+                                  onChange={e => {
+                                    const val = e.target.value
+                                    const newMeds = [...mediciones]
+                                    const num = parseFloat(val)
+                                    let calcPatron = ''
+                                    if (!isNaN(num)) {
+                                      if (formulaActiva === 'MASA_A_NEWTONS_KG') {
+                                        calcPatron = (num * 9.80665).toFixed(3)
+                                      } else if (formulaActiva === 'MASA_A_NEWTONS_G') {
+                                        calcPatron = ((num / 1000) * 9.80665).toFixed(3)
+                                      }
+                                    }
+                                    newMeds[index] = { ...newMeds[index], masaInput: val, patron: calcPatron }
+                                    setMediciones(newMeds)
+                                  }}
+                                  style={{ 
+                                    padding: '10px 10px', 
+                                    fontSize: 13, 
+                                    borderRadius: 10, 
+                                    border: '2px solid #f1f5f9', 
+                                    background: '#f8fafc', 
+                                    color: '#1e293b',
+                                    outline: 'none',
+                                    width: '100%',
+                                    minWidth: 0,
+                                    boxSizing: 'border-box'
+                                  }}
+                                  required
+                                />
+                                {med.patron && (
+                                  <div style={{ fontSize: 10, color: '#0284c7', fontWeight: 700, marginTop: 3, paddingLeft: 2 }}>
+                                    ⚡ = {med.patron} {effectiveUnidad || 'N'}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type="number"
+                                step="any"
+                                placeholder={`Medida Patrón ${effectiveUnidad ? `(${effectiveUnidad})` : ''}`}
+                                value={med.patron}
+                                onChange={e => {
+                                  const newMeds = [...mediciones]
+                                  newMeds[index] = { ...newMeds[index], patron: e.target.value }
+                                  setMediciones(newMeds)
+                                }}
+                                style={{ 
+                                  padding: '10px 10px', 
+                                  fontSize: 13, 
+                                  borderRadius: 10, 
+                                  border: '2px solid #f1f5f9', 
+                                  background: '#f8fafc', 
+                                  color: '#1e293b',
+                                  outline: 'none',
+                                  width: '100%',
+                                  minWidth: 0,
+                                  boxSizing: 'border-box'
+                                }}
+                                required
+                              />
+                            )}
+
                             <input
                               type="number"
                               step="any"
-                              placeholder="Medida Patrón"
-                              value={med.patron}
-                              onChange={e => {
-                                const newMeds = [...mediciones]
-                                newMeds[index] = { ...newMeds[index], patron: e.target.value }
-                                setMediciones(newMeds)
-                              }}
-                              style={{ 
-                                padding: '10px 10px', 
-                                fontSize: 13, 
-                                borderRadius: 10, 
-                                border: '2px solid #f1f5f9', 
-                                background: '#f8fafc', 
-                                color: '#1e293b',
-                                outline: 'none',
-                                width: '100%',
-                                minWidth: 0,
-                                boxSizing: 'border-box'
-                              }}
-                              required
-                            />
-                            <input
-                              type="number"
-                              step="any"
-                              placeholder="Medida Instr."
+                              placeholder={`Lectura Instr. ${effectiveUnidad ? `(${effectiveUnidad})` : ''}`}
                               value={med.instrumento}
                               onChange={e => {
                                 const newMeds = [...mediciones]
@@ -949,7 +1227,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                 border: 'none', 
                                 borderRadius: 10, 
                                 height: 38, 
-                                width: '100%',
+                                width: '100%', 
                                 display: 'grid', 
                                 placeItems: 'center', 
                                 cursor: mediciones.length > 1 ? 'pointer' : 'not-allowed', 
@@ -971,18 +1249,18 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                           </span>
                           <div className="status-val" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                             {varNum > 0 ? '+' : ''}{varNum.toFixed(4)} 
-                            <span style={{ fontSize: 14, opacity: 0.6 }}>{selectedEquipo.Unidad_Tolerancia ?? ''}</span>
+                            <span style={{ fontSize: 14, opacity: 0.6 }}>{effectiveUnidad}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                             <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
                               <div style={{ 
-                                width: `${Math.min(100, (Math.abs(varNum) / selectedEquipo.Tolerancia_Aceptable) * 100)}%`, 
+                                width: `${Math.min(100, (Math.abs(varNum) / (effectiveTolerance || 1)) * 100)}%`, 
                                 height: '100%', 
                                 background: statusCalc === 'APTO' ? '#10b981' : '#ef4444',
                                 transition: 'width 0.3s ease'
                               }} />
                             </div>
-                            <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{selectedEquipo.Tolerancia_Aceptable}</span>
+                            <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{effectiveTolerance} {effectiveUnidad}</span>
                           </div>
                         </div>
                         <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>

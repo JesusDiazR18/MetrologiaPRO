@@ -73,7 +73,7 @@ export default function CreateEquipoModal({ onClose, onSaved }: Props) {
 
   const magnitudesDisponibles = [
     'TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION',
-    'TIEMPO', 'ELECTRICA', 'VOLUMEN', 'OTRA'
+    'TIEMPO', 'ELECTRICA', 'VOLUMEN', 'FUERZA', 'OTRA'
   ]
 
   function toggleMagnitud(mag: string) {

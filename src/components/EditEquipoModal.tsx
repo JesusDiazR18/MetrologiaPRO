@@ -9,7 +9,7 @@ interface Props {
 
 export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
   const initialMags = equipo.Magnitud ? equipo.Magnitud.split(',').map((m: string) => m.trim()).filter(Boolean) : ['TEMPERATURA']
-  const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN']
+  const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN', 'FUERZA']
   const customItems = initialMags.filter((m: string) => !standardMags.includes(m) && m !== 'OTRA')
   const initialCustomMag = customItems.join(', ')
   const initialFormDataMags = initialMags.map((m: string) => (!standardMags.includes(m) && m !== 'OTRA') ? 'OTRA' : m)

@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
-  const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN']
+  const standardMags = ['TEMPERATURA', 'MASA', 'LONGITUD', 'PRESION', 'TIEMPO', 'ELECTRICA', 'VOLUMEN', 'FUERZA']
   const isCustomMag = patron.Magnitud && !standardMags.includes(patron.Magnitud) && patron.Magnitud !== 'OTRA'
   const initialMagValue = isCustomMag ? 'OTRA' : (patron.Magnitud || 'TEMPERATURA')
   const initialCustomMagValue = isCustomMag ? patron.Magnitud : ''
@@ -136,6 +136,7 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
                     <option value="TIEMPO">TIEMPO</option>
                     <option value="ELECTRICA">ELÉCTRICA</option>
                     <option value="VOLUMEN">VOLUMEN</option>
+                    <option value="FUERZA">FUERZA</option>
                     <option value="OTRA">OTRA MAGNITUD</option>
                   </select>
                   {formData.Magnitud === 'OTRA' && (

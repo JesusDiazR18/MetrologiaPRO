@@ -701,7 +701,25 @@ function EquiposContent() {
                     <td style={{ fontSize: 11, color: 'var(--text-soft)' }}>
                       {h.patron?.Codigo || '—'}
                     </td>
-                    <td style={{ fontFamily: 'var(--font-mono)' }}>{h.Variacion_Calculada?.toFixed(4) ?? '—'}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)' }}>
+                      {(() => {
+                        if (h.Variacion_Calculada == null) return '—'
+                        let pointUnit = ''
+                        if (h.Mediciones_Puntos) {
+                          try {
+                            const pts = JSON.parse(h.Mediciones_Puntos)
+                            if (Array.isArray(pts) && pts[0]?.unidad) pointUnit = pts[0].unidad
+                          } catch (e) {}
+                        }
+                        const unitToShow = pointUnit || details.Unidad_Tolerancia || ''
+                        return (
+                          <span>
+                            {h.Variacion_Calculada > 0 ? '+' : ''}{h.Variacion_Calculada.toFixed(4)}
+                            {unitToShow ? <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 3 }}>{unitToShow}</span> : null}
+                          </span>
+                        )
+                      })()}
+                    </td>
                     <td>
                       <span className="status-badge" style={{ color: h.Resultado_Status === 'APTO' || h.Resultado_Status === 'OPERATIVO' ? 'var(--success)' : h.Resultado_Status === 'ACCION_PENDIENTE' ? '#f59e0b' : 'var(--danger)' }}>
                         {h.Resultado_Status}

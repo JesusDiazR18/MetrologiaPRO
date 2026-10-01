@@ -602,7 +602,8 @@ export async function generateTechnicalSheetPDF(equipo: any) {
           if (Array.isArray(pts) && pts.length > 0) {
             const formattedPts = pts.map((p: any, i: number) => {
               const diff = (p.patron !== null && p.instrumento !== null) ? (p.instrumento - p.patron) : null;
-              const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(3))}` : '—';
+              const unitSuffix = p.unidad ? ` ${p.unidad}` : '';
+              const diffStr = diff !== null ? `${diff > 0 ? '+' : ''}${parseFloat(diff.toFixed(3))}${unitSuffix}` : '—';
               return `P${i+1}(${diffStr})`;
             }).join(', ');
             ptsString = `Pts: ${formattedPts}`;

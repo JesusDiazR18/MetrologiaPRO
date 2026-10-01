@@ -151,6 +151,7 @@ export default function CreatePatronModal({ onClose, onSaved }: Props) {
                     <option value="TIEMPO">TIEMPO</option>
                     <option value="ELECTRICA">ELÉCTRICA</option>
                     <option value="VOLUMEN">VOLUMEN</option>
+                    <option value="FUERZA">FUERZA</option>
                     <option value="OTRA">OTRA MAGNITUD</option>
                   </select>
                   {formData.Magnitud === 'OTRA' && (
