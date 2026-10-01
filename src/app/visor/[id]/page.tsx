@@ -383,16 +383,56 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
                 <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>ID Sistema</span>
                 <span style={{ color: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }}>{assetFound.ID_Equipo}</span>
               </div>
+
+              {((assetFound as any).PDF_Certificado || patronData?.PDF_Certificado) && (
+                <>
+                  <div style={{ width: '100%', height: 1, background: '#f1f5f9' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: 13, fontWeight: 600 }}>Certificado Oficial</span>
+                    <a
+                      href={isPatron ? `/api/patrones/${assetFound.ID_Equipo}/certificado` : `/api/equipos/${assetFound.ID_Equipo}/certificado`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#0284c7', fontSize: 13, fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      📄 Ver Certificado PDF ↗
+                    </a>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Acciones */}
-        {!isPatron && (
-          <div style={{ padding: '0 24px 20px' }}>
-            <VisorVerificationButton equipo={assetFound as any} />
-          </div>
-        )}
+        <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {((assetFound as any).PDF_Certificado || patronData?.PDF_Certificado) && (
+            <a
+              href={isPatron ? `/api/patrones/${assetFound.ID_Equipo}/certificado` : `/api/equipos/${assetFound.ID_Equipo}/certificado`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                width: '100%',
+                padding: '12px 20px',
+                background: '#f0f9ff',
+                color: '#0284c7',
+                border: '1.5px solid #bae6fd',
+                borderRadius: 14,
+                fontWeight: 800,
+                fontSize: 14,
+                textDecoration: 'none',
+                boxSizing: 'border-box'
+              }}
+            >
+              <span>📜 Descargar Certificado PDF Oficial</span>
+            </a>
+          )}
+          {!isPatron && <VisorVerificationButton equipo={assetFound as any} />}
+        </div>
         
         <div style={{ background: '#f1f5f9', padding: '16px', textAlign: 'center', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderTop: '1px solid #e2e8f0' }}>
           POLIFUSION METROLOGY PRO — MODO LECTURA

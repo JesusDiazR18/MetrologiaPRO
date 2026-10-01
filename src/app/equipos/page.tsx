@@ -465,6 +465,19 @@ function EquiposContent() {
                 <QrCode size={12} style={{ display: 'inline', marginRight: 4 }} /> Etiqueta QR
               </button>
             )}
+            {details.PDF_Certificado && (
+              <a 
+                href={`/api/equipos/${details.ID_Equipo}/certificado`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-xs" 
+                style={{ color: '#0284c7', background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.3)', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                onClick={(ev) => ev.stopPropagation()}
+                title="Ver Certificado de Calibración / Verificación oficial en PDF"
+              >
+                <FileText size={12} /> Certificado Oficial PDF
+              </a>
+            )}
             <button 
               className="btn btn-ghost btn-xs" 
               style={{ color: 'var(--accent)' }}
@@ -575,6 +588,20 @@ function EquiposContent() {
               <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Intervalo:</span>
               <span className="spec-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textAlign: 'right' }}>{details.Periodicidad_Meses} Meses</span>
             </div>
+            {details.PDF_Certificado && (
+              <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
+                <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Certificado Adjunto:</span>
+                <a
+                  href={`/api/equipos/${details.ID_Equipo}/certificado`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12, fontWeight: 750, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                  onClick={(ev) => ev.stopPropagation()}
+                >
+                  <FileText size={13} /> Ver Certificado PDF ↗
+                </a>
+              </div>
+            )}
             {details.Accesorios && details.Accesorios.trim() !== '' && details.Accesorios.trim() !== '—' && (
               <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '9px 0', borderBottom: '1px solid var(--glass-border)', gap: 16 }}>
                 <span className="spec-label" style={{ fontWeight: 800, fontSize: 12, color: 'var(--text-main)', letterSpacing: '0.02em', flexShrink: 0 }}>Accesorios:</span>
@@ -915,12 +942,37 @@ function EquiposContent() {
                             <span className="code-chip">{e.ID_Equipo}</span>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                               <div style={{ fontWeight: 750, fontSize: 14 }}>{e.Nombre_Equipo}</div>
                               {e.Magnitud && (
                                 <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 12, color: 'var(--accent)', border: '1px solid rgba(0, 229, 255, 0.2)', fontWeight: 700 }}>
                                   {e.Magnitud}
                                 </span>
+                              )}
+                              {e.PDF_Certificado && (
+                                <a 
+                                  href={`/api/equipos/${e.ID_Equipo}/certificado`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(ev) => ev.stopPropagation()}
+                                  title="Ver Certificado PDF oficial cargado"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    fontSize: 10,
+                                    fontWeight: 750,
+                                    color: '#0284c7',
+                                    background: 'rgba(2, 132, 199, 0.1)',
+                                    border: '1px solid rgba(2, 132, 199, 0.3)',
+                                    borderRadius: 999,
+                                    padding: '1px 8px',
+                                    textDecoration: 'none',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <FileText size={10} /> Certificado PDF
+                                </a>
                               )}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{e.Tipo} · {e.Area_Asignada ?? 'Sin área'}</div>
@@ -985,6 +1037,29 @@ function EquiposContent() {
                         <span className="code-chip">{e.ID_Equipo}</span>
                         <span className="type-badge-mini">{e.Tipo}</span>
                         {e.Magnitud && <span className="magnitud-badge-mini">{e.Magnitud}</span>}
+                        {e.PDF_Certificado && (
+                          <a
+                            href={`/api/equipos/${e.ID_Equipo}/certificado`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(ev) => ev.stopPropagation()}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              fontSize: 10,
+                              fontWeight: 750,
+                              color: '#0284c7',
+                              background: 'rgba(2, 132, 199, 0.12)',
+                              border: '1px solid rgba(2, 132, 199, 0.3)',
+                              borderRadius: 999,
+                              padding: '1px 6px',
+                              textDecoration: 'none'
+                            }}
+                          >
+                            <FileText size={10} /> Cert. PDF
+                          </a>
+                        )}
                       </div>
 
                       <span className="mobile-semaforo-badge" style={{ 
@@ -1022,6 +1097,21 @@ function EquiposContent() {
                         <Activity size={14} />
                         <span>Verificar</span>
                       </button>
+
+                      {e.PDF_Certificado && (
+                        <a 
+                          href={`/api/equipos/${e.ID_Equipo}/certificado`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mobile-action-btn secondary"
+                          style={{ color: '#0284c7', textDecoration: 'none' }}
+                          onClick={(ev) => ev.stopPropagation()}
+                          title="Ver Certificado PDF oficial"
+                        >
+                          <FileText size={14} />
+                          <span>Cert. PDF</span>
+                        </a>
+                      )}
 
                       <button 
                         className="mobile-action-btn secondary"

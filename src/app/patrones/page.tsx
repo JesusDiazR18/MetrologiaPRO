@@ -92,29 +92,8 @@ export default function PatronesPage() {
     setModalState(loadedPatron)
   }
 
-  const handleOpenPdf = async (patronId: string, currentPdf: string) => {
-    if (currentPdf === 'dummy_exists') {
-      try {
-        toast.loading('Cargando certificado PDF...', { id: 'pdf-loading' })
-        const res = await fetch(`/api/patrones/${patronId}`)
-        if (res.ok) {
-          const data = await res.json()
-          toast.success('Cargado', { id: 'pdf-loading' })
-          if (data.PDF_Certificado) {
-            openPdf(data.PDF_Certificado)
-          } else {
-            toast.error('No se encontró archivo PDF')
-          }
-        } else {
-          toast.error('Error al descargar el certificado', { id: 'pdf-loading' })
-        }
-      } catch (err) {
-        console.error(err)
-        toast.error('Error de red al descargar el certificado', { id: 'pdf-loading' })
-      }
-    } else {
-      openPdf(currentPdf)
-    }
+  const handleOpenPdf = (patronId: string, _currentPdf?: string) => {
+    window.open(`/api/patrones/${patronId}/certificado`, '_blank')
   }
 
   useEffect(() => {
@@ -208,6 +187,19 @@ export default function PatronesPage() {
             <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }} onClick={(ev) => { ev.stopPropagation(); generatePatronSheetPDF(details); }}>
               📄 Ficha PDF
             </button>
+            {details.PDF_Certificado && (
+              <a 
+                href={`/api/patrones/${details.ID_Patron}/certificado`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-xs" 
+                style={{ color: '#0284c7', background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.3)', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                onClick={(ev) => ev.stopPropagation()}
+                title="Ver Certificado de Calibración oficial en PDF"
+              >
+                <FileText size={12} /> Certificado Oficial PDF
+              </a>
+            )}
             <button className="btn btn-ghost btn-xs" style={{ color: 'var(--accent)', border: '1px solid rgba(14, 165, 233, 0.2)' }} onClick={(ev) => { ev.stopPropagation(); setHistorialPatron(details) }}>
               <History size={12} style={{ display: 'inline', marginRight: 4 }} /> Historial
             </button>
@@ -235,8 +227,21 @@ export default function PatronesPage() {
           </div>
           <div className="spec-item" style={{ background: 'var(--page-bg-soft)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
             <label style={{ fontSize: 11, color: 'var(--text-main)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>Vencimiento Certificado:</label>
-            <div style={{ fontSize: 13, fontWeight: 800, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--success)' }}>
-              {formatFecha(details.Fecha_Vencimiento_Certificado)}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: details.Estado_Vigencia === 'VENCIDO' ? 'var(--danger)' : details.Estado_Vigencia === 'SIN CERTIFICADO' ? '#f59e0b' : 'var(--success)' }}>
+                {formatFecha(details.Fecha_Vencimiento_Certificado)}
+              </span>
+              {details.PDF_Certificado && (
+                <a
+                  href={`/api/patrones/${details.ID_Patron}/certificado`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 11, fontWeight: 750, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 3, textDecoration: 'none' }}
+                  onClick={(ev) => ev.stopPropagation()}
+                >
+                  <FileText size={11} /> Ver PDF ↗
+                </a>
+              )}
             </div>
           </div>
         </div>

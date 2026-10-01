@@ -916,6 +916,21 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 )}
+                {(selectedAsset.PDF_Certificado || fullAssetDetails?.PDF_Certificado) && (
+                  <div className="specs-row" style={{ alignItems: 'center' }}>
+                    <span className="spec-lbl">Certificado Adjunto</span>
+                    <span className="spec-val">
+                      <a 
+                        href={selectedAsset.categoria === 'patron' ? `/api/patrones/${selectedAsset.id}/certificado` : `/api/equipos/${selectedAsset.id}/certificado`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#0284c7', fontWeight: 700, fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                      >
+                        <FileText size={13} /> Ver Certificado PDF ↗
+                      </a>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -926,8 +941,21 @@ export default function DashboardPage() {
                 disabled={pdfLoadingId === selectedAsset.id}
               >
                 {pdfLoadingId === selectedAsset.id ? <div className="mini-spinner" /> : <Download size={13} />}
-                <span>Descargar PDF</span>
+                <span>Descargar Ficha</span>
               </button>
+
+              {(selectedAsset.PDF_Certificado || fullAssetDetails?.PDF_Certificado) && (
+                <a 
+                  href={selectedAsset.categoria === 'patron' ? `/api/patrones/${selectedAsset.id}/certificado` : `/api/equipos/${selectedAsset.id}/certificado`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="modal-btn modal-btn-secondary"
+                  style={{ color: '#0284c7', borderColor: 'rgba(2, 132, 199, 0.35)', textDecoration: 'none' }}
+                >
+                  <FileText size={13} />
+                  <span>Certificado Oficial</span>
+                </a>
+              )}
               
               <Link 
                 href={selectedAsset.categoria === 'patron' ? `/patrones?q=${selectedAsset.codigo}` : `/equipos?q=${selectedAsset.codigo}`} 

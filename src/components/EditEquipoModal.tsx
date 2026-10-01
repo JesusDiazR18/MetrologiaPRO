@@ -474,7 +474,14 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                     <div style={{ fontSize: 24 }}>📄</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 700 }}>Certificado PDF actual cargado</div>
-                      <a href={formData.PDF_Certificado} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, textDecoration: 'underline' }}>Ver PDF actual</a>
+                      <a 
+                        href={`/api/equipos/${equipo.ID_Equipo}/certificado`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, textDecoration: 'underline' }}
+                      >
+                        Ver PDF actual
+                      </a>
                     </div>
                   </div>
                 )}
