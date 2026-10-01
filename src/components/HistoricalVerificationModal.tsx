@@ -536,7 +536,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
   }
 
   const isInstrument = selectedEquipo?.Tipo === 'INSTRUMENTO'
-  const tab2Label = isInstrument ? '2. Verificación' : '2. Calibración / Verificación'
+  const tab2Label = '2. Verificación Metrológica'
 
   const patronesFiltrados = patrones.filter(p => {
     if (equipoMags.length === 0) return true

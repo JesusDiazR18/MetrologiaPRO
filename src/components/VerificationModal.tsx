@@ -334,7 +334,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   }
 
   const isInstrument = selectedEquipo?.Tipo === 'INSTRUMENTO'
-  const tab2Label = isInstrument ? '2. Verificación' : '2. Calibración / Verificación'
+  const tab2Label = '2. Verificación Metrológica'
 
   // Filtrar patrones si el equipo tiene magnitud
   const equipoMags = selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
@@ -529,7 +529,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             </div>
             <div>
               <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>Control y Verificación de Activo</h2>
-              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Registro de inspección operativa o calibración</p>
+              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Registro de inspección operativa o verificación metrológica</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="btn-close-large">

@@ -183,7 +183,7 @@ export async function POST(request: Request) {
 
       const html = generateMonthlyReportHtml(reportData)
       const fueraServicioText = activosFueraDeServicio.length > 0 ? ` · ${activosFueraDeServicio.length} Fuera de Servicio` : ''
-      const subject = `[PRUEBA] 📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Programados${fueraServicioText}`
+      const subject = `[PRUEBA] 📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Verificaciones Programadas${fueraServicioText}`
 
       let emailResult = null
       if (sendLive) {

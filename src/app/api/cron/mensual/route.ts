@@ -179,7 +179,7 @@ export async function GET(request: Request) {
     // 6. Generar HTML y Enviar Correo
     const html = generateMonthlyReportHtml(reportData)
     const fueraServicioText = activosFueraDeServicio.length > 0 ? ` · ${activosFueraDeServicio.length} Fuera de Servicio` : ''
-    const subject = `📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Programados${fueraServicioText}`
+    const subject = `📅 Balance Mensual Metrológico: ${mesNombre.toUpperCase()} ${anio} · ${pendientesMesAnterior.length} Pendientes | ${programadosMesActual.length} Verificaciones Programadas${fueraServicioText}`
 
     const sendResult = await sendQmsEmail({
       subject,

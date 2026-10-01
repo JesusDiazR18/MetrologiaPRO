@@ -668,7 +668,7 @@ function EquiposContent() {
                     <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(h.Fecha_Ejecucion)}</td>
                     <td>
                       <span style={{ fontSize: 10, background: h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'rgba(245,158,11,0.12)' : 'rgba(0,229,255,0.08)', padding: '2px 6px', borderRadius: 4, fontWeight: 700, color: h.Tipo_Verificacion === 'OPERATIVIDAD' ? '#f59e0b' : 'var(--accent)' }}>
-                        {h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Calibración'}
+                        {h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Verificación'}
                       </span>
                     </td>
                     <td style={{ fontSize: 11, color: 'var(--text-soft)' }}>

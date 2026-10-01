@@ -311,10 +311,10 @@ export function generateWeeklyAlertsHtml(data: WeeklyAlertsData): string {
         <tr>
           <td style="padding: 14px 14px 8px 14px;">
             <div style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #991b1b;">
-              🔴 EQUIPOS E INSTRUMENTOS CON CONTROL VENCIDO (${data.equiposVencidos.length})
+              🔴 EQUIPOS E INSTRUMENTOS CON VERIFICACIÓN VENCIDA (${data.equiposVencidos.length})
             </div>
             <div style="font-family: Arial, sans-serif; font-size: 11.5px; color: #b91c1c; margin-top: 3px; margin-bottom: 10px;">
-              Requieren verificación o calibración inmediata (fecha de control superada):
+              Requieren verificación metrológica inmediata (fecha de control superada):
             </div>
           </td>
         </tr>
@@ -395,7 +395,10 @@ export function generateWeeklyAlertsHtml(data: WeeklyAlertsData): string {
         <tr>
           <td style="padding: 14px 14px 8px 14px;">
             <div style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; color: #92400e;">
-              🟡 PRÓXIMOS CONTROLES PROGRAMADOS (Próximos 30 días) (${data.equiposProximos.length})
+              🟡 PRÓXIMAS VERIFICACIONES PROGRAMADAS (Próximos 30 días) (${data.equiposProximos.length})
+            </div>
+            <div style="font-family: Arial, sans-serif; font-size: 11.5px; color: #b45309; margin-top: 3px; margin-bottom: 10px;">
+              Equipos e instrumentos con fecha de verificación metrológica próxima a vencer:
             </div>
           </td>
         </tr>
@@ -497,7 +500,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
         </td>
         <td width="33%" align="center" bgcolor="#f0fdf4" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 6px;">
           <div style="font-family: Arial, sans-serif; font-size: 24px; font-weight: 900; color: #16a34a; line-height: 1;">${data.kpis.programadosMesActual}</div>
-          <div style="font-family: Arial, sans-serif; font-size: 10px; font-weight: bold; color: #166534; text-transform: uppercase; margin-top: 5px;">A Calibrar este Mes</div>
+          <div style="font-family: Arial, sans-serif; font-size: 10px; font-weight: bold; color: #166534; text-transform: uppercase; margin-top: 5px;">A Verificar este Mes</div>
         </td>
       </tr>
     </table>
@@ -545,6 +548,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
             <tr bgcolor="#fee2e2">
               <th align="left" style="color: #991b1b; font-size: 10.5px; border-bottom: 1px solid #fca5a5;">CÓDIGO</th>
               <th align="left" style="color: #991b1b; font-size: 10.5px; border-bottom: 1px solid #fca5a5;">ACTIVO</th>
+              <th align="left" style="color: #991b1b; font-size: 10.5px; border-bottom: 1px solid #fca5a5;">CONTROL</th>
               <th align="left" style="color: #991b1b; font-size: 10.5px; border-bottom: 1px solid #fca5a5;">ÁREA / RESPONSABLE</th>
               <th align="left" style="color: #991b1b; font-size: 10.5px; border-bottom: 1px solid #fca5a5;">VENCIMIENTO</th>
               <th align="left" style="color: #991b1b; font-size: 10.5px; border-bottom: 1px solid #fca5a5;">ESTADO</th>
@@ -555,6 +559,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
                 <td style="border-bottom: 1px solid #fee2e2; color: #1e293b;">
                   <strong>${e.nombre}</strong> <span style="font-size: 10px; color: #64748b;">(${e.tipo})</span>
                 </td>
+                <td style="border-bottom: 1px solid #fee2e2; color: #991b1b; font-weight: 600; font-size: 11px;">Verificación Pendiente</td>
                 <td style="border-bottom: 1px solid #fee2e2; color: #475569;">${e.area || '—'} · ${e.responsable || 'Sin asignar'}</td>
                 <td style="border-bottom: 1px solid #fee2e2; color: #334155;">${formatFecha(e.fechaProximoControl)}</td>
                 <td style="border-bottom: 1px solid #fee2e2; color: #dc2626; font-weight: bold;">
@@ -638,7 +643,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
             </tr>
           </table>
           <div style="font-family: Arial, sans-serif; font-size: 11.5px; color: #15803d; margin-top: 4px; margin-bottom: 8px;">
-            Equipos e instrumentos programados para control metrológico regular durante este mes:
+            Equipos e instrumentos programados para verificación metrológica regular durante este mes:
           </div>
         </td>
       </tr>
@@ -662,6 +667,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
             <tr bgcolor="#dcfce7">
               <th align="left" style="color: #166534; font-size: 10.5px; border-bottom: 1px solid #86efac;">CÓDIGO</th>
               <th align="left" style="color: #166534; font-size: 10.5px; border-bottom: 1px solid #86efac;">ACTIVO</th>
+              <th align="left" style="color: #166534; font-size: 10.5px; border-bottom: 1px solid #86efac;">CONTROL</th>
               <th align="left" style="color: #166534; font-size: 10.5px; border-bottom: 1px solid #86efac;">RESPONSABLE</th>
               <th align="left" style="color: #166534; font-size: 10.5px; border-bottom: 1px solid #86efac;">FECHA PREVISTA</th>
             </tr>
@@ -669,6 +675,7 @@ export function generateMonthlyReportHtml(data: MonthlyReportData): string {
               <tr bgcolor="${idx % 2 === 0 ? '#ffffff' : '#f0fdf4'}">
                 <td style="border-bottom: 1px solid #dcfce7; font-weight: bold; color: #0284c7;">${e.codigo}</td>
                 <td style="border-bottom: 1px solid #dcfce7; color: #1e293b;"><strong>${e.nombre}</strong></td>
+                <td style="border-bottom: 1px solid #dcfce7; color: #166534; font-weight: 600; font-size: 11px;">Verificación Interna</td>
                 <td style="border-bottom: 1px solid #dcfce7; color: #475569;">${e.responsable || 'Sin asignar'}</td>
                 <td style="border-bottom: 1px solid #dcfce7; color: #16a34a; font-weight: bold;">
                   ${formatFecha(e.fechaProximoControl)}

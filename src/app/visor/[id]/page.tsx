@@ -256,7 +256,7 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
               <div style={{ width: '100%', height: 1, background: '#f1f5f9' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>Tipo</span>
-                <span style={{ color: '#0f172a', fontSize: 13, fontWeight: 700 }}>{ultimaVerificacion.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Calibración'}</span>
+                <span style={{ color: '#0f172a', fontSize: 13, fontWeight: 700 }}>{ultimaVerificacion.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operatividad' : 'Verificación'}</span>
               </div>
               <div style={{ width: '100%', height: 1, background: '#f1f5f9' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

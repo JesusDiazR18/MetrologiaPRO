@@ -643,7 +643,7 @@ export async function generateTechnicalSheetPDF(equipo: any) {
       doc.setTextColor(15, 23, 42);
       doc.text(formatFecha(h.Fecha_Ejecucion), colX.fecha, cellY);
 
-      const tipoLabel = h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operativ.' : 'Calibrac.';
+      const tipoLabel = h.Tipo_Verificacion === 'OPERATIVIDAD' ? 'Operativ.' : 'Verific.';
       doc.setTextColor(h.Tipo_Verificacion === 'OPERATIVIDAD' ? 180 : 14, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 120 : 165, h.Tipo_Verificacion === 'OPERATIVIDAD' ? 0 : 233);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
@@ -1231,7 +1231,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
   rows.push({
     label: `  - ${stateSuffix} fuera de Vigencia (Críticos)`,
     value: stats.vencidos ?? 0,
-    detail: 'Calibración / Inspección pendiente',
+    detail: 'Verificación / Control pendiente',
     color: [220, 38, 38]
   });
 
@@ -1384,7 +1384,7 @@ export async function generateExecutiveSummaryPDF(stats: any, filterInfo?: { tip
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
       doc.setTextColor(185, 28, 28); // Rojo
-      const motivoText = a.status === 'ROJO' ? 'Calibración Expirada / Crítico' : 'Estado NO APTO';
+      const motivoText = a.status === 'ROJO' ? 'Control Vencido / Crítico' : 'Estado NO APTO';
       doc.text(motivoText, margin + printableWidth - 4, currY + 4.5, { align: 'right' });
 
       currY += rowHeight;
