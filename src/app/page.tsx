@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, CheckCircle, XCircle, AlertTriangle,
@@ -56,6 +56,16 @@ export default function DashboardPage() {
   // Filtros locales
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const explorerRef = useRef<HTMLDivElement>(null)
+
+  // Al tocar un KPI se filtra el explorador y, en pantallas pequeñas, se desplaza hasta él
+  const applyKpiFilter = (status: string) => {
+    const next = statusFilter === status ? null : status
+    setStatusFilter(next)
+    if (next && window.innerWidth < 1024) {
+      explorerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
   const [tipoFilter, setTipoFilter] = useState<string | null>(null)
   const [magnitudFilter, setMagnitudFilter] = useState<string | null>(null)
   const [responsableFilter, setResponsableFilter] = useState<string | null>(null)
@@ -420,7 +430,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 3 */}
-        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter(statusFilter === 'ROJO' ? null : 'ROJO')}>
+        <div className={`kpi-bar-item clickable ${statusFilter === 'ROJO' ? 'active' : ''}`} role="button" tabIndex={0} aria-pressed={statusFilter === 'ROJO'} title="Filtrar activos vencidos o críticos" onClick={() => applyKpiFilter('ROJO')} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && applyKpiFilter('ROJO')}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-red blinking" />
             <span className="kpi-bar-label" style={{ color: (dynamicStats?.vencidos ?? 0) > 0 ? 'var(--danger)' : 'inherit' }}>Alertas Críticas</span>
@@ -434,7 +444,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 4 */}
-        <div className="kpi-bar-item clickable" onClick={() => setStatusFilter(statusFilter === 'AMARILLO' ? null : 'AMARILLO')}>
+        <div className={`kpi-bar-item clickable ${statusFilter === 'AMARILLO' ? 'active' : ''}`} role="button" tabIndex={0} aria-pressed={statusFilter === 'AMARILLO'} title="Filtrar activos próximos a vencer" onClick={() => applyKpiFilter('AMARILLO')} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && applyKpiFilter('AMARILLO')}>
           <div className="kpi-meta">
             <span className="kpi-dot bg-yellow" />
             <span className="kpi-bar-label">Advertencia</span>
@@ -451,7 +461,7 @@ export default function DashboardPage() {
         
         {/* Lado Izquierdo: Explorador Inteligente de Activos (60% ancho) */}
         <div className="grid-left">
-          <div className="panel-card">
+          <div className="panel-card" ref={explorerRef}>
             <div className="panel-card-header">
               <div className="panel-header-titles">
                 <h2>Explorador Inteligente de Activos</h2>
@@ -1075,6 +1085,14 @@ export default function DashboardPage() {
           padding: 4px 8px;
           border-radius: var(--radius-md);
         }
+        .kpi-bar-item.clickable:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 2px;
+        }
+        .kpi-bar-item.clickable.active {
+          background: var(--alpha-04);
+          box-shadow: inset 0 0 0 1.5px var(--glass-border);
+        }
         .kpi-bar-item.clickable:hover {
           background: var(--alpha-04);
           transform: translateY(-1px);
@@ -1587,13 +1605,15 @@ export default function DashboardPage() {
 
         .asset-code {
           font-family: var(--font-mono);
-          font-size: 10px;
+          white-space: nowrap;
+          font-size: 11px;
           font-weight: 850;
           color: var(--text-main);
         }
 
         .asset-type-badge {
-          font-size: 8.5px;
+          font-size: 9.5px;
+          white-space: nowrap;
           font-weight: 800;
           background: var(--alpha-04);
           color: var(--text-muted);
@@ -1614,7 +1634,7 @@ export default function DashboardPage() {
         }
 
         .asset-meta {
-          font-size: 9.5px;
+          font-size: 11px;
           color: var(--text-soft);
           white-space: nowrap;
           overflow: hidden;
@@ -2217,6 +2237,17 @@ export default function DashboardPage() {
           .asset-list-row {
             padding: 10px 12px !important;
             gap: 8px !important;
+            flex-wrap: wrap !important;
+          }
+          .asset-row-main {
+            flex: 1 1 100% !important;
+          }
+          .asset-row-actions {
+            width: 100%;
+            padding-left: 44px;
+          }
+          .asset-row-actions .semaforo-pill {
+            margin-right: auto;
           }
           .asset-avatar {
             width: 32px !important;

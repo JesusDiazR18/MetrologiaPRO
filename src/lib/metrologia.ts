@@ -71,32 +71,15 @@ export function semaforoLabel(s: SemaforoColor, estado?: string): string {
 
 /**
  * Lógica de validación técnica.
- *
- * Regla de decisión (ISO/IEC 17025:2017 §7.1.3 y §7.8.6, ILAC-G8:09/2019):
- * aceptación con banda de guarda w = U. Un punto es CONFORME solo si
- * |E| + U ≤ EMP, donde E = lectura del instrumento − valor del patrón,
- * U = incertidumbre expandida (k≈2, ~95 %) y EMP = error máximo permitido.
- * Con U = 0 equivale a la aceptación simple |E| ≤ EMP.
+ * E = lectura del instrumento − valor del patrón. Conforme si |E| ≤ EMP (tolerancia).
  */
-export const REGLA_DECISION = 'Aceptación con banda de guarda (ILAC-G8:09/2019): conforme si |E| + U ≤ EMP'
-
-/** TUR mínimo recomendado entre tolerancia e incertidumbre (ANSI/NCSL Z540.3, ILAC-G8). */
-export const TUR_MINIMO = 4
-
 export function calcularVariacion(instrumento: number, patron: number): number {
   return parseFloat((instrumento - patron).toFixed(6))
 }
 
-export function calcularStatus(variacion: number, tolerancia: number, incertidumbre = 0): 'APTO' | 'NO_APTO' {
-  const u = Number.isFinite(incertidumbre) && incertidumbre > 0 ? incertidumbre : 0
+export function calcularStatus(variacion: number, tolerancia: number): 'APTO' | 'NO_APTO' {
   // Pequeño margen para evitar falsos NO_APTO por representación binaria (p. ej. 0.1 + 0.2)
-  return Math.abs(variacion) + u <= tolerancia + 1e-9 ? 'APTO' : 'NO_APTO'
-}
-
-/** Relación de exactitud de ensayo: EMP / U. null si no hay incertidumbre declarada. */
-export function calcularTUR(tolerancia: number, incertidumbre: number | null | undefined): number | null {
-  if (!incertidumbre || incertidumbre <= 0 || !Number.isFinite(incertidumbre)) return null
-  return parseFloat((tolerancia / incertidumbre).toFixed(2))
+  return Math.abs(variacion) <= tolerancia + 1e-9 ? 'APTO' : 'NO_APTO'
 }
 
 export interface PuntoEvaluado {
@@ -112,7 +95,6 @@ export interface EvaluacionPuntos {
   worstPatron: number
   worstInstrumento: number
   status: 'APTO' | 'NO_APTO'
-  tur: number | null
 }
 
 /**
@@ -122,8 +104,7 @@ export interface EvaluacionPuntos {
  */
 export function evaluarPuntos(
   puntos: Array<{ patron: unknown; instrumento: unknown; [extra: string]: unknown }>,
-  tolerancia: number,
-  incertidumbre = 0
+  tolerancia: number
 ): EvaluacionPuntos | null {
   const points: PuntoEvaluado[] = []
   for (const p of puntos) {
@@ -140,8 +121,7 @@ export function evaluarPuntos(
     worstVar: worst.variacion,
     worstPatron: worst.patron,
     worstInstrumento: worst.instrumento,
-    status: calcularStatus(worst.variacion, tolerancia, incertidumbre),
-    tur: calcularTUR(tolerancia, incertidumbre),
+    status: calcularStatus(worst.variacion, tolerancia),
   }
 }
 

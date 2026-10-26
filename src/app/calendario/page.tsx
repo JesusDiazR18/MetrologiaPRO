@@ -92,10 +92,19 @@ export default function CalendarioPage() {
     })
     .sort((a, b) => new Date(a.Fecha_Proximo_Control!).getTime() - new Date(b.Fecha_Proximo_Control!).getTime())
 
+  // Activos vencidos: requieren acción inmediata y no aparecen en "Próximas tareas"
+  const overdueEvents = equipos
+    .filter(e => {
+      const active = !['OBSOLETO', 'FUERA_DE_SERVICIO', 'DE_BAJA_OBSOLETO'].includes(e.Estado)
+      const matchFilter = filter === 'ALL' || e.Tipo === filter
+      return active && matchFilter && e.Fecha_Proximo_Control && new Date(e.Fecha_Proximo_Control) < todayDate
+    })
+    .sort((a, b) => new Date(a.Fecha_Proximo_Control!).getTime() - new Date(b.Fecha_Proximo_Control!).getTime())
+
   // Group events by date for sidebar
 
   const groupedEvents: Record<string, Equipo[]> = {};
-  (selected ? selectedEquipos : upcomingEvents.slice(0, 3)).forEach(e => {
+  (selected ? selectedEquipos : upcomingEvents.slice(0, 6)).forEach(e => {
     const dateKey = e.Fecha_Proximo_Control ? format(new Date(e.Fecha_Proximo_Control), 'yyyy-MM-dd') : 'Sin Fecha';
     if (!groupedEvents[dateKey]) groupedEvents[dateKey] = [];
     groupedEvents[dateKey].push(e);
@@ -116,7 +125,7 @@ export default function CalendarioPage() {
   const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-out', padding: '0 20px' }}>
+    <div className="calendar-page" style={{ animation: 'fadeIn 0.5s ease-out' }}>
 
 
       <div className="calendar-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
@@ -124,10 +133,10 @@ export default function CalendarioPage() {
         {/* Main Calendar View */}
         <div className="card" style={{ 
           padding: '16px', 
-          background: '#ffffff', 
+          background: 'var(--card-bg)', 
           borderRadius: 20,
           boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
-          border: '1px solid #f1f5f9'
+          border: '1px solid var(--glass-border)'
         }}>
           <div className="calendar-header-controls" style={{ 
             display: 'flex', 
@@ -136,7 +145,7 @@ export default function CalendarioPage() {
             marginBottom: 20,
             padding: '8px 4px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ 
                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                 width: 40,
@@ -150,34 +159,38 @@ export default function CalendarioPage() {
                 <CalendarDays size={20} color="#fff" />
               </div>
               <div>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', textTransform: 'capitalize' }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-main)', textTransform: 'capitalize' }}>
                   {format(currentMonth, 'MMMM yyyy', { locale: es })}
                 </h2>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>Gestión de Vencimientos</p>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>Gestión de Vencimientos</p>
               </div>
-              <div style={{ display: 'flex', gap: 2, background: '#f1f5f9', padding: 3, borderRadius: 10, marginLeft: 8 }}>
-                <button className="btn-icon-sm" onClick={() => setCurrentMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}><ChevronLeft size={16} /></button>
-                <button className="btn-icon-sm" onClick={() => setCurrentMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}><ChevronRight size={16} /></button>
+              <div style={{ display: 'flex', gap: 2, background: 'var(--page-bg-soft)', padding: 3, borderRadius: 10, marginLeft: 8 }}>
+                <button className="btn-icon-sm" aria-label="Mes anterior" onClick={() => setCurrentMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--text-main)' }}><ChevronLeft size={16} /></button>
+                <button className="btn-icon-sm" aria-label="Mes siguiente" onClick={() => setCurrentMonth(d => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--text-main)' }}><ChevronRight size={16} /></button>
               </div>
             </div>
 
             
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 8 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 8, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00e5ff' }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>CAL</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>CAL</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb' }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>VER</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>VER</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>SEG</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>SEG</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>VENCIDO</span>
                 </div>
               </div>
-              <div style={{ display: 'flex', background: '#f8fafc', padding: 3, borderRadius: 10 }}>
+              <div style={{ display: 'flex', background: 'var(--page-bg-soft)', padding: 3, borderRadius: 10 }}>
                 {(['ALL', 'EQUIPO', 'INSTRUMENTO'] as const).map(f => (
                   <button 
                     key={f}
@@ -188,21 +201,21 @@ export default function CalendarioPage() {
                       borderRadius: 8, 
                       fontSize: 12, 
                       fontWeight: 700,
-                      background: filter === f ? '#fff' : 'transparent',
-                      color: filter === f ? '#2563eb' : '#64748b',
+                      background: filter === f ? 'var(--card-bg)' : 'transparent',
+                      color: filter === f ? '#2563eb' : 'var(--text-soft)',
                       boxShadow: filter === f ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
                       cursor: 'pointer',
                       transition: 'all 0.2s'
                     }}
                   >
-                    {f === 'ALL' ? 'Todos' : f === 'EQUIPO' ? 'Equipos' : 'Ins.'}
+                    {f === 'ALL' ? 'Todos' : f === 'EQUIPO' ? 'Equipos' : 'Instrumentos'}
                   </button>
                 ))}
               </div>
             </div>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', borderTop: '1px solid var(--glass-border)' }}>
             {dayLabels.map(l => (
               <div key={l} style={{ 
                 padding: '12px 0', 
@@ -210,7 +223,7 @@ export default function CalendarioPage() {
                 fontSize: 11, 
                 fontWeight: 800, 
                 textTransform: 'uppercase', 
-                color: '#94a3b8',
+                color: 'var(--text-dim)',
                 letterSpacing: '0.05em'
               }}>{l}</div>
             ))}
@@ -225,14 +238,14 @@ export default function CalendarioPage() {
                   key={i}
                   onClick={() => setSelected(day)}
                   style={{
-                    background: '#fff',
+                    background: 'var(--card-bg)',
                     minHeight: 85,
                     padding: 8,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     position: 'relative',
-                    borderTop: '1px solid #f8fafc',
-                    borderLeft: i % 7 !== 0 ? '1px solid #f8fafc' : 'none',
+                    borderTop: '1px solid var(--glass-border)',
+                    borderLeft: i % 7 !== 0 ? '1px solid var(--glass-border)' : 'none',
                     opacity: muted ? 0.2 : 1
 
                   }}
@@ -241,7 +254,7 @@ export default function CalendarioPage() {
                   <div style={{ 
                     fontSize: 14, 
                     fontWeight: 700, 
-                    color: today ? '#2563eb' : '#1e293b',
+                    color: today ? '#2563eb' : 'var(--text-main)',
                     marginBottom: 8,
                     display: 'flex',
                     alignItems: 'center',
@@ -252,7 +265,7 @@ export default function CalendarioPage() {
                     {today && <span className="today-badge" style={{ fontSize: 9, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', padding: '2px 6px', borderRadius: 6, border: '1px solid rgba(37, 99, 235, 0.2)' }}>Hoy</span>}
                   </div>
 
-                  <div className="day-dots" style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <div className="day-dots" title={dayItems.length ? `${dayItems.length} control(es) programado(s)` : undefined} style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
                     {dayItems.map(e => (
                       <div 
                         key={e.ID_Equipo} 
@@ -260,8 +273,8 @@ export default function CalendarioPage() {
                           width: 6, 
                           height: 6, 
                           borderRadius: '50%', 
-                          background: e.Tipo === 'EQUIPO' ? '#2563eb' : '#00e5ff',
-                          boxShadow: `0 0 8px ${e.Tipo === 'EQUIPO' ? 'rgba(37, 99, 235, 0.4)' : 'rgba(0, 229, 255, 0.4)'}`
+                          background: day < todayDate ? '#ef4444' : e.Tipo === 'EQUIPO' ? '#2563eb' : '#00e5ff',
+                          boxShadow: `0 0 8px ${day < todayDate ? 'rgba(239, 68, 68, 0.4)' : e.Tipo === 'EQUIPO' ? 'rgba(37, 99, 235, 0.4)' : 'rgba(0, 229, 255, 0.4)'}`
                         }} 
                       />
                     ))}
@@ -299,19 +312,46 @@ export default function CalendarioPage() {
 
         {/* Sidebar: Upcoming Tasks */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {overdueEvents.length > 0 && !selected && (
+            <div className="overdue-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ background: 'rgba(239, 68, 68, 0.12)', padding: 8, borderRadius: 10, display: 'flex' }}>
+                    <AlertCircle size={18} color="#dc2626" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 800, color: '#991b1b' }}>Vencidos ({overdueEvents.length})</h3>
+                    <p style={{ fontSize: 11, color: '#b91c1c', fontWeight: 600 }}>Requieren verificación inmediata</p>
+                  </div>
+                </div>
+                <Link href="/equipos?estado=vencidos" className="overdue-link">Ver todos</Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {overdueEvents.slice(0, 4).map(e => (
+                  <Link key={e.ID_Equipo} href={`/equipos?q=${encodeURIComponent(e.ID_Equipo)}`} className="overdue-item">
+                    <span style={{ minWidth: 0 }}>
+                      <strong>{e.Nombre_Equipo}</strong>
+                      <small>{e.Codigo_Interno} · {formatFecha(e.Fecha_Proximo_Control)}</small>
+                    </span>
+                    <em>{diasRestantes(e.Fecha_Proximo_Control)}</em>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <div style={{ background: 'rgba(37, 99, 235, 0.1)', padding: 8, borderRadius: 10 }}>
                 <Clock size={18} color="#2563eb" />
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-main)' }}>
                 Próximas Tareas {selected && `(${format(selected, 'd MMM')})`}
               </h3>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {Object.keys(groupedEvents).length === 0 ? (
-                <div style={{ padding: 30, textAlign: 'center', background: '#f8fafc', borderRadius: 16, color: '#94a3b8' }}>
+                <div style={{ padding: 30, textAlign: 'center', background: 'var(--page-bg-soft)', borderRadius: 16, color: 'var(--text-dim)' }}>
                   <Info size={24} style={{ marginBottom: 8, opacity: 0.5 }} />
                   <p style={{ fontSize: 13 }}>No hay tareas para mostrar</p>
                 </div>
@@ -322,7 +362,7 @@ export default function CalendarioPage() {
                       <div style={{ 
                         fontSize: 10, 
                         fontWeight: 800, 
-                        color: '#94a3b8', 
+                        color: 'var(--text-dim)', 
                         textTransform: 'uppercase', 
                         padding: '4px 8px',
                         letterSpacing: '0.05em'
@@ -343,8 +383,8 @@ export default function CalendarioPage() {
                             <div style={{ 
                               padding: '12px 14px', 
                               borderRadius: 14, 
-                              background: '#fff', 
-                              border: '1px solid #f1f5f9',
+                              background: 'var(--card-bg)', 
+                              border: '1px solid var(--glass-border)',
                               display: 'flex',
                               alignItems: 'center',
                               gap: 12,
@@ -363,10 +403,10 @@ export default function CalendarioPage() {
                               }} />
                               <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <h4 style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{e.Nombre_Equipo}</h4>
+                                  <h4 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{e.Nombre_Equipo}</h4>
                                   <span style={{ fontSize: 9, fontWeight: 800, color: semaforoHex(s) }}>{diasRestantes(e.Fecha_Proximo_Control)}</span>
                                 </div>
-                                <p style={{ fontSize: 11, color: '#64748b' }}>ID: {e.ID_Equipo}</p>
+                                <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>ID: {e.ID_Equipo}</p>
                               </div>
                               <ChevronRight size={14} color="#cbd5e1" />
                             </div>
@@ -403,7 +443,7 @@ export default function CalendarioPage() {
               </div>
             </div>
             <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${complianceRate}%`, height: '100%', background: '#fff', borderRadius: 3, transition: 'width 1s ease-out' }} />
+              <div style={{ width: `${complianceRate}%`, height: '100%', background: 'var(--card-bg)', borderRadius: 3, transition: 'width 1s ease-out' }} />
             </div>
 
           </div>
@@ -413,10 +453,62 @@ export default function CalendarioPage() {
 
       <style jsx global>{`
         .cal-day-box:hover {
-          background: #f8fafc !important;
+          background: var(--page-bg-soft) !important;
           transform: scale(1.02);
           z-index: 10;
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .calendar-page { padding: 0 20px; }
+        .overdue-card {
+          padding: 16px;
+          border-radius: 18px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+        }
+        .overdue-link {
+          font-size: 12px;
+          font-weight: 800;
+          color: #dc2626;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        .overdue-link:hover { text-decoration: underline; }
+        .overdue-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 9px 12px;
+          border-radius: 12px;
+          background: #fff;
+          text-decoration: none;
+          transition: transform 0.15s ease;
+        }
+        .overdue-item:hover { transform: translateX(3px); }
+        .overdue-item strong {
+          display: block;
+          font-size: 13px;
+          color: #1e293b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .overdue-item small { font-size: 11px; color: #64748b; }
+        [data-theme="dark"] .overdue-card {
+          background: rgba(239, 68, 68, 0.08);
+          border-color: rgba(239, 68, 68, 0.3);
+        }
+        [data-theme="dark"] .overdue-card h3 { color: #fca5a5 !important; }
+        [data-theme="dark"] .overdue-card p { color: #f87171 !important; }
+        [data-theme="dark"] .overdue-item { background: var(--card-bg); }
+        [data-theme="dark"] .overdue-item strong { color: var(--text-main); }
+        [data-theme="dark"] .overdue-item small { color: var(--text-soft); }
+        .overdue-item em {
+          font-style: normal;
+          font-size: 10.5px;
+          font-weight: 800;
+          color: #dc2626;
+          white-space: nowrap;
         }
         .task-item-compact:hover {
           transform: translateX(4px);
@@ -428,9 +520,10 @@ export default function CalendarioPage() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .calendar-main-grid > * { min-width: 0; }
         @media (max-width: 1200px) {
           .calendar-main-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
           }
         }
         @media (max-width: 768px) {
@@ -451,8 +544,19 @@ export default function CalendarioPage() {
             margin-bottom: 0 !important;
             font-size: 13px !important;
           }
-          .today-badge, .day-dots {
+          .calendar-page { padding: 0; }
+          .today-badge {
             display: none !important;
+          }
+          .day-dots {
+            max-height: 14px;
+            overflow: hidden;
+            margin-top: 4px;
+            gap: 2px !important;
+          }
+          .day-dots > div {
+            width: 5px !important;
+            height: 5px !important;
           }
           .calendar-main-grid {
             gap: 16px !important;

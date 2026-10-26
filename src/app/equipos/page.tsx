@@ -74,6 +74,17 @@ export default function EquiposPage() {
   )
 }
 
+type SemaforoFiltro = 'ALL' | 'ROJO' | 'AMARILLO' | 'VERDE'
+
+const ESTADOS_BAJA = ['DE_BAJA_OBSOLETO', 'OBSOLETO', 'BAJA']
+
+const SEMAFORO_CHIPS: { key: SemaforoFiltro; label: string; color: string }[] = [
+  { key: 'ALL', label: 'Todos', color: '#64748b' },
+  { key: 'ROJO', label: 'Vencidos / críticos', color: '#ef4444' },
+  { key: 'AMARILLO', label: 'Por vencer (30 días)', color: '#f59e0b' },
+  { key: 'VERDE', label: 'Al día', color: '#10b981' },
+]
+
 function EquiposContent() {
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,6 +92,7 @@ function EquiposContent() {
   const [tipo, setTipo] = useState('')
   const [filterEstado, setFilterEstado] = useState<string>('ALL')
   const [filterResponsable, setFilterResponsable] = useState<string>('ALL')
+  const [semaforoFilter, setSemaforoFilter] = useState<SemaforoFiltro>('ALL')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [modalEquipo, setModalEquipo] = useState<Equipo | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -260,6 +272,11 @@ function EquiposContent() {
       list = list.filter(e => e.Estado === filterEstado)
     }
 
+    // 2b. Semáforo (vencimiento) Filter
+    if (semaforoFilter !== 'ALL') {
+      list = list.filter(e => !ESTADOS_BAJA.includes(e.Estado) && calcularSemaforo(e.Fecha_Proximo_Control, e.Estado) === semaforoFilter)
+    }
+
     // 3. Responsable Filter
     if (filterResponsable !== 'ALL') {
       list = list.filter(e => {
@@ -295,7 +312,19 @@ function EquiposContent() {
       })
     }
     return list
-  }, [equipos, q, tipo, filterEstado, filterResponsable, sortBy])
+  }, [equipos, q, tipo, filterEstado, filterResponsable, sortBy, semaforoFilter])
+
+  const semaforoCounts = React.useMemo(() => {
+    const counts: Record<SemaforoFiltro, number> = { ALL: 0, ROJO: 0, AMARILLO: 0, VERDE: 0 }
+    for (const e of equipos) {
+      if (tipo && e.Tipo !== tipo) continue
+      counts.ALL++
+      if (ESTADOS_BAJA.includes(e.Estado)) continue
+      const sem = calcularSemaforo(e.Fecha_Proximo_Control, e.Estado)
+      if (sem in counts) counts[sem as SemaforoFiltro]++
+    }
+    return counts
+  }, [equipos, tipo])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -322,6 +351,10 @@ function EquiposContent() {
     if (qParam) {
       setQ(qParam)
     }
+    const estadoParam = searchParams.get('estado')
+    if (estadoParam === 'vencidos') setSemaforoFilter('ROJO')
+    else if (estadoParam === 'proximos') setSemaforoFilter('AMARILLO')
+    else if (estadoParam === 'aldia') setSemaforoFilter('VERDE')
   }, [searchParams, load])
 
   useEffect(() => {
@@ -336,9 +369,10 @@ function EquiposContent() {
     }
   }, [equipos, q])
 
-  const hasActiveFilters = q !== '' || tipo !== '' || filterEstado !== 'ALL' || filterResponsable !== 'ALL'
+  const hasActiveFilters = q !== '' || tipo !== '' || filterEstado !== 'ALL' || filterResponsable !== 'ALL' || semaforoFilter !== 'ALL'
   const handleClearFilters = () => {
     setQ('')
+    setSemaforoFilter('ALL')
     setTipo('')
     setFilterEstado('ALL')
     setFilterResponsable('ALL')
@@ -911,6 +945,30 @@ function EquiposContent() {
         )}
       </div>
 
+      {/* Filtros rápidos por estado de vencimiento */}
+      <div className="semaforo-chips" role="tablist" aria-label="Filtrar por estado de vencimiento">
+        {SEMAFORO_CHIPS.map(c => (
+          <button
+            key={c.key}
+            type="button"
+            role="tab"
+            aria-selected={semaforoFilter === c.key}
+            className={`semaforo-chip ${semaforoFilter === c.key ? 'active' : ''}`}
+            onClick={() => setSemaforoFilter(c.key)}
+            style={{ '--chip-color': c.color } as React.CSSProperties}
+          >
+            {c.key !== 'ALL' && <span className="chip-dot" />}
+            {c.label}
+            <span className="chip-count">{semaforoCounts[c.key]}</span>
+          </button>
+        ))}
+        {!loading && (
+          <span className="semaforo-result">
+            Mostrando <strong>{sortedEquipos.length}</strong> {sortedEquipos.length === 1 ? 'activo' : 'activos'}
+          </span>
+        )}
+      </div>
+
       <div className="content-assets-card">
         {loading ? (
           <div className="loading-state-box">
@@ -1184,6 +1242,56 @@ function EquiposContent() {
       </div>
 
       <style jsx>{`
+        .semaforo-chips {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: -4px 0 14px;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+        }
+        .semaforo-chips::-webkit-scrollbar { display: none; }
+        .semaforo-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+          padding: 7px 12px;
+          border-radius: 999px;
+          border: 1px solid var(--glass-border);
+          background: var(--card-bg);
+          color: var(--text-soft);
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .semaforo-chip:hover { border-color: var(--chip-color); color: var(--text-main); }
+        .semaforo-chip:focus-visible { outline: 2px solid var(--chip-color); outline-offset: 2px; }
+        .semaforo-chip.active {
+          border-color: var(--chip-color);
+          color: var(--chip-color);
+          background: color-mix(in srgb, var(--chip-color) 10%, var(--card-bg));
+        }
+        .chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip-color); }
+        .chip-count {
+          min-width: 22px;
+          padding: 1px 7px;
+          border-radius: 999px;
+          background: color-mix(in srgb, var(--chip-color) 14%, transparent);
+          color: var(--chip-color);
+          font-size: 11.5px;
+          text-align: center;
+        }
+        .semaforo-result {
+          margin-left: auto;
+          flex-shrink: 0;
+          font-size: 12px;
+          color: var(--text-soft);
+          padding-left: 8px;
+        }
+
         .page-header {
           display: flex;
           align-items: center;
@@ -1593,14 +1701,27 @@ function EquiposContent() {
             align-items: stretch;
             gap: 12px;
           }
+          .page-header h1 {
+            font-size: 20px;
+          }
           .page-header-actions {
             width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
           }
           .page-header-actions .btn {
-            flex: 1;
             justify-content: center;
-            font-size: 11.5px;
-            padding: 8px 10px;
+            font-size: 12.5px;
+            padding: 10px 10px;
+            white-space: nowrap;
+          }
+          /* Acción principal primero y a todo el ancho */
+          .page-header-actions .btn-cyan {
+            grid-column: 1 / -1;
+            order: -1;
+            padding: 12px;
+            font-size: 14px;
           }
         }
       `}</style>

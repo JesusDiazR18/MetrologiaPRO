@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calcularProximoControl, evaluarPuntos, REGLA_DECISION } from '@/lib/metrologia'
+import { calcularProximoControl, evaluarPuntos } from '@/lib/metrologia'
 import { getSessionFromRequest } from '@/lib/auth'
 
 class ValidationError extends Error {}
@@ -18,8 +18,7 @@ function evaluarCalibracion(
   rawPoints: unknown,
   medidaInstrumento: unknown,
   medidaPatron: unknown,
-  tolerancia: number,
-  incertidumbre: number
+  tolerancia: number
 ) {
   let puntos: Array<{ patron: unknown; instrumento: unknown }> = []
   if (typeof rawPoints === 'string' && rawPoints.trim()) {
@@ -31,10 +30,10 @@ function evaluarCalibracion(
     puntos = [{ patron: medidaPatron, instrumento: medidaInstrumento }]
   }
 
-  const ev = evaluarPuntos(puntos, tolerancia, incertidumbre)
+  const ev = evaluarPuntos(puntos, tolerancia)
   if (!ev) throw new ValidationError('Las mediciones del patrón y del instrumento deben ser numéricas')
 
-  const points = ev.points.map(p => ({ ...p, tolerancia, incertidumbre: incertidumbre || undefined }))
+  const points = ev.points.map(p => ({ ...p, tolerancia }))
   return {
     numInstr: ev.worstInstrumento,
     numPatr: ev.worstPatron,
@@ -123,9 +122,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const session = getSessionFromRequest(request)
-    // Firma electrónica: usuario autenticado que registra + regla de decisión aplicada
+    // Firma electrónica: usuario autenticado que registra
     const firma = session
-      ? `${session.nombre} <${session.email}> · ${new Date().toISOString()} · ${REGLA_DECISION}`
+      ? `${session.nombre} <${session.email}> · ${new Date().toISOString()}`
       : null
 
     const equipo = await prisma.instrumentoEquipo.findUnique({
@@ -166,7 +165,7 @@ export async function POST(request: Request) {
                 }
               } catch {}
             }
-            const ev = evaluarCalibracion(item.Mediciones_Puntos, item.Medida_Instrumento, item.Medida_Patron, magTolerancia, positiveOrNull(item.Incertidumbre_Expandida) ?? 0)
+            const ev = evaluarCalibracion(item.Mediciones_Puntos, item.Medida_Instrumento, item.Medida_Patron, magTolerancia)
             ;({ numInstr, numPatr, variacion, status } = ev)
             item.Mediciones_Puntos = ev.pointsJson
           } else {
@@ -253,7 +252,7 @@ export async function POST(request: Request) {
           await validarPatron(body.FK_ID_Patron_Usado, new Date())
           // Tolerancia aplicada: la indicada en la verificación (p. ej. tras conversión de unidades) o la del equipo
           const toleranciaAplicada = positiveOrNull(body.Tolerancia_Aplicada) || equipo.Tolerancia_Aceptable
-          const ev = evaluarCalibracion(body.Mediciones_Puntos, body.Medida_Instrumento, body.Medida_Patron, toleranciaAplicada, positiveOrNull(body.Incertidumbre_Expandida) ?? 0)
+          const ev = evaluarCalibracion(body.Mediciones_Puntos, body.Medida_Instrumento, body.Medida_Patron, toleranciaAplicada)
           ;({ numInstr, numPatr, variacion, status, pointsJson } = ev)
         } else {
           status = body.Resultado_Status || 'OPERATIVO'

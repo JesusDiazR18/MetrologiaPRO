@@ -102,12 +102,12 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20 }}>
+      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: 20 }}>
         
         {/* ========================================================================= */}
         {/* 1. CENTRO DE CORREOS Y NOTIFICACIONES AUTOMÁTICAS */}
         {/* ========================================================================= */}
-        <div className="card" style={{ padding: 28, gridColumn: 'span 2' }}>
+        <div className="card card-wide" style={{ padding: 28 }}>
           <div className="section-title">
             <Mail size={20} color="var(--accent)" />
             <span>Sistema Automatizado de Correos y Cron Jobs</span>
@@ -125,7 +125,7 @@ export default function ConfiguracionPage() {
             El sistema ejecuta rutinas periódicas automatizadas y el balance mensual para alertar sobre vencimientos metrológicos y pendientes de calidad.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16, marginBottom: 24 }}>
             {/* Alerta Periódica Card */}
             <div className="cron-info-card" style={{ borderLeft: '4px solid #0ea5e9' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -135,7 +135,7 @@ export default function ConfiguracionPage() {
                 <span className="badge badge-equipo">Semanal / Diario</span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.4, marginBottom: 12 }}>
-                Identifica activos con vencimiento a $\le 30$ días, $\le 15$ días, $\le 7$ días, vencidos, patrones por calibrar y activos con protocolo de seguimiento activo.
+                Identifica activos con vencimiento a 30, 15 y 7 días o menos, vencidos, patrones por calibrar y activos con protocolo de seguimiento activo.
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button 
@@ -314,8 +314,15 @@ export default function ConfiguracionPage() {
       )}
 
       <style jsx>{`
+        .card-wide {
+          grid-column: span 2;
+        }
+        @media (max-width: 1024px) {
+          .card-wide { grid-column: auto; }
+        }
         .section-title {
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
           gap: 12px;
           font-size: 15px;
