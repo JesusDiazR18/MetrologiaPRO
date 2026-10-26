@@ -21,8 +21,14 @@ export interface SessionPayload {
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET
   if (secret && secret.length >= 32) return secret
+  // Sin SESSION_SECRET: se deriva una clave de DATABASE_URL, que ya es secreta
+  // (incluye la contraseña de la base). Cambiar esa contraseña cierra las sesiones.
+  const dbUrl = process.env.DATABASE_URL
+  if (dbUrl) {
+    return createHmac('sha256', 'metrologiapro-session-v1').update(dbUrl).digest('hex')
+  }
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('SESSION_SECRET no configurado (mínimo 32 caracteres)')
+    throw new Error('SESSION_SECRET o DATABASE_URL no configurado')
   }
   // Solo desarrollo local: secreto estable por proceso
   const g = globalThis as unknown as { __devSessionSecret?: string }

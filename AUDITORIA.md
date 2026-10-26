@@ -46,11 +46,10 @@ Alcance: código completo (Next.js 16 + Prisma/PostgreSQL), 25 k líneas. Se rev
 - Pruebas automatizadas (`npm test`) del motor metrológico y de la autenticación.
 
 ## 5. Acciones requeridas al desplegar
-1. En Vercel → Settings → Environment Variables, crear:
-   - `SESSION_SECRET` (aleatorio, ≥ 32 caracteres): `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`
-   - `CRON_SECRET` (aleatorio).
-2. Todos los usuarios deberán iniciar sesión de nuevo (las cookies antiguas dejan de ser válidas).
-3. Los técnicos ya no pueden **eliminar** registros; solo los Admin.
+1. `CRON_SECRET` en Vercel (Settings → Environment Variables) para que sigan funcionando las alertas por correo programadas.
+2. `SESSION_SECRET` es opcional: si no existe, la clave de sesión se deriva de `DATABASE_URL`.
+3. Todos los usuarios deberán iniciar sesión de nuevo (las cookies antiguas dejan de ser válidas).
+4. Los técnicos ya no pueden **eliminar** registros; solo los Admin.
 
 ## 6. Hoja de ruta hacia un estándar de clase mundial
 Prioridad alta:
