@@ -830,7 +830,7 @@ tr:hover { transform: translateX(2px); }
 .modal-header {
   padding: 20px 28px;
   border-bottom: 1px solid var(--glass-border);
-  display: flex; align-items: center; gap: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
   background: var(--card-bg);
 }
 

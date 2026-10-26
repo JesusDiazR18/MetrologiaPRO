@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
+import { calcularStatus, calcularTUR, TUR_MINIMO } from '@/lib/metrologia'
 import { 
   CheckCircle2, XCircle, User, FileText, 
   Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Lock, LogIn, BookOpen
@@ -193,6 +193,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const [customUnidad, setCustomUnidad] = useState('')
   const [formulaActiva, setFormulaActiva] = useState<'NINGUNA' | 'MASA_A_NEWTONS_KG' | 'MASA_A_NEWTONS_G' | 'KGF_A_NEWTONS' | 'NEWTONS_A_KN'>('NINGUNA')
   const [customTolerancia, setCustomTolerancia] = useState('')
+  const [incertidumbre, setIncertidumbre] = useState('')
   const [tecnico, setTecnico] = useState('')
   const [obs, setObs] = useState('')
   const [accionesPendientes, setAccionesPendientes] = useState('')
@@ -264,7 +265,8 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
   const calculateMultipointCalcs = (
     meds: { patron: string, instrumento: string }[],
-    tolerance: number
+    tolerance: number,
+    uExpandida = 0
   ) => {
     let maxAbsVar = 0
     let worstVar: number | null = null
@@ -301,7 +303,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
     if (!hasValues || worstVar === null) return null
 
-    const status = Math.abs(worstVar) <= tolerance ? 'APTO' : 'NO_APTO'
+    const status = calcularStatus(worstVar, tolerance, uExpandida)
     return {
       points: points as { patron: number; instrumento: number; variacion: number }[],
       worstVar: worstVar as number,
@@ -318,8 +320,11 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
   const effectiveUnidad = customUnidad || selectedEquipo?.Unidad_Tolerancia || ''
 
+  const effectiveU = parseFloat(incertidumbre) > 0 ? parseFloat(incertidumbre) : 0
+  const tur = calcularTUR(effectiveTolerance, effectiveU)
+
   const singleCalcs = selectedEquipo
-    ? calculateMultipointCalcs(mediciones, effectiveTolerance)
+    ? calculateMultipointCalcs(mediciones, effectiveTolerance, effectiveU)
     : null
 
   const varNum = singleCalcs?.worstVar ?? null
@@ -517,6 +522,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         ? singleCalcs.points.map((p, idx) => ({
             ...p,
             unidad: effectiveUnidad,
+            incertidumbre: effectiveU || undefined,
             formula: formulaActiva !== 'NINGUNA' ? formulaActiva : undefined,
             masaInput: mediciones[idx]?.masaInput || undefined
           }))
@@ -529,6 +535,8 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstInstrumento : null,
         Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstVar : null,
         Tecnico_Ejecutor: tecnico,
+        Tolerancia_Aplicada: effectiveTolerance,
+        Incertidumbre_Expandida: effectiveU || null,
         Observaciones: finalObs,
         Tipo_Verificacion: tipoVerif,
         Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,
@@ -1008,6 +1016,36 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                             </div>
                           </div>
                         </div>
+
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                            Incertidumbre expandida U (k=2) {effectiveUnidad && `(${effectiveUnidad})`}:
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="Opcional · ej: 0.05"
+                            value={incertidumbre}
+                            onChange={e => setIncertidumbre(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: 8,
+                              border: '1.5px solid #cbd5e1',
+                              background: '#fff',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: '#1e293b',
+                              outline: 'none'
+                            }}
+                          />
+                          <div style={{ fontSize: 10.5, color: tur !== null && tur < TUR_MINIMO ? '#b45309' : '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                            {tur === null
+                              ? 'Sin U: aceptación simple |E| ≤ EMP.'
+                              : `Regla ILAC-G8: conforme si |E| + U ≤ EMP · TUR ${tur}:1${tur < TUR_MINIMO ? ` (bajo el mínimo recomendado ${TUR_MINIMO}:1)` : ''}`}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Botones de acceso rápido para masas patrón (E-17 / Máquina Universal) */}
@@ -1260,7 +1298,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
                                 transition: 'width 0.3s ease'
                               }} />
                             </div>
-                            <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{effectiveTolerance} {effectiveUnidad}</span>
+                            <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{effectiveTolerance} {effectiveUnidad}{effectiveU > 0 && ` · U ±${effectiveU}`}</span>
                           </div>
                         </div>
                         <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>

@@ -1,10 +1,9 @@
 import { Metadata } from 'next'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { calcularSemaforo, semaforoLabel, semaforoHex, formatFecha, diasRestantes } from '@/lib/metrologia'
 import VisorVerificationButton from '@/components/VisorVerificationButton'
 
-const prisma = new PrismaClient()
 
 export const metadata: Metadata = {
   title: 'Ficha Técnica - Sistema Metrológico',

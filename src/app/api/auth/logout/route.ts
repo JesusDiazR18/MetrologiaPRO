@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sessionCookieOptions } from '@/lib/auth'
 
 export async function POST() {
   try {
@@ -6,9 +7,8 @@ export async function POST() {
     
     // Clear session cookie
     response.cookies.set({
-      name: 'qms_session',
+      ...sessionCookieOptions(),
       value: '',
-      path: '/',
       maxAge: 0
     })
 

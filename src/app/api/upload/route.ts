@@ -1,6 +1,30 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+const MAX_BYTES = 10 * 1024 * 1024
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+const ASSET_TYPES = ['EQUIPO', 'INSTRUMENTO', 'PATRON', 'HISTORIAL']
+
+/** Valida tipo, tamaño y contenido real del archivo antes de persistirlo. */
+function validateUpload(dataUrl: string, uploadType: string, assetType: string): string | null {
+  if (!ASSET_TYPES.includes(assetType)) return 'Tipo de activo no válido'
+  if (uploadType !== 'FOTO' && uploadType !== 'CERTIFICADO') return 'Tipo de carga no válido'
+  const match = /^data:([^;,]+);base64,([\s\S]*)$/.exec(dataUrl)
+  if (!match) return 'Formato de archivo no válido'
+  const [, mime, b64] = match
+  const bytes = Buffer.from(b64, 'base64')
+  if (bytes.length === 0) return 'El archivo está vacío'
+  if (bytes.length > MAX_BYTES) return 'El archivo supera el máximo de 10 MB'
+  if (uploadType === 'FOTO') {
+    if (!IMAGE_TYPES.includes(mime)) return 'La foto debe ser PNG, JPG, WEBP o GIF'
+  } else {
+    if (mime !== 'application/pdf' || bytes.subarray(0, 5).toString('latin1') !== '%PDF-') {
+      return 'El certificado debe ser un archivo PDF válido'
+    }
+  }
+  return null
+}
+
 export async function POST(request: Request) {
   try {
     let fileBase64 = ''
@@ -52,6 +76,9 @@ export async function POST(request: Request) {
     }
 
     const publicPath = fileBase64.startsWith('data:') ? fileBase64 : `data:${fileType};base64,${fileBase64}`
+
+    const invalid = validateUpload(publicPath, uploadType, assetType)
+    if (invalid) return NextResponse.json({ error: invalid }, { status: 400 })
 
     let updated
 

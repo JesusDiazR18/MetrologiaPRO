@@ -8,7 +8,8 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "lint": "eslint",
-    "seed": "tsx seed_final.ts"
+    "seed": "tsx seed_final.ts",
+    "test": "tsx --test src/lib/*.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -1,72 +1,26 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { authenticate, withSessionCookie } from '@/lib/authenticate'
 
 /**
  * POST /api/auth/verify
- * Verifica credenciales de usuario para autorizar registros de verificación.
- * Solo usuarios con Rol 'Admin' o 'Técnico' y contraseña válida pueden autorizar.
- * Body: { email: string, contrasena: string }
+ * Autoriza (firma) el registro de una verificación. Solo Admin o Técnico.
+ * Si las credenciales son válidas también abre sesión, lo que permite operar
+ * desde el visor público (escaneo QR) sin pasar por /login.
+ * Body: { username: string, contrasena: string }
  */
 export async function POST(req: Request) {
   try {
     const { username, contrasena } = await req.json()
+    const result = await authenticate(req, username, contrasena)
+    if (!result.ok) return result.response
 
-    if (!username || !contrasena) {
-      return NextResponse.json(
-        { error: 'Se requiere usuario y contraseña' },
-        { status: 400 }
-      )
+    const { user } = result
+    if (user.Rol !== 'Admin' && user.Rol !== 'Técnico') {
+      return NextResponse.json({ error: 'Su rol no permite registrar verificaciones' }, { status: 403 })
     }
 
-    const targetUser = username.trim().toLowerCase()
-    const emailToSearch = targetUser.includes('@') ? targetUser : `${targetUser}@polifusion.cl`
-
-    const usuario = await prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { Email: { equals: emailToSearch, mode: 'insensitive' } },
-          { Email: { equals: targetUser, mode: 'insensitive' } }
-        ]
-      },
-      select: {
-        Email: true,
-        Nombre: true,
-        Rol: true,
-        Contrasena: true
-      }
-    })
-
-    if (!usuario) {
-      return NextResponse.json(
-        { error: 'Usuario no autorizado para registrar verificaciones' },
-        { status: 401 }
-      )
-    }
-
-    // Solo usuarios con contraseña configurada pueden autorizar
-    if (!usuario.Contrasena) {
-      return NextResponse.json(
-        { error: 'Usuario sin permisos de verificación. Contacte al administrador.' },
-        { status: 403 }
-      )
-    }
-
-    // Verificar contraseña
-    if (usuario.Contrasena !== contrasena) {
-      return NextResponse.json(
-        { error: 'Contraseña incorrecta' },
-        { status: 401 }
-      )
-    }
-
-    return NextResponse.json({
-      authenticated: true,
-      nombre: usuario.Nombre,
-      rol: usuario.Rol
-    })
-  } catch (err: any) {
+    return withSessionCookie(NextResponse.json({ authenticated: true, nombre: user.Nombre, rol: user.Rol }), user)
+  } catch (err) {
     console.error('Auth error:', err)
     return NextResponse.json({ error: 'Error de autenticación' }, { status: 500 })
   }

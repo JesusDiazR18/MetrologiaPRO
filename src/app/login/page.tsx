@@ -11,7 +11,9 @@ import {
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectUrl = searchParams.get('redirect') || '/'
+  const rawRedirect = searchParams.get('redirect') || '/'
+  // Solo rutas internas: evita redirecciones abiertas hacia dominios externos
+  const redirectUrl = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.startsWith('/\\') ? rawRedirect : '/'
   
   const { user, login, isAuthenticated, loading: authLoading } = useAuth()
 

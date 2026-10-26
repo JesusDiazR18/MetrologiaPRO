@@ -34,6 +34,13 @@ export default function VisorVerificationButton({ equipo }: Props) {
     }
     setLoading(true)
     try {
+      // Registrar una verificación requiere sesión de Técnico o Administrador
+      const me = await fetch('/api/auth/me', { cache: 'no-store' })
+      if (!me.ok) {
+        toast('Inicie sesión para registrar la verificación')
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+        return
+      }
       const res = await fetch('/api/equipos')
       if (res.ok) {
         const data = await res.json()
