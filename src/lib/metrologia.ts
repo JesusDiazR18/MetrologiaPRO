@@ -1,4 +1,4 @@
-import { differenceInDays } from 'date-fns'
+import { addMonths, differenceInDays } from 'date-fns'
 
 // --- Umbrales Configurables (Motor de Reglas) ---
 export const THRESHOLDS = {
@@ -71,19 +71,63 @@ export function semaforoLabel(s: SemaforoColor, estado?: string): string {
 
 /**
  * Lógica de validación técnica.
+ * E = lectura del instrumento − valor del patrón. Conforme si |E| ≤ EMP (tolerancia).
  */
 export function calcularVariacion(instrumento: number, patron: number): number {
   return parseFloat((instrumento - patron).toFixed(6))
 }
 
 export function calcularStatus(variacion: number, tolerancia: number): 'APTO' | 'NO_APTO' {
-  return Math.abs(variacion) <= tolerancia ? 'APTO' : 'NO_APTO'
+  // Pequeño margen para evitar falsos NO_APTO por representación binaria (p. ej. 0.1 + 0.2)
+  return Math.abs(variacion) <= tolerancia + 1e-9 ? 'APTO' : 'NO_APTO'
 }
 
+export interface PuntoEvaluado {
+  patron: number
+  instrumento: number
+  variacion: number
+  [extra: string]: unknown
+}
+
+export interface EvaluacionPuntos {
+  points: PuntoEvaluado[]
+  worstVar: number
+  worstPatron: number
+  worstInstrumento: number
+  status: 'APTO' | 'NO_APTO'
+}
+
+/**
+ * Evalúa una serie de puntos de medición (patrón vs. instrumento) y devuelve
+ * el punto con mayor error absoluto y el dictamen global. Los valores no
+ * numéricos se descartan; si no queda ningún punto válido retorna null.
+ */
+export function evaluarPuntos(
+  puntos: Array<{ patron: unknown; instrumento: unknown; [extra: string]: unknown }>,
+  tolerancia: number
+): EvaluacionPuntos | null {
+  const points: PuntoEvaluado[] = []
+  for (const p of puntos) {
+    const patron = typeof p.patron === 'number' ? p.patron : parseFloat(String(p.patron ?? ''))
+    const instrumento = typeof p.instrumento === 'number' ? p.instrumento : parseFloat(String(p.instrumento ?? ''))
+    if (!Number.isFinite(patron) || !Number.isFinite(instrumento)) continue
+    points.push({ ...p, patron, instrumento, variacion: calcularVariacion(instrumento, patron) })
+  }
+  if (points.length === 0) return null
+
+  const worst = points.reduce((a, b) => (Math.abs(b.variacion) >= Math.abs(a.variacion) ? b : a))
+  return {
+    points,
+    worstVar: worst.variacion,
+    worstPatron: worst.patron,
+    worstInstrumento: worst.instrumento,
+    status: calcularStatus(worst.variacion, tolerancia),
+  }
+}
+
+/** Suma meses respetando fin de mes (31-ene + 1 mes = 28/29-feb, no 3-mar). */
 export function calcularProximoControl(from: Date, meses: number): Date {
-  const d = new Date(from)
-  d.setMonth(d.getMonth() + meses)
-  return d
+  return addMonths(new Date(from), meses)
 }
 
 /**

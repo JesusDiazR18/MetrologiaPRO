@@ -830,7 +830,7 @@ tr:hover { transform: translateX(2px); }
 .modal-header {
   padding: 20px 28px;
   border-bottom: 1px solid var(--glass-border);
-  display: flex; align-items: center; gap: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
   background: var(--card-bg);
 }
 
@@ -892,7 +892,7 @@ tr:hover { transform: translateX(2px); }
     transform: translateX(-100%) !important; 
     width: min(300px, 85vw) !important;
     z-index: 1200 !important;
-    box-shadow: 20px 0 60px rgba(0,0,0,0.4) !important;
+    box-shadow: none !important; /* la sombra del menú oculto se filtraba como franja gris */
     display: flex !important;
     flex-direction: column !important;
     pointer-events: none;
@@ -901,6 +901,7 @@ tr:hover { transform: translateX(2px); }
   .sidebar.open { 
     transform: translateX(0) !important; 
     pointer-events: auto !important;
+    box-shadow: 20px 0 60px rgba(0,0,0,0.4) !important;
   }
   
   .main-content { 

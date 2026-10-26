@@ -1,10 +1,9 @@
 import { Metadata } from 'next'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { calcularSemaforo, semaforoLabel, semaforoHex, formatFecha, diasRestantes } from '@/lib/metrologia'
 import VisorVerificationButton from '@/components/VisorVerificationButton'
 
-const prisma = new PrismaClient()
 
 export const metadata: Metadata = {
   title: 'Ficha Técnica - Sistema Metrológico',
@@ -94,6 +93,20 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
 
   // Último historial
   const ultimaVerificacion = (assetFound as any).historiales?.[0] || null
+  const fechaUltima = assetFound.Fecha_Ultima_Verificacion || ultimaVerificacion?.Fecha_Ejecucion || null
+
+  // Mensaje claro para el operador en planta: ¿puedo usar este activo?
+  const isBaja = ['DE_BAJA_OBSOLETO', 'OBSOLETO', 'BAJA'].includes(estado)
+  const usoBloqueado = isFuera || semaforoBase === 'ROJO'
+  const usoAviso = isBaja
+    ? { titulo: 'Activo dado de baja', texto: 'No debe utilizarse en mediciones.' }
+    : isFuera
+      ? { titulo: 'No utilizar', texto: 'El activo está fuera de servicio o no apto.' }
+      : semaforoBase === 'ROJO'
+        ? { titulo: 'No utilizar: control vencido', texto: 'Debe verificarse o calibrarse antes de usarlo en mediciones.' }
+        : semaforoBase === 'AMARILLO'
+          ? { titulo: 'Apto para uso · control próximo', texto: `Programar la próxima ${isPatron ? 'calibración' : 'verificación'} (${diasRestantes(assetFound.Fecha_Proximo_Control).toLowerCase()}).` }
+          : { titulo: 'Apto para uso', texto: `${isPatron ? 'Certificado de calibración vigente' : 'Verificación vigente'}.` }
 
   // Función para formatear el estado humano
   function estadoHumano(est: string): string {
@@ -137,7 +150,31 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
           {/* Badge de Estado */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 16, background: `${sColor}10`, padding: '8px 16px', borderRadius: 30, border: `1px solid ${sColor}30` }}>
             <div style={{ background: sColor, width: 10, height: 10, borderRadius: '50%', boxShadow: `0 0 10px ${sColor}` }} />
-            <span style={{ color: sColor, fontSize: 13, fontWeight: 800, textTransform: 'uppercase' }}>{estadoHumano(estado)}</span>
+            <span style={{ color: sColor, fontSize: 13, fontWeight: 800, textTransform: 'uppercase' }}>
+              {semaforoBase === 'ROJO' && !isFuera && estado !== 'VENCIDO' ? sLabel : estadoHumano(estado)}
+            </span>
+          </div>
+
+          {/* Indicación de uso para el operador */}
+          <div role="status" style={{
+            marginTop: 14,
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+            padding: '12px 14px',
+            borderRadius: 14,
+            background: usoBloqueado ? '#fef2f2' : semaforoBase === 'AMARILLO' ? '#fffbeb' : '#f0fdf4',
+            border: `1px solid ${usoBloqueado ? '#fecaca' : semaforoBase === 'AMARILLO' ? '#fde68a' : '#bbf7d0'}`
+          }}>
+            <div style={{ fontSize: 20, lineHeight: 1 }}>{usoBloqueado ? '⛔' : semaforoBase === 'AMARILLO' ? '⚠️' : '✅'}</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: usoBloqueado ? '#991b1b' : semaforoBase === 'AMARILLO' ? '#92400e' : '#166534' }}>
+                {usoAviso.titulo}
+              </div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: usoBloqueado ? '#b91c1c' : semaforoBase === 'AMARILLO' ? '#a16207' : '#15803d', marginTop: 2 }}>
+                {usoAviso.texto}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -238,7 +275,7 @@ export default async function VisorPublico({ params }: { params: Promise<{ id: s
             Última {isPatron ? 'Calibración' : 'Verificación'}
           </span>
           <span style={{ fontSize: 15, fontWeight: 800, color: '#1e293b' }}>
-            {formatFecha(assetFound.Fecha_Ultima_Verificacion) || 'No registrada'}
+            {fechaUltima ? formatFecha(fechaUltima) : 'No registrada'}
           </span>
         </div>
 

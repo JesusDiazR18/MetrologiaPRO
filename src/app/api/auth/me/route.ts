@@ -1,25 +1,19 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth'
 
 export async function GET() {
   try {
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('qms_session')?.value
+    const sessionCookie = cookieStore.get(SESSION_COOKIE)?.value
 
     if (!sessionCookie) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 })
     }
 
-    let payload: any = null
-    try {
-      const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8')
-      payload = JSON.parse(decoded)
-    } catch {
-      return NextResponse.json({ authenticated: false, user: null }, { status: 401 })
-    }
-
-    if (!payload || !payload.email || (payload.expiresAt && Date.now() > payload.expiresAt)) {
+    const payload = verifySessionToken(sessionCookie)
+    if (!payload) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 })
     }
 

@@ -516,18 +516,22 @@ export default function BibliotecaPage() {
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
-        .form-group-modern input {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 10px 14px;
-          border-radius: 10px;
-          color: #fff;
-          font-size: 13px;
+        .form-group-modern input:not([type="file"]),
+        .form-group-modern select {
+          background: var(--page-bg-soft, #f8fafc) !important;
+          border: 1.5px solid var(--glass-border, #e2e8f0) !important;
+          padding: 11px 14px !important;
+          border-radius: 12px !important;
+          color: var(--text-main, #0f172a) !important;
+          font-size: 14px !important;
           outline: none;
-          transition: border-color 0.2s;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .form-group-modern input:focus {
-          border-color: var(--accent);
+        .form-group-modern input:not([type="file"]):focus,
+        .form-group-modern select:focus {
+          border-color: var(--accent) !important;
+          background: var(--card-bg, #fff) !important;
+          box-shadow: 0 0 0 3px var(--accent-glow, rgba(14,165,233,0.15));
         }
       `}</style>
     </div>

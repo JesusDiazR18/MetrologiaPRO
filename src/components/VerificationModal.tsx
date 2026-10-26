@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
+import { calcularStatus } from '@/lib/metrologia'
 import { 
   CheckCircle2, XCircle, User, FileText, 
   Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Lock, LogIn, BookOpen
@@ -301,7 +301,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
 
     if (!hasValues || worstVar === null) return null
 
-    const status = Math.abs(worstVar) <= tolerance ? 'APTO' : 'NO_APTO'
+    const status = calcularStatus(worstVar, tolerance)
     return {
       points: points as { patron: number; instrumento: number; variacion: number }[],
       worstVar: worstVar as number,
@@ -529,6 +529,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         Medida_Instrumento: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstInstrumento : null,
         Variacion_Calculada: (tipoVerif === 'CALIBRACION' && equipoMags.length <= 1 && singleCalcs) ? singleCalcs.worstVar : null,
         Tecnico_Ejecutor: tecnico,
+        Tolerancia_Aplicada: effectiveTolerance,
         Observaciones: finalObs,
         Tipo_Verificacion: tipoVerif,
         Acciones_Pendientes: tipoVerif === 'OPERATIVIDAD' ? (accionesPendientes || null) : null,

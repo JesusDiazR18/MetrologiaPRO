@@ -497,6 +497,9 @@ export default function UsuariosPage() {
 
       <style jsx>{`
         .users-page-container {
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
           padding: 24px var(--page-px, 24px);
           max-width: 1200px;
           margin: 0 auto;
@@ -1206,6 +1209,13 @@ export default function UsuariosPage() {
         }
 
         @media (max-width: 768px) {
+          .users-page-container {
+            padding: 0;
+            gap: 16px;
+          }
+          .page-title {
+            font-size: 20px;
+          }
           .page-header {
             flex-direction: column;
             align-items: stretch;

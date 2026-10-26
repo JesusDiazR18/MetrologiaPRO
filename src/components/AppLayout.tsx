@@ -129,7 +129,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ? [...baseNavItems, { href: '/usuarios', label: 'Gestión Usuarios', shortLabel: 'Usuarios', icon: Users }]
     : baseNavItems
 
-  const currentPage = navItems.find(n => n.href === pathname)?.label ?? (pathname === '/usuarios' ? 'Gestión de Usuarios' : 'Panel')
+  const extraTitles: Record<string, string> = {
+    '/usuarios': 'Gestión de Usuarios',
+    '/biblioteca': 'Biblioteca de Ensayos',
+    '/configuracion': 'Configuración',
+  }
+  const currentPage = navItems.find(n => n.href === pathname)?.label ?? extraTitles[pathname] ?? 'Panel'
   const userInitials = user.nombre ? user.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : (user.username?.slice(0, 2).toUpperCase() || 'U')
 
   return (
@@ -449,6 +454,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         .topbar-title-block {
           display: flex;
           flex-direction: column;
+          min-width: 0;
+        }
+
+        .topbar-title-block .topbar-title {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .topbar-sub-brand {
@@ -695,6 +707,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             height: 56px !important;
             padding: 0 14px !important;
             gap: 12px !important;
+          }
+
+          .topbar-title-block {
+            flex: 1;
           }
 
           .topbar-title {

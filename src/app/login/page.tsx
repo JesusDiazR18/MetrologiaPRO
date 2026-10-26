@@ -11,7 +11,9 @@ import {
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectUrl = searchParams.get('redirect') || '/'
+  const rawRedirect = searchParams.get('redirect') || '/'
+  // Solo rutas internas: evita redirecciones abiertas hacia dominios externos
+  const redirectUrl = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.startsWith('/\\') ? rawRedirect : '/'
   
   const { user, login, isAuthenticated, loading: authLoading } = useAuth()
 
@@ -667,7 +669,7 @@ export default function LoginPage() {
           align-items: center;
         }
 
-        .field-icon {
+        .input-field-wrapper :global(.field-icon) {
           position: absolute;
           left: 16px;
           color: var(--text-dim, #94a3b8);
@@ -696,7 +698,7 @@ export default function LoginPage() {
           box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
         }
 
-        .input-field-wrapper:focus-within .field-icon {
+        .input-field-wrapper:focus-within :global(.field-icon) {
           color: #0ea5e9;
         }
 

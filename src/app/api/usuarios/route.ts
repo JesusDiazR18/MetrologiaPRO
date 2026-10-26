@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
+import { SESSION_COOKIE, hashPassword, verifySessionToken } from '@/lib/auth'
 
 // Helper to verify if requester is Admin
 async function isAuthorizedAdmin() {
   try {
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('qms_session')?.value
-    if (!sessionCookie) return false
-
-    const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8')
-    const payload = JSON.parse(decoded)
-    if (!payload || !payload.email) return false
+    const payload = verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value)
+    if (!payload) return false
 
     const user = await prisma.usuario.findUnique({
       where: { Email: payload.email },
@@ -89,7 +86,7 @@ export async function POST(req: Request) {
         Email: finalEmail,
         Nombre: nombre.trim(),
         Rol: rol,
-        Contrasena: contrasena ? contrasena.trim() : null
+        Contrasena: contrasena && contrasena.trim() ? hashPassword(contrasena.trim()) : null
       }
     })
 
@@ -130,7 +127,7 @@ export async function PUT(req: Request) {
     }
 
     if (contrasena !== undefined && contrasena !== null && contrasena.trim().length > 0) {
-      updateData.Contrasena = contrasena.trim()
+      updateData.Contrasena = hashPassword(contrasena.trim())
     }
 
     const updated = await prisma.usuario.update({

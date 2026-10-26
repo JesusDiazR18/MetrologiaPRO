@@ -1,6 +1,63 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { calcularVariacion, calcularStatus, calcularProximoControl } from '@/lib/metrologia'
+import { calcularProximoControl, evaluarPuntos } from '@/lib/metrologia'
+import { getSessionFromRequest } from '@/lib/auth'
+
+class ValidationError extends Error {}
+
+function positiveOrNull(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''))
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+/**
+ * Recalcula en servidor el resultado de una calibración/verificación a partir
+ * de los puntos medidos. El dictamen del cliente nunca se usa directamente.
+ */
+function evaluarCalibracion(
+  rawPoints: unknown,
+  medidaInstrumento: unknown,
+  medidaPatron: unknown,
+  tolerancia: number
+) {
+  let puntos: Array<{ patron: unknown; instrumento: unknown }> = []
+  if (typeof rawPoints === 'string' && rawPoints.trim()) {
+    try { puntos = JSON.parse(rawPoints) } catch { throw new ValidationError('Mediciones_Puntos no es un JSON válido') }
+  } else if (Array.isArray(rawPoints)) {
+    puntos = rawPoints
+  }
+  if (!Array.isArray(puntos) || puntos.length === 0) {
+    puntos = [{ patron: medidaPatron, instrumento: medidaInstrumento }]
+  }
+
+  const ev = evaluarPuntos(puntos, tolerancia)
+  if (!ev) throw new ValidationError('Las mediciones del patrón y del instrumento deben ser numéricas')
+
+  const points = ev.points.map(p => ({ ...p, tolerancia }))
+  return {
+    numInstr: ev.worstInstrumento,
+    numPatr: ev.worstPatron,
+    variacion: ev.worstVar,
+    status: ev.status,
+    pointsJson: JSON.stringify(points),
+  }
+}
+
+/** Trazabilidad: el patrón debe existir y tener su certificado vigente a la fecha de la verificación. */
+async function validarPatron(idPatron: unknown, fecha: Date) {
+  if (!idPatron || typeof idPatron !== 'string') throw new ValidationError('Debe indicar el patrón de referencia utilizado')
+  const patron = await prisma.patronReferencia.findUnique({
+    where: { ID_Patron: idPatron },
+    select: { Codigo: true, Estado_Vigencia: true, Fecha_Vencimiento_Certificado: true }
+  })
+  if (!patron) throw new ValidationError('El patrón de referencia indicado no existe')
+  const vencido = patron.Fecha_Vencimiento_Certificado
+    ? patron.Fecha_Vencimiento_Certificado.getTime() < fecha.getTime()
+    : patron.Estado_Vigencia === 'VENCIDO'
+  if (vencido) {
+    throw new ValidationError(`El patrón ${patron.Codigo} tiene el certificado de calibración vencido; no asegura trazabilidad metrológica`)
+  }
+}
 
 export async function GET(request: Request) {
   try {
@@ -64,6 +121,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+    const session = getSessionFromRequest(request)
+    // Firma electrónica: usuario autenticado que registra
+    const firma = session
+      ? `${session.nombre} <${session.email}> · ${new Date().toISOString()}`
+      : null
 
     const equipo = await prisma.instrumentoEquipo.findUnique({
       where: { ID_Equipo: body.FK_ID_Equipo }
@@ -93,10 +155,7 @@ export async function POST(request: Request) {
           status = item.Resultado_Status || 'APTO'
         } else {
           if (tipoVerif === 'CALIBRACION') {
-            numInstr = parseFloat(item.Medida_Instrumento)
-            numPatr = parseFloat(item.Medida_Patron)
-            variacion = calcularVariacion(numInstr, numPatr)
-            
+            await validarPatron(item.FK_ID_Patron_Usado, new Date())
             let magTolerancia = equipo.Tolerancia_Aceptable
             if (equipo.Tolerancias_Multimagnitud) {
               try {
@@ -104,9 +163,11 @@ export async function POST(request: Request) {
                 if (map[item.Magnitud_Controlada]?.tolerancia) {
                   magTolerancia = parseFloat(map[item.Magnitud_Controlada].tolerancia) || 0
                 }
-              } catch (e) {}
+              } catch {}
             }
-            status = calcularStatus(variacion, magTolerancia)
+            const ev = evaluarCalibracion(item.Mediciones_Puntos, item.Medida_Instrumento, item.Medida_Patron, magTolerancia)
+            ;({ numInstr, numPatr, variacion, status } = ev)
+            item.Mediciones_Puntos = ev.pointsJson
           } else {
             status = item.Resultado_Status || 'OPERATIVO'
             if (accionesPendientes && accionesPendientes.trim().length > 0) {
@@ -135,7 +196,7 @@ export async function POST(request: Request) {
             Resultado_Status: status,
             Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
             Observaciones: item.Observaciones || body.Observaciones || null,
-            Firma_Digital: body.Firma_Digital ?? null,
+            Firma_Digital: firma,
             Tipo_Verificacion: tipoVerif,
             Acciones_Pendientes: accionesPendientes,
             Estado_Seguimiento: estadoSeguimiento,
@@ -186,11 +247,13 @@ export async function POST(request: Request) {
         let accionesPendientes = body.Acciones_Pendientes || null
         let estadoSeguimiento = 'N/A'
 
+        let pointsJson: string | null = body.Mediciones_Puntos || null
         if (tipoVerif === 'CALIBRACION') {
-          numInstr = parseFloat(body.Medida_Instrumento)
-          numPatr = parseFloat(body.Medida_Patron)
-          variacion = calcularVariacion(numInstr, numPatr)
-          status = calcularStatus(variacion, equipo.Tolerancia_Aceptable)
+          await validarPatron(body.FK_ID_Patron_Usado, new Date())
+          // Tolerancia aplicada: la indicada en la verificación (p. ej. tras conversión de unidades) o la del equipo
+          const toleranciaAplicada = positiveOrNull(body.Tolerancia_Aplicada) || equipo.Tolerancia_Aceptable
+          const ev = evaluarCalibracion(body.Mediciones_Puntos, body.Medida_Instrumento, body.Medida_Patron, toleranciaAplicada)
+          ;({ numInstr, numPatr, variacion, status, pointsJson } = ev)
         } else {
           status = body.Resultado_Status || 'OPERATIVO'
           if (accionesPendientes && accionesPendientes.trim().length > 0) {
@@ -214,13 +277,13 @@ export async function POST(request: Request) {
             Resultado_Status: status,
             Tecnico_Ejecutor: body.Tecnico_Ejecutor || 'Técnico Metrólogo',
             Observaciones: body.Observaciones ?? null,
-            Firma_Digital: body.Firma_Digital ?? null,
+            Firma_Digital: firma,
             Tipo_Verificacion: tipoVerif,
             Acciones_Pendientes: accionesPendientes,
             Estado_Seguimiento: estadoSeguimiento,
             Evidencia_Foto: body.Evidencia_Foto ?? null,
             Magnitud_Controlada: magControlada || null,
-            Mediciones_Puntos: body.Mediciones_Puntos || null
+            Mediciones_Puntos: pointsJson
           }
         })
         overallStatus = status
@@ -251,6 +314,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(createdLog, { status: 201 })
   } catch (error: any) {
+    if (error instanceof ValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     console.error('[API Historial POST Error]:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
