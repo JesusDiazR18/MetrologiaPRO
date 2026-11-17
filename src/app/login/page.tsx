@@ -626,7 +626,7 @@ export default function LoginPage() {
           75% { transform: translateX(4px); }
         }
 
-        .error-icon {
+        :global(.error-icon) {
           flex-shrink: 0;
           margin-top: 2px;
           color: #dc2626;

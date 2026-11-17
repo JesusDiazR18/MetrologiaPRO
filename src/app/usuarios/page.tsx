@@ -804,11 +804,11 @@ export default function UsuariosPage() {
           font-weight: 500;
         }
 
-        .email-icon {
+        :global(.email-icon) {
           color: var(--text-soft, #94a3b8);
         }
 
-        .role-badge {
+        :global(.role-badge) {
           display: inline-flex;
           align-items: center;
           gap: 6px;
@@ -818,19 +818,19 @@ export default function UsuariosPage() {
           font-weight: 700;
         }
 
-        .role-badge.admin {
+        :global(.role-badge.admin) {
           background: rgba(139, 92, 246, 0.12);
           color: #7c3aed;
           border: 1px solid rgba(139, 92, 246, 0.25);
         }
 
-        .role-badge.tech {
+        :global(.role-badge.tech) {
           background: rgba(14, 165, 233, 0.12);
           color: #0284c7;
           border: 1px solid rgba(14, 165, 233, 0.25);
         }
 
-        .role-badge.reader {
+        :global(.role-badge.reader) {
           background: rgba(100, 116, 139, 0.12);
           color: #475569;
           border: 1px solid rgba(100, 116, 139, 0.25);
@@ -911,7 +911,7 @@ export default function UsuariosPage() {
           color: var(--text-dim, #64748b);
         }
 
-        .empty-icon {
+        :global(.empty-icon) {
           color: var(--text-soft, #cbd5e1);
         }
 
@@ -1027,7 +1027,7 @@ export default function UsuariosPage() {
           align-items: center;
         }
 
-        .modal-field-icon {
+        :global(.modal-field-icon) {
           position: absolute;
           left: 14px;
           color: var(--text-dim, #94a3b8);
@@ -1090,7 +1090,7 @@ export default function UsuariosPage() {
           gap: 8px;
         }
 
-        .role-option-icon {
+        :global(.role-option-icon) {
           color: #0ea5e9;
         }
 
@@ -1101,7 +1101,7 @@ export default function UsuariosPage() {
           flex: 1;
         }
 
-        .role-check {
+        :global(.role-check) {
           color: #0ea5e9;
         }
 

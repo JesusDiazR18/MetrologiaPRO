@@ -112,7 +112,7 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {error && <div style={{ background: 'var(--danger-dim)', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
+            {error && <div style={{ background: 'var(--danger-dim)', color: 'var(--bad)', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
             
             <div className="form-section">
               <div className="section-title">1. Identificación del Patrón</div>
@@ -214,16 +214,16 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
                       <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📄</div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{pdfFile.name}</span>
                     </div>
-                    <button type="button" onClick={() => setPdfFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar PDF</button>
+                    <button type="button" onClick={() => setPdfFile(null)} style={{ background: 'var(--danger-dim)', color: 'var(--bad)', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar PDF</button>
                   </div>
                 ) : (
                   <label 
                     style={{ 
-                      border: '2px dashed #cbd5e1', 
+                      border: '2px dashed var(--border-field)', 
                       borderRadius: 14, 
                       padding: '24px 20px', 
                       textAlign: 'center', 
-                      background: '#f8fafc', 
+                      background: 'var(--surface-field)', 
                       cursor: 'pointer', 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -264,16 +264,16 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
                       <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{photoFile.name}</span>
                     </div>
-                    <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar Foto</button>
+                    <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'var(--danger-dim)', color: 'var(--bad)', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar Foto</button>
                   </div>
                 ) : (
                   <label 
                     style={{ 
-                      border: '2px dashed #cbd5e1', 
+                      border: '2px dashed var(--border-field)', 
                       borderRadius: 14, 
                       padding: '24px 20px', 
                       textAlign: 'center', 
-                      background: '#f8fafc', 
+                      background: 'var(--surface-field)', 
                       cursor: 'pointer', 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -308,7 +308,7 @@ export default function EditPatronModal({ patron, onClose, onSaved }: Props) {
       </div>
       <style jsx>{`
         .form-section {
-          background: #ffffff;
+          background: var(--card-bg);
           border: 1px solid var(--snow-3);
           border-radius: 12px;
           padding: 20px;

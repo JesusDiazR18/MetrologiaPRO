@@ -81,7 +81,7 @@ export default function PatronesPage() {
         const data = await res.json()
         setExpandedDetails(prev => ({ ...prev, [patron.ID_Patron]: data }))
         loadedPatron = data
-        toast.success('Cargado', { id: 'modal-loading-patron' })
+        toast.dismiss('modal-loading-patron')
       } else {
         toast.error('Error al cargar detalles', { id: 'modal-loading-patron' })
       }

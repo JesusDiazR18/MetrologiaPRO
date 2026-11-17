@@ -69,6 +69,35 @@
   --text-secondary: #475569;
   --text-muted: #64748b;
   --radius: 12px;
+
+  /* --- Design System v2: superficies, campos y estados semánticos --- */
+  --surface-field: #f8fafc;
+  --surface-sunken: #f1f5f9;
+  --border-field: #dbe3ee;
+  --border-field-hover: #b6c3d4;
+  --ring: rgba(2, 132, 199, 0.22);
+  --on-accent: #ffffff;
+  --btn-primary: #0f172a;
+  --btn-primary-hover: #1e293b;
+  --on-primary: #ffffff;
+
+  --ok: #047857;   --ok-bg: #ecfdf5;   --ok-border: #a7f3d0;
+  --bad: #b91c1c;  --bad-bg: #fef2f2;  --bad-border: #fecaca;
+  --warn: #b45309; --warn-bg: #fffbeb; --warn-border: #fde68a;
+  --info: #0369a1; --info-bg: #f0f9ff; --info-border: #bae6fd;
+
+  /* Tokens usados por componentes pero que nunca se habían definido */
+  --danger-dim: rgba(220, 38, 38, 0.1);
+  --accent-dim: rgba(2, 132, 199, 0.1);
+  --text-color: var(--text-main);
+  --border-color: var(--border-field);
+
+  /* Escala de capas (z-index) */
+  --z-sticky: 50;
+  --z-sidebar: 100;
+  --z-modal: 1400;
+  --z-popover: 1600;
+  --z-toast: 2000;
 }
 
 [data-theme="dark"] {
@@ -117,6 +146,25 @@
   --shadow-md: 0 4px 8px -1px rgba(0,0,0,0.25), 0 2px 4px -1px rgba(0,0,0,0.15);
   --shadow-lg: 0 8px 16px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
   --shadow-premium: 0 12px 20px -5px rgba(0,0,0,0.35), 0 6px 8px -5px rgba(0,0,0,0.25);
+
+  /* Design System v2 (oscuro) */
+  --surface-field: #0e1529;
+  --surface-sunken: #0b1224;
+  --border-field: #25345c;
+  --border-field-hover: #35497f;
+  --ring: rgba(56, 189, 248, 0.3);
+  --on-accent: #04121f;
+  --btn-primary: #e2e8f0;
+  --btn-primary-hover: #ffffff;
+  --on-primary: #06101f;
+
+  --ok: #34d399;   --ok-bg: rgba(16, 185, 129, 0.12);  --ok-border: rgba(52, 211, 153, 0.35);
+  --bad: #fca5a5;  --bad-bg: rgba(248, 113, 113, 0.12); --bad-border: rgba(248, 113, 113, 0.4);
+  --warn: #fcd34d; --warn-bg: rgba(245, 158, 11, 0.12); --warn-border: rgba(252, 211, 77, 0.35);
+  --info: #7dd3fc; --info-bg: rgba(56, 189, 248, 0.1);  --info-border: rgba(125, 211, 252, 0.3);
+
+  --danger-dim: rgba(248, 113, 113, 0.14);
+  --accent-dim: rgba(56, 189, 248, 0.14);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -624,11 +672,11 @@ tr:hover { transform: translateX(2px); }
 }
 
 .btn-primary {
-  background: var(--oxford-blue); color: #fff;
+  background: var(--btn-primary); color: var(--on-primary);
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
-.btn-primary:hover:not(:disabled) { 
-  background: var(--oxford-blue-light); 
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-primary-hover);
   transform: translateY(-1px); 
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
 }
@@ -799,12 +847,16 @@ tr:hover { transform: translateX(2px); }
 .bottom-nav-item svg { width: 22px; height: 22px; }
 
 /* ─── MODAL ──────────────────────────────────────────────────── */
+/* Estructura: el overlay centra; .modal es una columna flex con cabecera y pie
+   fijos y el cuerpo (.modal-body) como única zona con scroll. Si un modal no usa
+   .modal-body, .modal conserva overflow-y:auto como respaldo. */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(15, 23, 42, 0.65); z-index: 300;
+  background: rgba(8, 13, 26, 0.6); z-index: var(--z-modal);
   display: flex; align-items: center; justify-content: center;
-  padding: clamp(10px, 2vh, 20px); backdrop-filter: blur(8px);
-  animation: fadeInModal 0.3s ease-out;
+  padding: clamp(8px, 2.5vh, 28px);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: fadeInModal 0.2s ease-out;
 }
 
 @keyframes fadeInModal {
@@ -813,30 +865,60 @@ tr:hover { transform: translateX(2px); }
 }
 
 .modal {
+  position: relative;
+  display: flex; flex-direction: column;
   background: var(--card-bg);
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 32px 64px -16px rgba(2, 6, 23, 0.5);
   width: 100%; max-width: 560px;
-  max-height: 90vh; overflow-y: auto;
+  max-height: 100%;
+  overflow-x: hidden; overflow-y: auto;
   border: 1px solid var(--glass-border);
-  animation: modalScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalScaleUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalScaleUp {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
 }
 
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+/* Un <form> que envuelve cuerpo + pie debe participar del layout flex */
+.modal > form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+
 .modal-header {
+  flex-shrink: 0;
   padding: 20px 28px;
   border-bottom: 1px solid var(--glass-border);
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   background: var(--card-bg);
 }
 
-.modal-title { font-size: clamp(16px, 3vw, 18px); font-weight: 800; color: var(--text-main); flex: 1; }
-.modal-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; background: var(--page-bg-soft); }
-.modal-footer { padding: 20px 28px; border-top: 1px solid var(--glass-border); display: flex; gap: 12px; justify-content: flex-end; background: var(--page-bg); }
+.modal-title { font-size: clamp(16px, 3vw, 18px); font-weight: 800; color: var(--text-main); flex: 1; min-width: 0; line-height: 1.25; }
+.modal-body {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; background: var(--page-bg-soft);
+}
+.modal-footer { flex-shrink: 0; padding: 20px 28px; border-top: 1px solid var(--glass-border); display: flex; gap: 12px; justify-content: flex-end; background: var(--page-bg); }
+
+/* Móvil: hoja inferior (bottom sheet) que respeta la zona segura del dispositivo */
+@media (max-width: 640px) {
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100% !important;
+    max-height: 94dvh !important;
+    border-radius: 20px 20px 0 0;
+    animation: sheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .modal-header { padding: 14px 16px; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
 
 /* ─── VARIACION DISPLAY ──────────────────────────────────────── */
 .variacion-display {

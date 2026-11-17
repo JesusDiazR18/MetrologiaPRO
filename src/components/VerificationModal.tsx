@@ -1,162 +1,13 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import { compressImage } from '@/lib/imageUtils'
 import { calcularStatus } from '@/lib/metrologia'
-import { 
-  CheckCircle2, XCircle, User, FileText, 
-  Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Lock, LogIn, BookOpen
+import {
+  CheckCircle2, XCircle, User, FileText, Calculator, AlertTriangle, Settings2,
+  Activity, ClipboardList, Lock, LogIn, Camera, Plus, Trash2, Zap, Ruler, ChevronDown, Info,
 } from 'lucide-react'
-import ProcedureModal from '@/components/ProcedureModal'
-
-// Componente de Selección Búsqueda Rápida (Combobox)
-function SearchableSelect({ 
-  options, 
-  value, 
-  onChange, 
-  placeholder = "Buscar y seleccionar...",
-  icon = <User size={14} />
-}: { 
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-  icon?: React.ReactNode;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const selectedOption = options.find(o => o.value === value);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <div 
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) setSearch('');
-        }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderRadius: '12px',
-          border: `2px solid ${isOpen ? '#0ea5e9' : '#f1f5f9'}`,
-          background: isOpen ? '#fff' : '#f8fafc',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          boxShadow: isOpen ? '0 0 0 4px rgba(14, 165, 233, 0.1)' : 'none'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
-          <span style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>{icon}</span>
-          {isOpen ? (
-            <input
-              autoFocus
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
-                  if (filtered.length > 0) {
-                    onChange(filtered[0].value);
-                    setIsOpen(false);
-                  }
-                } else if (e.key === 'Escape') {
-                  setIsOpen(false);
-                }
-              }}
-              placeholder="Escribir código o nombre..."
-              style={{
-                border: 'none',
-                background: 'transparent',
-                outline: 'none',
-                width: '100%',
-                fontSize: '15px',
-                fontWeight: 600,
-                color: '#1e293b',
-                padding: 0
-              }}
-            />
-          ) : (
-            <span style={{ fontSize: '15px', fontWeight: 600, color: selectedOption ? '#1e293b' : '#94a3b8', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-              {selectedOption ? selectedOption.label : placeholder}
-            </span>
-          )}
-        </div>
-        <span style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94a3b8', fontSize: '12px', marginLeft: 8 }}>
-          ▼
-        </span>
-      </div>
-
-      {isOpen && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            left: 0,
-            right: 0,
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)',
-            border: '1px solid #cbd5e1',
-            maxHeight: '240px',
-            overflowY: 'auto',
-            zIndex: 3000,
-            padding: '8px',
-            animation: 'fadeIn 0.2s ease-out'
-          }}
-        >
-          {options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
-            <div style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
-              No se encontraron coincidencias
-            </div>
-          ) : (
-            options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())).map((opt) => (
-              <div
-                key={opt.value}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: opt.value === value ? 700 : 500,
-                  color: opt.value === value ? '#2563eb' : '#1e293b',
-                  background: opt.value === value ? '#eff6ff' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.15s',
-                  marginBottom: '2px'
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = opt.value === value ? '#eff6ff' : '#f1f5f9')}
-                onMouseLeave={e => (e.currentTarget.style.background = opt.value === value ? '#eff6ff' : 'transparent')}
-              >
-                <span>{opt.label}</span>
-                {opt.value === value && <CheckCircle2 size={16} color="#2563eb" />}
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import Modal from '@/components/ui/Modal'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 interface Equipo {
   ID_Equipo: string
@@ -184,15 +35,104 @@ interface Props {
   onSaved: () => void
 }
 
+type Medicion = { patron: string; instrumento: string; masaInput?: string }
+
+// Límite seguro para el cuerpo de la petición en Vercel Serverless (4,5 MB).
+// El JSON restante es pequeño; dejamos margen para él.
+const MAX_PHOTO_CHARS = 3_800_000
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024
+const SAVE_TIMEOUT_MS = 45_000
+
+const meterPct = (value: number, tolerance: number) =>
+  tolerance > 0 ? Math.min(100, (Math.abs(value) / tolerance) * 100) : value !== 0 ? 100 : 0
+
+const signed = (n: number, digits?: number) =>
+  `${n > 0 ? '+' : ''}${digits !== undefined ? n.toFixed(digits) : n}`
+
+/** Fila de medición: patrón · instrumento · variación (coloreada vs tolerancia) · quitar. */
+function MeasureRow({
+  index, med, unit, tolerance, mass, massLabel, canRemove, required = true, onPatron, onInstr, onMass, onRemove,
+}: {
+  index: number
+  med: Medicion
+  unit: string
+  tolerance: number
+  mass?: boolean
+  massLabel?: string
+  canRemove: boolean
+  /** Validación nativa del navegador. En multimagnitud se desactiva: allí una magnitud puede omitirse. */
+  required?: boolean
+  onPatron: (v: string) => void
+  onInstr: (v: string) => void
+  onMass?: (v: string) => void
+  onRemove: () => void
+}) {
+  const pVal = parseFloat(med.patron)
+  const iVal = parseFloat(med.instrumento)
+  const diff = !isNaN(pVal) && !isNaN(iVal) ? parseFloat((iVal - pVal).toFixed(4)) : null
+  const state = diff === null || !(tolerance > 0) ? '' : calcularStatus(diff, tolerance) === 'APTO' ? ' is-ok' : ' is-bad'
+  const u = unit ? ` (${unit})` : ''
+  const n = index + 1
+
+  return (
+    <div className={`ui-measure${mass ? ' is-mass' : ''}`}>
+      <div style={{ minWidth: 0 }}>
+        {mass ? (
+          <input
+            className="ui-input" type="number" step="any" inputMode="decimal" required={required}
+            aria-label={`Punto ${n}: ${massLabel}`} placeholder={massLabel}
+            value={med.masaInput ?? ''} onChange={e => onMass?.(e.target.value)}
+          />
+        ) : (
+          <input
+            className="ui-input" type="number" step="any" inputMode="decimal" required={required}
+            aria-label={`Punto ${n}: medida del patrón${u}`} placeholder={`Patrón${u}`}
+            value={med.patron} onChange={e => onPatron(e.target.value)}
+          />
+        )}
+        {mass && med.patron && (
+          <div className="ui-measure-hint"><Zap size={10} aria-hidden="true" /> = {med.patron} {unit || 'N'}</div>
+        )}
+      </div>
+      <input
+        className="ui-input" type="number" step="any" inputMode="decimal" required={required}
+        aria-label={`Punto ${n}: lectura del instrumento${u}`} placeholder={`Instrumento${u}`}
+        value={med.instrumento} onChange={e => onInstr(e.target.value)}
+      />
+      <div className={`ui-measure-var${state}`} aria-label="Variación" title="Variación (instrumento − patrón)">
+        {diff !== null ? signed(diff) : '—'}
+      </div>
+      <button
+        type="button" className="ui-icon-btn is-danger" disabled={!canRemove}
+        onClick={onRemove} aria-label={`Quitar punto ${n}`}
+      >
+        <Trash2 size={16} />
+      </button>
+    </div>
+  )
+}
+
+/** Encabezado de columnas de las filas de medición (las etiquetas no desaparecen al escribir). */
+function MeasureHeader({ unit, mass, massLabel }: { unit: string; mass?: boolean; massLabel?: string }) {
+  const u = unit ? ` (${unit})` : ''
+  return (
+    <div className={`ui-measure-cols${mass ? ' is-mass' : ''}`} aria-hidden="true">
+      <span>{mass ? massLabel : <>Patrón<span className="ui-unit">{u}</span></>}</span>
+      <span>Instrumento<span className="ui-unit">{u}</span></span>
+      <span>Var.</span>
+      <span />
+    </div>
+  )
+}
+
 export default function VerificationModal({ equipo, equipos, onClose, onSaved }: Props) {
   const [tipoVerif, setTipoVerif] = useState<'OPERATIVIDAD' | 'CALIBRACION'>('OPERATIVIDAD')
   const [selectedId, setSelectedId] = useState(equipo?.ID_Equipo ?? '')
-  const [mediciones, setMediciones] = useState<{ patron: string, instrumento: string, masaInput?: string }[]>([
-    { patron: '', instrumento: '' }
-  ])
+  const [mediciones, setMediciones] = useState<Medicion[]>([{ patron: '', instrumento: '' }])
   const [customUnidad, setCustomUnidad] = useState('')
   const [formulaActiva, setFormulaActiva] = useState<'NINGUNA' | 'MASA_A_NEWTONS_KG' | 'MASA_A_NEWTONS_G' | 'KGF_A_NEWTONS' | 'NEWTONS_A_KN'>('NINGUNA')
   const [customTolerancia, setCustomTolerancia] = useState('')
+  const [unitsOpen, setUnitsOpen] = useState(false)
   const [tecnico, setTecnico] = useState('')
   const [obs, setObs] = useState('')
   const [accionesPendientes, setAccionesPendientes] = useState('')
@@ -236,7 +176,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       setCustomTolerancia(selectedEquipo.Tolerancia_Aceptable != null ? String(selectedEquipo.Tolerancia_Aceptable) : '')
 
       // Si el equipo es Universal o Fuerza, preconfigurar Newtons y fórmula de masa automáticamente
-      const isUniversalOrFuerza = (selectedEquipo.Nombre_Equipo || '').toLowerCase().includes('universal') || 
+      const isUniversalOrFuerza = (selectedEquipo.Nombre_Equipo || '').toLowerCase().includes('universal') ||
                                   (selectedEquipo.Magnitud || '').toLowerCase().includes('fuerza')
       if (isUniversalOrFuerza) {
         setFormulaActiva('MASA_A_NEWTONS_KG')
@@ -244,22 +184,18 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       } else {
         setFormulaActiva('NINGUNA')
       }
+      setUnitsOpen(isUniversalOrFuerza)
     }
   }, [selectedId, selectedEquipo])
-
-  function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = error => reject(error)
-    })
-  }
 
   useEffect(() => {
     fetch('/api/patrones')
       .then(r => r.json())
-      .then(data => setPatrones(data.filter((p: Patron) => p.Estado_Vigencia === 'VIGENTE')))
+      .then(data => {
+        if (Array.isArray(data)) setPatrones(data.filter((p: Patron) => p.Estado_Vigencia === 'VIGENTE'))
+        else setError('No se pudo cargar la lista de patrones. Cierra y vuelve a abrir esta ventana.')
+      })
+      .catch(() => setError('No se pudo cargar la lista de patrones. Revisa tu conexión y vuelve a abrir esta ventana.'))
   }, [])
 
   const calculateMultipointCalcs = (
@@ -328,7 +264,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   const computeMagCalcs = (magName: string) => {
     const item = multimagnitudData[magName]
     if (!item || !item.Mediciones) return null
-    
+
     let magTolerancia = selectedEquipo?.Tolerancia_Aceptable ?? 0
     let magUnidad = selectedEquipo?.Unidad_Tolerancia ?? ''
     if (selectedEquipo?.Tolerancias_Multimagnitud) {
@@ -338,7 +274,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
           magTolerancia = parseFloat(map[magName].tolerancia) || 0
           magUnidad = map[magName].unidad || ''
         }
-      } catch(e) {}
+      } catch {}
     }
 
     const calcs = calculateMultipointCalcs(item.Mediciones, magTolerancia)
@@ -356,11 +292,17 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
     }
   }
 
-  const isInstrument = selectedEquipo?.Tipo === 'INSTRUMENTO'
-  const tab2Label = '2. Verificación Metrológica'
-
   // Filtrar patrones si el equipo tiene magnitud
   const equipoMags = selectedEquipo?.Magnitud ? selectedEquipo.Magnitud.split(',').map(m => m.trim()).filter(Boolean) : []
+  const isMultiMag = equipoMags.length > 1
+
+  // ¿Hay datos ingresados que se perderían al cerrar?
+  const dirty = !saving && Boolean(
+    tecnico.trim() || obs.trim() || accionesPendientes.trim() || photoFile || selectedPatronId ||
+    mediciones.some(m => m.patron || m.instrumento || m.masaInput) ||
+    Object.values(multimagnitudData).some(v =>
+      v.FK_ID_Patron_Usado || v.Observaciones || v.Mediciones.some(m => m.patron || m.instrumento))
+  )
 
   async function handleAuthAndSubmit(ev: React.FormEvent) {
     ev.preventDefault()
@@ -391,18 +333,19 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: authEmail.trim(), contrasena: authPassword })
       })
-      const data = await res.json()
-      if (res.ok && data.authenticated) {
+      let data: { authenticated?: boolean; nombre?: string; error?: string } | null = null
+      try { data = await res.json() } catch { /* respuesta sin JSON */ }
+      if (res.ok && data?.authenticated) {
         setIsAuthenticated(true)
-        setAuthUserName(data.nombre)
+        setAuthUserName(data.nombre ?? '')
         setShowAuthPrompt(false)
         // Proceder directamente a guardar
         await doSaveVerification()
       } else {
-        setAuthError(data.error || 'Credenciales inválidas')
+        setAuthError(data?.error || (res.ok ? 'Respuesta inválida del servidor' : `Error del servidor (${res.status})`))
       }
     } catch {
-      setAuthError('Error de conexión')
+      setAuthError('No se pudo conectar con el servidor. Revisa tu conexión y reintenta.')
     } finally {
       setAuthLoading(false)
     }
@@ -457,16 +400,33 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
         }
       }
     }
-    
+
     if (!selectedId) { setError('Selecciona un equipo'); return }
     if (!tecnico) { setError('El nombre del técnico es requerido'); return }
     setSaving(true); setError('')
-    try {
-      let photoBase64 = ''
-      if (photoFile) {
-        photoBase64 = await fileToBase64(photoFile)
-      }
 
+    // Foto: se comprime en el cliente y se verifica ANTES de enviar. Así un archivo
+    // demasiado pesado da un mensaje claro en vez de un fallo de red genérico.
+    let photoBase64 = ''
+    if (photoFile) {
+      try {
+        photoBase64 = await compressImage(photoFile)
+      } catch {
+        setError('No se pudo procesar la foto. Prueba con otra imagen o quítala.')
+        setSaving(false)
+        return
+      }
+      if (photoBase64.length > MAX_PHOTO_CHARS) {
+        const mb = (photoBase64.length / 1_048_576).toFixed(1)
+        setError(`La foto pesa ${mb} MB incluso comprimida y el servidor admite ~3,6 MB. Usa otra imagen o quítala.`)
+        setSaving(false)
+        return
+      }
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS)
+    try {
       let multimagnitudPayload = null
       let finalStatus = statusCalc || 'APTO'
 
@@ -493,7 +453,7 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
             Mediciones_Puntos: calcs?.points ? JSON.stringify(calcs.points) : null
           }
         })
-        
+
         const hasNoApto = multimagnitudPayload.some(item => item.Resultado_Status === 'NO_APTO')
         finalStatus = hasNoApto ? 'NO_APTO' : 'APTO'
       }
@@ -543,19 +503,34 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
       const r = await fetch('/api/historial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       })
-      if (r.ok) { 
-        onSaved() 
+      if (r.ok) {
+        onSaved()
       }
-      else { 
-        const d = await r.json()
-        setError(d.error ?? 'Error al guardar la verificación')
-        setSaving(false) 
+      else {
+        let errorMsg = 'Error al guardar la verificación'
+        try {
+          const d = await r.json()
+          if (d?.error) errorMsg = d.error
+        } catch {
+          errorMsg = r.status === 413
+            ? 'El envío es demasiado grande para el servidor (413). Quita la foto o usa una de menor tamaño.'
+            : `Error del servidor (${r.status}: ${r.statusText || 'respuesta no válida'})`
+        }
+        setError(errorMsg)
+        setSaving(false)
       }
     } catch (err) {
-      setError('Error de conexión')
+      if ((err as Error)?.name === 'AbortError') {
+        setError('El servidor tardó demasiado en responder. Revisa el historial del equipo antes de reintentar, por si el registro sí quedó guardado.')
+      } else {
+        setError('No se pudo conectar con el servidor. Tus datos siguen en el formulario: revisa tu conexión y vuelve a intentarlo.')
+      }
       setSaving(false)
+    } finally {
+      clearTimeout(timer)
     }
   }
 
@@ -569,1013 +544,512 @@ export default function VerificationModal({ equipo, equipos, onClose, onSaved }:
   })
 
   const patronesAMostrar = patronesFiltrados.length > 0 ? patronesFiltrados : patrones
+  const patronOptions = (list: Patron[]) => list.map(p => ({
+    value: p.ID_Patron,
+    label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
+  }))
+
+  const isMassFormula = formulaActiva === 'MASA_A_NEWTONS_KG' || formulaActiva === 'MASA_A_NEWTONS_G'
+  const massLabel = formulaActiva === 'MASA_A_NEWTONS_KG' ? 'Masa patrón (kg)' : 'Masa patrón (g)'
+
+  const updateMed = (index: number, patch: Partial<Medicion>) =>
+    setMediciones(prev => prev.map((m, i) => (i === index ? { ...m, ...patch } : m)))
+
+  const updateMagMed = (mag: string, index: number, patch: { patron?: string; instrumento?: string }) =>
+    setMultimagnitudData(prev => ({
+      ...prev,
+      [mag]: { ...prev[mag], Mediciones: prev[mag].Mediciones.map((m, i) => (i === index ? { ...m, ...patch } : m)) }
+    }))
+
+  function pickPhoto(file: File | undefined) {
+    if (!file) return
+    if (file.size > MAX_PHOTO_BYTES) {
+      setError(`La imagen pesa ${(file.size / 1_048_576).toFixed(1)} MB y el máximo es 10 MB.`)
+      return
+    }
+    setError('')
+    setPhotoFile(file)
+  }
+
+  const tabs = [
+    { id: 'OPERATIVIDAD' as const, label: '1. Operatividad', short: '1. Operatividad', Icon: Activity },
+    { id: 'CALIBRACION' as const, label: '2. Verificación Metrológica', short: '2. Verificación', Icon: Calculator },
+  ]
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' }}>
-        <div className="modal-header" style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 42, height: 42, background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', borderRadius: 12, display: 'grid', placeItems: 'center', boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)' }}>
-              <Settings2 size={20} color="#fff" />
+    <Modal
+      title="Control y Verificación de Activo"
+      subtitle="Registro de inspección operativa o verificación metrológica"
+      icon={<Settings2 size={20} />}
+      onClose={onClose}
+      dirty={dirty}
+      busy={saving}
+      maxWidth={600}
+      error={error}
+      onSubmit={handleAuthAndSubmit}
+      toolbar={
+        <div className="ui-seg" role="tablist" aria-label="¿Qué tipo de control se realiza?">
+          {tabs.map(({ id, label, short, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tipoVerif === id}
+              aria-label={label}
+              className="ui-seg-btn"
+              onClick={() => { setTipoVerif(id); setError('') }}
+            >
+              <Icon size={16} aria-hidden="true" />
+              <span className="ui-seg-long">{label}</span>
+              <span className="ui-seg-short" aria-hidden="true">{short}</span>
+            </button>
+          ))}
+        </div>
+      }
+      footer={
+        <>
+          {isAuthenticated && (
+            <div className="ui-auth-chip">
+              <CheckCircle2 size={14} aria-hidden="true" />
+              <span>Autenticado como {authUserName}</span>
             </div>
-            <div>
-              <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>Control y Verificación de Activo</h2>
-              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Registro de inspección operativa o verificación metrológica</p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="btn-close-large">
-            <XCircle size={24} color="#94a3b8" />
+          )}
+          <button type="button" className="ui-btn ui-btn-quiet" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="submit" className="ui-btn ui-btn-primary" disabled={saving}>
+            {saving
+              ? <><span className="ui-spin" aria-hidden="true" /> Guardando…</>
+              : <><Lock size={16} aria-hidden="true" /> Registrar Verificación</>}
           </button>
-        </div>
-
-        {/* Tabs de Selección de Modalidad */}
-        <div style={{ padding: '20px 24px 0 24px', background: '#fff' }}>
-          <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, display: 'block' }}>
-            ¿Qué tipo de control se realiza? *
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, background: '#f1f5f9', padding: 6, borderRadius: 16 }}>
-            <button
-              type="button"
-              onClick={() => setTipoVerif('OPERATIVIDAD')}
-              style={{
-                padding: '12px',
-                borderRadius: 12,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                transition: 'all 0.2s',
-                background: tipoVerif === 'OPERATIVIDAD' ? '#fff' : 'transparent',
-                color: tipoVerif === 'OPERATIVIDAD' ? '#0f172a' : '#64748b',
-                boxShadow: tipoVerif === 'OPERATIVIDAD' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              <Activity size={16} color={tipoVerif === 'OPERATIVIDAD' ? '#2563eb' : '#64748b'} />
-              1. Operatividad
-            </button>
-            <button
-              type="button"
-              onClick={() => setTipoVerif('CALIBRACION')}
-              style={{
-                padding: '12px',
-                borderRadius: 12,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                transition: 'all 0.2s',
-                background: tipoVerif === 'CALIBRACION' ? '#fff' : 'transparent',
-                color: tipoVerif === 'CALIBRACION' ? '#0f172a' : '#64748b',
-                boxShadow: tipoVerif === 'CALIBRACION' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              <Calculator size={16} color={tipoVerif === 'CALIBRACION' ? '#0ea5e9' : '#64748b'} />
-              {tab2Label}
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleAuthAndSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-            {error && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: 12, fontSize: 13, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <AlertTriangle size={18} /> {error}
-              </div>
-            )}
-
-            <div className="form-group-modern">
-              <label><User size={14} /> Equipo / Instrumento a verificar *</label>
-              <SearchableSelect 
-                options={equipos.map(e => ({
-                  value: e.ID_Equipo,
-                  label: `${e.Codigo_Interno} — ${e.Nombre_Equipo} ${e.Magnitud ? `(${e.Magnitud})` : ''}`
-                }))}
-                value={selectedId}
-                onChange={val => {
-                  setSelectedId(val);
-                  setSelectedPatronId('');
-                }}
-                placeholder="Buscar por código o nombre del equipo…"
-                icon={<User size={14} />}
-              />
+        </>
+      }
+      overlay={showAuthPrompt ? (
+        <form
+          className="ui-auth-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-title"
+          onSubmit={e => { e.preventDefault(); handleAuthSubmit() }}
+          onKeyDown={e => {
+            if (e.key === 'Escape') { e.preventDefault(); setShowAuthPrompt(false); setAuthError('') }
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div className="ui-modal-icon" style={{ width: 52, height: 52, borderRadius: 15, margin: '0 auto 14px' }} aria-hidden="true">
+              <Lock size={22} />
             </div>
-
-            {/* SECCIÓN OPERATIVIDAD */}
-            {tipoVerif === 'OPERATIVIDAD' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeIn 0.3s' }}>
-                <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                  <label><Activity size={14} /> Estado Resultante *</label>
-                  <select 
-                    value={resultadoStatusOperatividad} 
-                    onChange={e => setResultadoStatusOperatividad(e.target.value)}
-                    style={{ fontWeight: 700, color: resultadoStatusOperatividad === 'OPERATIVO' ? '#10b981' : '#f59e0b' }}
-                  >
-                    <option value="OPERATIVO">OPERATIVO / APTO PARA USO</option>
-                    <option value="ACCION_PENDIENTE">REQUIERE ACCIÓN / SEGUIMIENTO</option>
-                  </select>
-                </div>
-
-                <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                  <label><ClipboardList size={14} /> Acciones que se necesitan (Seguimiento)</label>
-                  <textarea 
-                    value={accionesPendientes} 
-                    onChange={e => {
-                      setAccionesPendientes(e.target.value);
-                      if (e.target.value.trim().length > 0 && resultadoStatusOperatividad === 'OPERATIVO') {
-                        setResultadoStatusOperatividad('ACCION_PENDIENTE');
-                      }
-                    }} 
-                    placeholder="Ej: Reemplazar sonda térmica la próxima semana, ajustar conector..." 
-                    rows={2} 
-                  />
-                  <span style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
-                    💡 Ingresar las acciones que se necesitan cambiará automáticamente el estado a seguimiento.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* SECCIÓN CALIBRACIÓN METROLÓGICA */}
-            {tipoVerif === 'CALIBRACION' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fadeIn 0.3s' }}>
-                {equipoMags.length > 1 ? (
-                  equipoMags.map(mag => {
-                    const item = multimagnitudData[mag] || { FK_ID_Patron_Usado: '', Medida_Instrumento: '', Medida_Patron: '' }
-                    const calcs = computeMagCalcs(mag)
-                    const filteredPatrons = patrones.filter(p => !p.Magnitud || p.Magnitud.includes(mag))
-                    const patronesAMostrar = filteredPatrons.length > 0 ? filteredPatrons : patrones
-
-                    return (
-                      <div key={mag} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <Activity size={16} color="#0ea5e9" /> MAGNITUD: {mag}
-                          </span>
-                          {calcs && (
-                            <span style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: 20,
-                              border: `1.5px solid ${calcs.status === 'APTO' ? '#10b981' : '#ef4444'}`,
-                              color: calcs.status === 'APTO' ? '#10b981' : '#ef4444',
-                              background: calcs.status === 'APTO' ? '#ecfdf5' : '#fef2f2'
-                            }}>
-                              {calcs.status === 'APTO' ? '✓ APTO' : '✗ NO APTO'}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                          <label><CheckCircle2 size={12} /> Patrón utilizado *</label>
-                          <SearchableSelect
-                            options={patronesAMostrar.map(p => ({
-                              value: p.ID_Patron,
-                              label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
-                            }))}
-                            value={item.FK_ID_Patron_Usado}
-                            onChange={val => setMultimagnitudData(prev => ({
-                              ...prev,
-                              [mag]: { ...prev[mag], FK_ID_Patron_Usado: val }
-                            }))}
-                            placeholder="Buscar y seleccionar patrón..."
-                            icon={<CheckCircle2 size={12} />}
-                          />
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>Puntos de Medición</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newMeds = [...(item.Mediciones || [])];
-                                newMeds.push({ patron: '', instrumento: '' });
-                                setMultimagnitudData(prev => ({
-                                  ...prev,
-                                  [mag]: { ...prev[mag], Mediciones: newMeds }
-                                }));
-                              }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(14, 165, 233, 0.1)', color: 'var(--accent)', border: 'none', padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 'bold' }}
-                            >
-                              ➕ Añadir Medida (1+)
-                            </button>
-                          </label>
-
-                          {(item.Mediciones || []).map((med, index) => {
-                            const pVal = parseFloat(med.patron)
-                            const iVal = parseFloat(med.instrumento)
-                            const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
-                            return (
-                              <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 75px 36px', gap: 8, alignItems: 'center' }}>
-                                <input
-                                  type="number"
-                                  step="any"
-                                  placeholder="Medida Patrón"
-                                  value={med.patron}
-                                  onChange={e => {
-                                    const newMeds = [...item.Mediciones]
-                                    newMeds[index] = { ...newMeds[index], patron: e.target.value }
-                                    setMultimagnitudData(prev => ({
-                                      ...prev,
-                                      [mag]: { ...prev[mag], Mediciones: newMeds }
-                                    }))
-                                  }}
-                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-                                  required
-                                />
-                                <input
-                                  type="number"
-                                  step="any"
-                                  placeholder="Medida Instr."
-                                  value={med.instrumento}
-                                  onChange={e => {
-                                    const newMeds = [...item.Mediciones]
-                                    newMeds[index] = { ...newMeds[index], instrumento: e.target.value }
-                                    setMultimagnitudData(prev => ({
-                                      ...prev,
-                                      [mag]: { ...prev[mag], Mediciones: newMeds }
-                                    }))
-                                  }}
-                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--glass-border)', background: 'var(--page-bg-soft)', color: 'var(--text-main)', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-                                  required
-                                />
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '8px 2px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
-                                </div>
-                                <button
-                                  type="button"
-                                  disabled={item.Mediciones.length <= 1}
-                                  onClick={() => {
-                                    const newMeds = item.Mediciones.filter((_, i) => i !== index)
-                                    setMultimagnitudData(prev => ({
-                                      ...prev,
-                                      [mag]: { ...prev[mag], Mediciones: newMeds }
-                                    }))
-                                  }}
-                                  style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: 8, height: 35, width: '100%', display: 'grid', placeItems: 'center', cursor: item.Mediciones.length > 1 ? 'pointer' : 'not-allowed', opacity: item.Mediciones.length > 1 ? 1 : 0.4 }}
-                                >
-                                  ❌
-                                </button>
-                              </div>
-                            )
-                          })}
-                        </div>
-
-                        <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                          <label><ClipboardList size={12} /> Observaciones para {mag}</label>
-                          <textarea
-                            value={item.Observaciones || ''}
-                            onChange={e => setMultimagnitudData(prev => ({
-                              ...prev,
-                              [mag]: { ...prev[mag], Observaciones: e.target.value }
-                            }))}
-                            placeholder={`Observaciones específicas para la magnitud ${mag}...`}
-                            rows={2}
-                            style={{ 
-                              width: '100%', 
-                              fontSize: '13px', 
-                              padding: '10px 14px', 
-                              borderRadius: '10px', 
-                              border: '2px solid var(--glass-border)', 
-                              background: 'var(--page-bg-soft)', 
-                              outline: 'none', 
-                              color: 'var(--text-main)',
-                              fontFamily: 'inherit',
-                              resize: 'vertical'
-                            }}
-                          />
-                        </div>
-
-                        {calcs && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#475569' }}>
-                              <span>Variación: {calcs.varNum > 0 ? '+' : ''}{calcs.varNum.toFixed(4)} {calcs.magUnidad}</span>
-                              <span>Tolerancia: ±{calcs.magTolerancia} {calcs.magUnidad}</span>
-                            </div>
-                            <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
-                              <div style={{
-                                width: `${Math.min(100, (Math.abs(calcs.varNum) / calcs.magTolerancia) * 100)}%`,
-                                height: '100%',
-                                background: calcs.status === 'APTO' ? '#10b981' : '#ef4444',
-                                transition: 'width 0.3s ease'
-                              }} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-                ) : (
-                  <>
-                    <div className="form-group-modern" style={{ marginBottom: 0 }}>
-                      <label style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <CheckCircle2 size={14} /> Patrón utilizado *
-                        </span>
-                        {selectedEquipo?.Magnitud && (
-                          <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 800 }}>
-                            MAGNITUD: {selectedEquipo.Magnitud}
-                          </span>
-                        )}
-                      </label>
-                      <SearchableSelect 
-                        options={patronesAMostrar.map(p => ({
-                          value: p.ID_Patron,
-                          label: `${p.Codigo || p.ID_Patron} — ${p.Nombre_Patron} (${p.Magnitud || 'General'})`
-                        }))}
-                        value={selectedPatronId}
-                        onChange={val => setSelectedPatronId(val)}
-                        placeholder="Buscar por código o nombre del patrón…"
-                        icon={<CheckCircle2 size={14} />}
-                      />
-                      {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
-                        <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
-                          ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Configuración Opcional: Unidad de Medición y Asistente de Fórmula */}
-                    <div style={{
-                      background: 'rgba(248, 250, 252, 0.8)',
-                      border: '1.5px solid #e2e8f0',
-                      borderRadius: 12,
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#334155' }}>
-                          <span>📐 Unidad de Medición & Conversor</span>
-                          <span style={{ fontSize: 10, background: '#e0f2fe', color: '#0284c7', padding: '2px 6px', borderRadius: 10, fontWeight: 700 }}>
-                            OPCIONAL
-                          </span>
-                        </div>
-                        {formulaActiva !== 'NINGUNA' && (
-                          <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            ⚡ Conversor activo ({effectiveUnidad})
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
-                        <div>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
-                            Asistente de Fórmula / Conversión:
-                          </label>
-                          <select
-                            value={formulaActiva}
-                            onChange={e => {
-                              const val = e.target.value as any
-                              setFormulaActiva(val)
-                              if (val === 'MASA_A_NEWTONS_KG' || val === 'MASA_A_NEWTONS_G' || val === 'KGF_A_NEWTONS') {
-                                setCustomUnidad('N')
-                              } else if (val === 'NEWTONS_A_KN') {
-                                setCustomUnidad('kN')
-                              }
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '8px 10px',
-                              borderRadius: 8,
-                              border: '1.5px solid #cbd5e1',
-                              background: '#fff',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: '#1e293b',
-                              outline: 'none'
-                            }}
-                          >
-                            <option value="NINGUNA">Entrada directa (Sin conversión)</option>
-                            <option value="MASA_A_NEWTONS_KG">⚡ Masa (kg) ➔ Newtons (N) [F = m × 9.80665]</option>
-                            <option value="MASA_A_NEWTONS_G">⚡ Masa (g) ➔ Newtons (N) [F = (g/1000) × 9.80665]</option>
-                            <option value="KGF_A_NEWTONS">⚡ kgf ➔ Newtons (N) [1 kgf = 9.80665 N]</option>
-                            <option value="NEWTONS_A_KN">⚡ Newtons (N) ➔ kiloNewtons (kN) [1 kN = 1000 N]</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
-                            Unidad de Medición ({effectiveUnidad || 'N/A'}):
-                          </label>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <input
-                              type="text"
-                              placeholder="Ej: N, kN, kgf, mm"
-                              value={customUnidad}
-                              onChange={e => setCustomUnidad(e.target.value)}
-                              style={{
-                                flex: 1,
-                                padding: '8px 10px',
-                                borderRadius: 8,
-                                border: '1.5px solid #cbd5e1',
-                                background: '#fff',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                color: '#1e293b',
-                                outline: 'none'
-                              }}
-                            />
-                            <div style={{ display: 'flex', gap: 3 }}>
-                              {['N', 'kN', 'kgf', 'mm'].map(u => (
-                                <button
-                                  key={u}
-                                  type="button"
-                                  onClick={() => setCustomUnidad(u)}
-                                  style={{
-                                    border: '1px solid #cbd5e1',
-                                    background: customUnidad === u ? '#0ea5e9' : '#fff',
-                                    color: customUnidad === u ? '#fff' : '#475569',
-                                    borderRadius: 6,
-                                    padding: '0 6px',
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  {u}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Botones de acceso rápido para masas patrón (E-17 / Máquina Universal) */}
-                      {formulaActiva === 'MASA_A_NEWTONS_KG' && (
-                        <div style={{ 
-                          background: 'rgba(14, 165, 233, 0.07)', 
-                          border: '1px dashed #38bdf8', 
-                          borderRadius: 8, 
-                          padding: '8px 10px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 6
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#0369a1' }}>
-                              ⚖️ Cargas Patrón de Laboratorio (PAT-008):
-                            </span>
-                            <span style={{ fontSize: 10, color: '#0284c7', fontFamily: 'var(--font-mono)' }}>g = 9.80665 m/s²</span>
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                            {[
-                              { kg: 1, n: '9.807' },
-                              { kg: 2, n: '19.613' },
-                              { kg: 5, n: '49.033' },
-                              { kg: 10, n: '98.067' },
-                              { kg: 20, n: '196.133' },
-                              { kg: 50, n: '490.333' }
-                            ].map(item => (
-                              <button
-                                key={item.kg}
-                                type="button"
-                                onClick={() => {
-                                  setMediciones(prev => {
-                                    const cleaned = prev.filter(p => (p.patron && p.patron.trim() !== '') || (p.instrumento && p.instrumento.trim() !== ''))
-                                    return [
-                                      ...cleaned,
-                                      {
-                                        masaInput: String(item.kg),
-                                        patron: item.n,
-                                        instrumento: ''
-                                      }
-                                    ]
-                                  })
-                                }}
-                                style={{
-                                  background: '#fff',
-                                  border: '1px solid #7dd3fc',
-                                  color: '#0369a1',
-                                  padding: '4px 8px',
-                                  borderRadius: 6,
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 4
-                                }}
-                              >
-                                <span>+{item.kg} kg</span>
-                                <span style={{ fontSize: 9.5, opacity: 0.75 }}>({item.n} N)</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>
-                          Puntos de Medición {effectiveUnidad ? `(${effectiveUnidad})` : ''}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMediciones(prev => [...prev, { patron: '', instrumento: '' }])
-                          }}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 4, 
-                            background: 'rgba(14, 165, 233, 0.1)', 
-                            color: '#0ea5e9', 
-                            border: 'none', 
-                            padding: '4px 10px', 
-                            borderRadius: 6, 
-                            fontSize: 11, 
-                            cursor: 'pointer', 
-                            fontWeight: 'bold' 
-                          }}
-                        >
-                          ➕ Añadir Medida (1+)
-                        </button>
-                      </label>
-
-                      {mediciones.map((med, index) => {
-                        const pVal = parseFloat(med.patron)
-                        const iVal = parseFloat(med.instrumento)
-                        const diff = (!isNaN(pVal) && !isNaN(iVal)) ? parseFloat((iVal - pVal).toFixed(4)) : null
-                        const isMassFormula = formulaActiva === 'MASA_A_NEWTONS_KG' || formulaActiva === 'MASA_A_NEWTONS_G'
-
-                        return (
-                          <div key={index} style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: isMassFormula 
-                              ? 'minmax(0, 1.25fr) minmax(0, 1fr) 75px 36px' 
-                              : 'minmax(0, 1fr) minmax(0, 1fr) 75px 36px', 
-                            gap: 8, 
-                            alignItems: 'flex-start' 
-                          }}>
-                            {isMassFormula ? (
-                              <div>
-                                <input
-                                  type="number"
-                                  step="any"
-                                  placeholder={formulaActiva === 'MASA_A_NEWTONS_KG' ? 'Masa Patrón (kg)' : 'Masa Patrón (g)'}
-                                  value={med.masaInput ?? ''}
-                                  onChange={e => {
-                                    const val = e.target.value
-                                    const newMeds = [...mediciones]
-                                    const num = parseFloat(val)
-                                    let calcPatron = ''
-                                    if (!isNaN(num)) {
-                                      if (formulaActiva === 'MASA_A_NEWTONS_KG') {
-                                        calcPatron = (num * 9.80665).toFixed(3)
-                                      } else if (formulaActiva === 'MASA_A_NEWTONS_G') {
-                                        calcPatron = ((num / 1000) * 9.80665).toFixed(3)
-                                      }
-                                    }
-                                    newMeds[index] = { ...newMeds[index], masaInput: val, patron: calcPatron }
-                                    setMediciones(newMeds)
-                                  }}
-                                  style={{ 
-                                    padding: '10px 10px', 
-                                    fontSize: 13, 
-                                    borderRadius: 10, 
-                                    border: '2px solid #f1f5f9', 
-                                    background: '#f8fafc', 
-                                    color: '#1e293b',
-                                    outline: 'none',
-                                    width: '100%',
-                                    minWidth: 0,
-                                    boxSizing: 'border-box'
-                                  }}
-                                  required
-                                />
-                                {med.patron && (
-                                  <div style={{ fontSize: 10, color: '#0284c7', fontWeight: 700, marginTop: 3, paddingLeft: 2 }}>
-                                    ⚡ = {med.patron} {effectiveUnidad || 'N'}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <input
-                                type="number"
-                                step="any"
-                                placeholder={`Medida Patrón ${effectiveUnidad ? `(${effectiveUnidad})` : ''}`}
-                                value={med.patron}
-                                onChange={e => {
-                                  const newMeds = [...mediciones]
-                                  newMeds[index] = { ...newMeds[index], patron: e.target.value }
-                                  setMediciones(newMeds)
-                                }}
-                                style={{ 
-                                  padding: '10px 10px', 
-                                  fontSize: 13, 
-                                  borderRadius: 10, 
-                                  border: '2px solid #f1f5f9', 
-                                  background: '#f8fafc', 
-                                  color: '#1e293b',
-                                  outline: 'none',
-                                  width: '100%',
-                                  minWidth: 0,
-                                  boxSizing: 'border-box'
-                                }}
-                                required
-                              />
-                            )}
-
-                            <input
-                              type="number"
-                              step="any"
-                              placeholder={`Lectura Instr. ${effectiveUnidad ? `(${effectiveUnidad})` : ''}`}
-                              value={med.instrumento}
-                              onChange={e => {
-                                const newMeds = [...mediciones]
-                                newMeds[index] = { ...newMeds[index], instrumento: e.target.value }
-                                setMediciones(newMeds)
-                              }}
-                              style={{ 
-                                padding: '10px 10px', 
-                                fontSize: 13, 
-                                borderRadius: 10, 
-                                border: '2px solid #f1f5f9', 
-                                background: '#f8fafc', 
-                                color: '#1e293b',
-                                outline: 'none',
-                                width: '100%',
-                                minWidth: 0,
-                                boxSizing: 'border-box'
-                              }}
-                              required
-                            />
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textAlign: 'center', background: '#f1f5f9', padding: '10px 2px', borderRadius: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
-                            </div>
-                            <button
-                              type="button"
-                              disabled={mediciones.length <= 1}
-                              onClick={() => {
-                                const newMeds = mediciones.filter((_, i) => i !== index)
-                                setMediciones(newMeds)
-                              }}
-                              style={{ 
-                                background: 'rgba(239, 68, 68, 0.1)', 
-                                color: '#ef4444', 
-                                border: 'none', 
-                                borderRadius: 10, 
-                                height: 38, 
-                                width: '100%', 
-                                display: 'grid', 
-                                placeItems: 'center', 
-                                cursor: mediciones.length > 1 ? 'pointer' : 'not-allowed', 
-                                opacity: mediciones.length > 1 ? 1 : 0.4 
-                              }}
-                            >
-                              ❌
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {varNum != null && selectedEquipo && (
-                      <div className={`status-card ${statusCalc === 'APTO' ? 'is-apto' : 'is-no-apto'}`} style={{ borderLeft: `6px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, margin: 0 }}>
-                        <div style={{ flex: 1 }}>
-                          <span className="status-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Calculator size={10} /> Variación Detectada
-                          </span>
-                          <div className="status-val" style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                            {varNum > 0 ? '+' : ''}{varNum.toFixed(4)} 
-                            <span style={{ fontSize: 14, opacity: 0.6 }}>{effectiveUnidad}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                            <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
-                              <div style={{ 
-                                width: `${Math.min(100, (Math.abs(varNum) / (effectiveTolerance || 1)) * 100)}%`, 
-                                height: '100%', 
-                                background: statusCalc === 'APTO' ? '#10b981' : '#ef4444',
-                                transition: 'width 0.3s ease'
-                              }} />
-                            </div>
-                            <span className="tolerance-info" style={{ whiteSpace: 'nowrap' }}>TOLERANCIA ±{effectiveTolerance} {effectiveUnidad}</span>
-                          </div>
-                        </div>
-                        <div className="status-badge-premium" style={{ border: `1.5px solid ${statusCalc === 'APTO' ? '#10b981' : '#ef4444'}`, color: statusCalc === 'APTO' ? '#10b981' : '#ef4444' }}>
-                          {statusCalc === 'APTO' ? <><CheckCircle2 size={18} /> APTO</> : <><XCircle size={18} /> NO APTO</>}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            <div className="form-group-modern" style={{ marginTop: 20 }}>
-              <label><User size={14} /> Responsable / Inspector *</label>
-              <input value={tecnico} onChange={e => setTecnico(e.target.value)} placeholder="Ingrese su nombre o apellido" required />
-            </div>
-
-            <div className="form-group-modern" style={{ marginBottom: 0 }}>
-              <label><FileText size={14} /> Comentarios / Observaciones</label>
-              <textarea value={obs} onChange={e => setObs(e.target.value)} placeholder="Anotaciones generales del estado del equipo o condiciones ambientales..." rows={2} />
-            </div>
-
-            <div className="form-group-modern" style={{ marginTop: 20, marginBottom: 0 }}>
-              <label style={{ marginBottom: 4, display: 'block' }}>📸 Evidencia Fotográfica (Opcional)</label>
-              {photoFile ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f1f5f9', border: '1px solid #0ea5e9', borderRadius: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, background: '#e0f2fe', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{photoFile.name}</span>
-                  </div>
-                  <button type="button" onClick={() => setPhotoFile(null)} style={{ background: '#fee2e2', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar</button>
-                </div>
-              ) : (
-                <label 
-                  style={{ 
-                    border: '2px dashed #cbd5e1', 
-                    borderRadius: 14, 
-                    padding: '20px', 
-                    textAlign: 'center', 
-                    background: '#f8fafc', 
-                    cursor: 'pointer', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    gap: 8,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>📸</span>
-                  <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
-                    Haz clic para subir o arrastra la foto de evidencia aquí
-                  </div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
-                    onChange={e => e.target.files?.[0] && setPhotoFile(e.target.files[0])} 
-                  />
-                </label>
-              )}
-            </div>
+            <h3 id="auth-title" style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-main)', marginBottom: 4 }}>Autenticación requerida</h3>
+            <p style={{ fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.5 }}>
+              Ingrese sus credenciales para autorizar este registro de verificación.
+            </p>
           </div>
 
-          <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12, alignItems: 'center' }}>
-            {isAuthenticated && (
-              <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#10b981', fontWeight: 700 }}>
-                <CheckCircle2 size={14} /> Autenticado como {authUserName}
-              </div>
-            )}
-            <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn-save-premium" disabled={saving}>
-              {saving ? 'Guardando...' : <><Lock size={16} /> Registrar Verificación</>}
+          {authError && (
+            <div role="alert" className="ui-alert ui-alert-error" style={{ marginBottom: 14 }}>
+              <AlertTriangle size={15} aria-hidden="true" /> <span>{authError}</span>
+            </div>
+          )}
+
+          <div className="ui-field" style={{ marginBottom: 14 }}>
+            <label className="ui-label" htmlFor="auth-user">Usuario autorizado</label>
+            <input
+              id="auth-user" className="ui-input" type="text" autoFocus autoComplete="username"
+              value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="Ej. cmunizaga"
+            />
+          </div>
+          <div className="ui-field" style={{ marginBottom: 20 }}>
+            <label className="ui-label" htmlFor="auth-pass">Contraseña</label>
+            <input
+              id="auth-pass" className="ui-input" type="password" autoComplete="current-password"
+              value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="••••••••"
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button" className="ui-btn ui-btn-ghost" style={{ flex: 1 }}
+              onClick={() => { setShowAuthPrompt(false); setAuthError('') }}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className="ui-btn ui-btn-accent" style={{ flex: 1.5 }} disabled={authLoading}>
+              {authLoading
+                ? <><span className="ui-spin" aria-hidden="true" /> Verificando…</>
+                : <><LogIn size={16} aria-hidden="true" /> Autorizar</>}
             </button>
           </div>
         </form>
+      ) : null}
+    >
+      <div className="ui-field">
+        <span className="ui-label"><User size={13} aria-hidden="true" /> Equipo / instrumento a verificar <span className="ui-required">*</span></span>
+        <SearchableSelect
+          options={equipos.map(e => ({
+            value: e.ID_Equipo,
+            label: `${e.Codigo_Interno} — ${e.Nombre_Equipo} ${e.Magnitud ? `(${e.Magnitud})` : ''}`
+          }))}
+          value={selectedId}
+          onChange={val => { setSelectedId(val); setSelectedPatronId(''); setError('') }}
+          placeholder="Buscar por código o nombre del equipo…"
+          ariaLabel="Equipo o instrumento a verificar"
+          icon={<User size={15} />}
+        />
+      </div>
 
-        {/* Auth Overlay */}
-        {showAuthPrompt && (
-          <div style={{
-            position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3100, borderRadius: 24, padding: 24
-          }}>
-            <div style={{
-              background: '#fff', borderRadius: 20, padding: '32px', width: '100%', maxWidth: 380,
-              boxShadow: '0 25px 50px rgba(0,0,0,0.3)', animation: 'slideUp 0.3s ease-out'
-            }}>
-              <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', borderRadius: 16, display: 'grid', placeItems: 'center', margin: '0 auto 16px', boxShadow: '0 12px 24px rgba(14, 165, 233, 0.3)' }}>
-                  <Lock size={24} color="#fff" />
+      {/* ── OPERATIVIDAD ── */}
+      {tipoVerif === 'OPERATIVIDAD' && (
+        <div className="ui-section">
+          <div className="ui-field">
+            <label className="ui-label" htmlFor="v-estado"><Activity size={13} aria-hidden="true" /> Estado resultante <span className="ui-required">*</span></label>
+            <select
+              id="v-estado"
+              className="ui-select"
+              value={resultadoStatusOperatividad}
+              onChange={e => setResultadoStatusOperatividad(e.target.value)}
+              style={{ fontWeight: 700, color: resultadoStatusOperatividad === 'OPERATIVO' ? 'var(--ok)' : 'var(--warn)' }}
+            >
+              <option value="OPERATIVO">OPERATIVO / APTO PARA USO</option>
+              <option value="ACCION_PENDIENTE">REQUIERE ACCIÓN / SEGUIMIENTO</option>
+            </select>
+          </div>
+
+          <div className="ui-field">
+            <label className="ui-label" htmlFor="v-acciones"><ClipboardList size={13} aria-hidden="true" /> Acciones que se necesitan (seguimiento)</label>
+            <textarea
+              id="v-acciones"
+              className="ui-textarea"
+              value={accionesPendientes}
+              onChange={e => {
+                setAccionesPendientes(e.target.value)
+                if (e.target.value.trim().length > 0 && resultadoStatusOperatividad === 'OPERATIVO') {
+                  setResultadoStatusOperatividad('ACCION_PENDIENTE')
+                }
+              }}
+              placeholder="Ej: Reemplazar sonda térmica la próxima semana, ajustar conector..."
+              rows={2}
+            />
+            <span className="ui-hint" style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+              <Info size={13} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+              Ingresar las acciones que se necesitan cambiará automáticamente el estado a seguimiento.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── VERIFICACIÓN METROLÓGICA ── */}
+      {tipoVerif === 'CALIBRACION' && (
+        <div className="ui-section">
+          {isMultiMag ? (
+            equipoMags.map(mag => {
+              const item = multimagnitudData[mag] || { FK_ID_Patron_Usado: '', Mediciones: [], Observaciones: '' }
+              const calcs = computeMagCalcs(mag)
+              const filteredPatrons = patrones.filter(p => !p.Magnitud || p.Magnitud.includes(mag))
+              const patronesDeMag = filteredPatrons.length > 0 ? filteredPatrons : patrones
+              const ok = calcs?.status === 'APTO'
+
+              return (
+                <div key={mag} className="ui-panel">
+                  <div className="ui-panel-head">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Activity size={16} color="var(--accent)" aria-hidden="true" /> Magnitud: {mag}
+                    </span>
+                    {calcs && (
+                      <span className={`ui-chip ${ok ? 'ui-chip-ok' : 'ui-chip-bad'}`}>
+                        {ok ? <><CheckCircle2 size={12} aria-hidden="true" /> Apto</> : <><XCircle size={12} aria-hidden="true" /> No apto</>}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="ui-field">
+                    <span className="ui-label"><CheckCircle2 size={12} aria-hidden="true" /> Patrón utilizado <span className="ui-required">*</span></span>
+                    <SearchableSelect
+                      options={patronOptions(patronesDeMag)}
+                      value={item.FK_ID_Patron_Usado}
+                      onChange={val => setMultimagnitudData(prev => ({ ...prev, [mag]: { ...prev[mag], FK_ID_Patron_Usado: val } }))}
+                      placeholder="Buscar y seleccionar patrón…"
+                      ariaLabel={`Patrón utilizado para ${mag}`}
+                      icon={<CheckCircle2 size={14} />}
+                    />
+                  </div>
+
+                  <div className="ui-field">
+                    <div className="ui-label-row">
+                      <span className="ui-label">Puntos de medición</span>
+                      <button
+                        type="button" className="ui-btn ui-btn-sm ui-btn-ghost"
+                        onClick={() => setMultimagnitudData(prev => ({
+                          ...prev,
+                          [mag]: { ...prev[mag], Mediciones: [...(prev[mag].Mediciones || []), { patron: '', instrumento: '' }] }
+                        }))}
+                      >
+                        <Plus size={14} aria-hidden="true" /> Añadir medida
+                      </button>
+                    </div>
+                    <MeasureHeader unit={calcs?.magUnidad ?? ''} />
+                    {(item.Mediciones || []).map((med, index) => (
+                      <MeasureRow
+                        key={index}
+                        index={index}
+                        med={med}
+                        unit={calcs?.magUnidad ?? ''}
+                        tolerance={calcs?.magTolerancia ?? 0}
+                        canRemove={item.Mediciones.length > 1}
+                        required={false}
+                        onPatron={v => updateMagMed(mag, index, { patron: v })}
+                        onInstr={v => updateMagMed(mag, index, { instrumento: v })}
+                        onRemove={() => setMultimagnitudData(prev => ({
+                          ...prev,
+                          [mag]: { ...prev[mag], Mediciones: prev[mag].Mediciones.filter((_, i) => i !== index) }
+                        }))}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="ui-field">
+                    <label className="ui-label" htmlFor={`obs-${mag}`}><ClipboardList size={12} aria-hidden="true" /> Observaciones para {mag}</label>
+                    <textarea
+                      id={`obs-${mag}`}
+                      className="ui-textarea"
+                      value={item.Observaciones || ''}
+                      onChange={e => setMultimagnitudData(prev => ({ ...prev, [mag]: { ...prev[mag], Observaciones: e.target.value } }))}
+                      placeholder={`Observaciones específicas para la magnitud ${mag}...`}
+                      rows={2}
+                    />
+                  </div>
+
+                  {calcs && (
+                    <div className={`ui-result ${ok ? 'is-ok' : 'is-bad'}`}>
+                      <div className="ui-result-main">
+                        <div className="ui-result-label"><Calculator size={11} aria-hidden="true" /> Variación detectada</div>
+                        <div className="ui-result-val">{signed(calcs.varNum, 4)} <small>{calcs.magUnidad}</small></div>
+                        <div className="ui-meter"><span style={{ width: `${meterPct(calcs.varNum, calcs.magTolerancia)}%` }} /></div>
+                        <div className="ui-result-tol">Tolerancia ±{calcs.magTolerancia} {calcs.magUnidad}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Autenticación Requerida</h3>
-                <p style={{ fontSize: 12, color: '#64748b', fontWeight: 500, lineHeight: 1.5 }}>
-                  Ingrese sus credenciales para autorizar este registro de verificación.
-                </p>
+              )
+            })
+          ) : (
+            <>
+              <div className="ui-field">
+                <div className="ui-label-row">
+                  <span className="ui-label"><CheckCircle2 size={13} aria-hidden="true" /> Patrón utilizado <span className="ui-required">*</span></span>
+                  {selectedEquipo?.Magnitud && <span className="ui-chip ui-chip-info">Magnitud: {selectedEquipo.Magnitud}</span>}
+                </div>
+                <SearchableSelect
+                  options={patronOptions(patronesAMostrar)}
+                  value={selectedPatronId}
+                  onChange={val => { setSelectedPatronId(val); setError('') }}
+                  placeholder="Buscar por código o nombre del patrón…"
+                  ariaLabel="Patrón utilizado"
+                  icon={<CheckCircle2 size={15} />}
+                />
+                {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
+                  <div className="ui-hint is-warn" style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+                    No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
+                  </div>
+                )}
               </div>
 
-              {authError && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <AlertTriangle size={14} color="#ef4444" />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#dc2626' }}>{authError}</span>
+              {/* Unidad de medición y asistente de fórmula (opcional, plegable) */}
+              <div className="ui-panel">
+                <button
+                  type="button"
+                  className="ui-panel-toggle"
+                  aria-expanded={unitsOpen}
+                  onClick={() => setUnitsOpen(o => !o)}
+                >
+                  <Ruler size={15} aria-hidden="true" />
+                  <span className="ui-grow">Unidad de medición y conversor <span style={{ fontWeight: 500, color: 'var(--text-soft)' }}>(opcional)</span></span>
+                  <span className="ui-chip ui-chip-info ui-unit">{effectiveUnidad || 'N/A'}</span>
+                  {formulaActiva !== 'NINGUNA' && <span className="ui-chip ui-chip-ok"><Zap size={11} aria-hidden="true" /> Conversor</span>}
+                  <ChevronDown size={16} className="ui-chevron" aria-hidden="true" />
+                </button>
+
+                {unitsOpen && (
+                  <div className="ui-units">
+                    <div className="ui-field">
+                      <label className="ui-label" htmlFor="v-formula">Asistente de fórmula / conversión</label>
+                      <select
+                        id="v-formula"
+                        className="ui-select"
+                        value={formulaActiva}
+                        onChange={e => {
+                          const val = e.target.value as typeof formulaActiva
+                          setFormulaActiva(val)
+                          if (val === 'MASA_A_NEWTONS_KG' || val === 'MASA_A_NEWTONS_G' || val === 'KGF_A_NEWTONS') {
+                            setCustomUnidad('N')
+                          } else if (val === 'NEWTONS_A_KN') {
+                            setCustomUnidad('kN')
+                          }
+                        }}
+                      >
+                        <option value="NINGUNA">Entrada directa (sin conversión)</option>
+                        <option value="MASA_A_NEWTONS_KG">Masa (kg) → Newtons (N) [F = m × 9.80665]</option>
+                        <option value="MASA_A_NEWTONS_G">Masa (g) → Newtons (N) [F = (g/1000) × 9.80665]</option>
+                        <option value="KGF_A_NEWTONS">kgf → Newtons (N) [1 kgf = 9.80665 N]</option>
+                        <option value="NEWTONS_A_KN">Newtons (N) → kiloNewtons (kN) [1 kN = 1000 N]</option>
+                      </select>
+                    </div>
+
+                    <div className="ui-field">
+                      <label className="ui-label" htmlFor="v-unidad">Unidad de medición <span className="ui-unit">({effectiveUnidad || 'N/A'})</span></label>
+                      <div className="ui-unit-row">
+                        <input
+                          id="v-unidad" className="ui-input" type="text"
+                          placeholder="Ej: N, kN, kgf, mm"
+                          value={customUnidad} onChange={e => setCustomUnidad(e.target.value)}
+                        />
+                        <div className="ui-unit-quick" role="group" aria-label="Unidades frecuentes">
+                          {['N', 'kN', 'kgf', 'mm'].map(u => (
+                            <button
+                              key={u} type="button" className="ui-pill-btn"
+                              aria-pressed={customUnidad === u}
+                              onClick={() => setCustomUnidad(u)}
+                            >
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Accesos rápidos de masas patrón (Máquina Universal / Fuerza) */}
+              {formulaActiva === 'MASA_A_NEWTONS_KG' && (
+                <div className="ui-quick-masses">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--info)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Zap size={12} aria-hidden="true" /> Cargas patrón de laboratorio (PAT-008)
+                    </span>
+                    <span style={{ fontSize: 10.5, color: 'var(--info)', fontFamily: 'var(--font-mono)' }}>g = 9.80665 m/s²</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {[
+                      { kg: 1, n: '9.807' },
+                      { kg: 2, n: '19.613' },
+                      { kg: 5, n: '49.033' },
+                      { kg: 10, n: '98.067' },
+                      { kg: 20, n: '196.133' },
+                      { kg: 50, n: '490.333' }
+                    ].map(item => (
+                      <button
+                        key={item.kg}
+                        type="button"
+                        className="ui-pill-btn"
+                        onClick={() => {
+                          setMediciones(prev => {
+                            const cleaned = prev.filter(p => (p.patron && p.patron.trim() !== '') || (p.instrumento && p.instrumento.trim() !== ''))
+                            return [...cleaned, { masaInput: String(item.kg), patron: item.n, instrumento: '' }]
+                          })
+                        }}
+                      >
+                        +{item.kg} kg <span style={{ opacity: 0.7, fontWeight: 600 }}>({item.n} N)</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Usuario Autorizado</label>
-                <input
-                  type="text"
-                  value={authEmail}
-                  onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="Ej. cmunizaga"
-                  autoFocus
-                  style={{
-                    width: '100%', padding: '12px 16px', borderRadius: 12, border: '2px solid #f1f5f9',
-                    background: '#f8fafc', fontSize: 14, fontWeight: 600, color: '#1e293b', outline: 'none',
-                    transition: 'all 0.2s', boxSizing: 'border-box'
-                  }}
-                  onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 4px rgba(14, 165, 233, 0.1)' }}
-                  onBlur={e => { e.target.style.borderColor = '#f1f5f9'; e.target.style.boxShadow = 'none' }}
-                />
+              <div className="ui-field">
+                <div className="ui-label-row">
+                  <span className="ui-label">Puntos de medición {effectiveUnidad && <span className="ui-unit">({effectiveUnidad})</span>}</span>
+                  <button
+                    type="button" className="ui-btn ui-btn-sm ui-btn-ghost"
+                    onClick={() => setMediciones(prev => [...prev, { patron: '', instrumento: '' }])}
+                  >
+                    <Plus size={14} aria-hidden="true" /> Añadir medida
+                  </button>
+                </div>
+                <MeasureHeader unit={effectiveUnidad} mass={isMassFormula} massLabel={massLabel} />
+                {mediciones.map((med, index) => (
+                  <MeasureRow
+                    key={index}
+                    index={index}
+                    med={med}
+                    unit={effectiveUnidad}
+                    tolerance={effectiveTolerance}
+                    mass={isMassFormula}
+                    massLabel={massLabel}
+                    canRemove={mediciones.length > 1}
+                    onPatron={v => updateMed(index, { patron: v })}
+                    onInstr={v => updateMed(index, { instrumento: v })}
+                    onMass={v => {
+                      const num = parseFloat(v)
+                      let calcPatron = ''
+                      if (!isNaN(num)) {
+                        calcPatron = formulaActiva === 'MASA_A_NEWTONS_KG'
+                          ? (num * 9.80665).toFixed(3)
+                          : ((num / 1000) * 9.80665).toFixed(3)
+                      }
+                      updateMed(index, { masaInput: v, patron: calcPatron })
+                    }}
+                    onRemove={() => setMediciones(prev => prev.filter((_, i) => i !== index))}
+                  />
+                ))}
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Contraseña</label>
-                <input
-                  type="password"
-                  value={authPassword}
-                  onChange={e => setAuthPassword(e.target.value)}
-                  placeholder="••••••••"
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAuthSubmit() } }}
-                  style={{
-                    width: '100%', padding: '12px 16px', borderRadius: 12, border: '2px solid #f1f5f9',
-                    background: '#f8fafc', fontSize: 14, fontWeight: 600, color: '#1e293b', outline: 'none',
-                    transition: 'all 0.2s', boxSizing: 'border-box'
-                  }}
-                  onFocus={e => { e.target.style.borderColor = '#0ea5e9'; e.target.style.boxShadow = '0 0 0 4px rgba(14, 165, 233, 0.1)' }}
-                  onBlur={e => { e.target.style.borderColor = '#f1f5f9'; e.target.style.boxShadow = 'none' }}
-                />
-              </div>
+              {varNum != null && selectedEquipo && (
+                <div className={`ui-result ${statusCalc === 'APTO' ? 'is-ok' : 'is-bad'}`}>
+                  <div className="ui-result-main">
+                    <div className="ui-result-label"><Calculator size={11} aria-hidden="true" /> Variación detectada</div>
+                    <div className="ui-result-val">{signed(varNum, 4)} <small>{effectiveUnidad}</small></div>
+                    <div className="ui-meter"><span style={{ width: `${meterPct(varNum, effectiveTolerance)}%` }} /></div>
+                    <div className="ui-result-tol">Tolerancia ±{effectiveTolerance} {effectiveUnidad}</div>
+                  </div>
+                  <div className="ui-verdict">
+                    {statusCalc === 'APTO'
+                      ? <><CheckCircle2 size={18} aria-hidden="true" /> APTO</>
+                      : <><XCircle size={18} aria-hidden="true" /> NO APTO</>}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => { setShowAuthPrompt(false); setAuthError('') }}
-                  style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', fontWeight: 700, color: '#64748b', cursor: 'pointer', fontSize: 13 }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAuthSubmit}
-                  disabled={authLoading}
-                  style={{
-                    flex: 1.5, padding: '12px', borderRadius: 12, border: 'none',
-                    background: authLoading ? '#94a3b8' : 'linear-gradient(135deg, #0ea5e9, #2563eb)',
-                    fontWeight: 800, color: '#fff', cursor: authLoading ? 'not-allowed' : 'pointer', fontSize: 13,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    boxShadow: '0 8px 16px rgba(14, 165, 233, 0.3)', transition: 'all 0.2s'
-                  }}
-                >
-                  {authLoading ? 'Verificando...' : <><LogIn size={16} /> Autorizar</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="ui-field">
+        <label className="ui-label" htmlFor="v-tecnico"><User size={13} aria-hidden="true" /> Responsable / inspector <span className="ui-required">*</span></label>
+        <input
+          id="v-tecnico" className="ui-input" value={tecnico} onChange={e => setTecnico(e.target.value)}
+          placeholder="Ingrese su nombre o apellido" autoComplete="name" required
+        />
       </div>
 
+      <div className="ui-field">
+        <label className="ui-label" htmlFor="v-obs"><FileText size={13} aria-hidden="true" /> Comentarios / observaciones</label>
+        <textarea
+          id="v-obs" className="ui-textarea" value={obs} onChange={e => setObs(e.target.value)} rows={2}
+          placeholder="Anotaciones generales del estado del equipo o condiciones ambientales..."
+        />
+      </div>
 
-
-      <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(15, 23, 42, 0.7);
-          backdrop-filter: blur(8px);
-          display: grid;
-          place-items: center;
-          padding: 20px;
-          z-index: 2000;
-          animation: fadeIn 0.3s ease-out;
-        }
-        .modal {
-          background: #fff;
-          border-radius: 24px;
-          width: 100%;
-          overflow: hidden;
-          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .btn-close-large {
-          background: #f1f5f9;
-          border: none;
-          padding: 8px;
-          border-radius: 50%;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-        }
-        .btn-close-large:hover {
-          background: #e2e8f0;
-          transform: rotate(90deg);
-        }
-        .form-group-modern {
-          margin-bottom: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .form-group-modern label {
-          font-size: 11px;
-          font-weight: 700;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .form-group-modern input, .form-group-modern select, .form-group-modern textarea {
-          padding: 12px 16px;
-          border-radius: 12px;
-          border: 2px solid #f1f5f9;
-          background: #f8fafc;
-          font-size: 15px;
-          font-weight: 500;
-          color: #1e293b;
-          transition: all 0.2s;
-          outline: none;
-        }
-        .form-group-modern input:focus, .form-group-modern select:focus, .form-group-modern textarea:focus {
-          border-color: #0ea5e9;
-          background: #fff;
-          box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
-        }
-        .metrology-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        .status-card {
-          padding: 16px 20px;
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          transition: all 0.3s;
-        }
-        .is-apto {
-          background: #f0fdf4;
-          border: 1px solid #dcfce7;
-          color: #166534;
-        }
-        .is-no-apto {
-          background: #fef2f2;
-          border: 1px solid #fee2e2;
-          color: #991b1b;
-        }
-        .status-label { font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.7; }
-        .status-val { font-size: 24px; font-weight: 900; line-height: 1; margin: 4px 0; }
-        .tolerance-info { font-size: 11px; font-weight: 600; opacity: 0.8; }
-        .status-badge-premium {
-          padding: 10px 18px;
-          border-radius: 12px;
-          font-weight: 800;
-          font-size: 14px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #fff;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .btn-cancel {
-          padding: 12px 24px;
-          border-radius: 12px;
-          border: none;
-          background: transparent;
-          font-weight: 700;
-          color: #64748b;
-          cursor: pointer;
-        }
-        .btn-save-premium {
-          padding: 12px 24px;
-          border-radius: 12px;
-          border: none;
-          background: #0f172a;
-          color: #fff;
-          font-weight: 700;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-          transition: all 0.2s;
-        }
-        .btn-save-premium:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-          background: #1e293b;
-        }
-        .btn-save-premium:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        @media (max-width: 768px) {
-          .modal {
-            border-radius: 0;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-          }
-          .modal-body { flex: 1; overflow-y: auto; }
-          .metrology-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
-    </div>
+      <div className="ui-field">
+        <span className="ui-label"><Camera size={13} aria-hidden="true" /> Evidencia fotográfica (opcional)</span>
+        {photoFile ? (
+          <div className="ui-file">
+            <div className="ui-file-name">
+              <Camera size={18} aria-hidden="true" />
+              <span>{photoFile.name}</span>
+            </div>
+            <button type="button" className="ui-btn ui-btn-sm ui-btn-ghost" onClick={() => setPhotoFile(null)}>Quitar</button>
+          </div>
+        ) : (
+          <label className="ui-drop">
+            <Camera size={22} color="var(--text-soft)" aria-hidden="true" />
+            <strong>Haz clic para subir la foto de evidencia</strong>
+            <small>JPG, PNG o WEBP · máx. 10 MB · se optimiza automáticamente</small>
+            <input
+              type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { pickPhoto(e.target.files?.[0]); e.target.value = '' }}
+            />
+          </label>
+        )}
+      </div>
+    </Modal>
   )
 }

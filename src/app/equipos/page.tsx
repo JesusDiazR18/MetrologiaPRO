@@ -226,7 +226,7 @@ function EquiposContent() {
         const data = await res.json()
         setExpandedDetails(prev => ({ ...prev, [eq.ID_Equipo]: data }))
         loadedEq = data
-        toast.success('Cargado', { id: 'modal-loading' })
+        toast.dismiss('modal-loading')
       } else {
         toast.error('Error al cargar detalles', { id: 'modal-loading' })
       }

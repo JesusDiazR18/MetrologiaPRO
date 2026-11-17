@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import './ui-kit.css'
 import AppLayout from '@/components/AppLayout'
 import NotificationsProvider from '@/components/NotificationsProvider'
 import { AuthProvider } from '@/components/AuthProvider'

@@ -495,7 +495,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           box-shadow: 0 0 0 3px var(--accent-glow, rgba(2, 132, 199, 0.15));
         }
 
-        .search-input-icon {
+        :global(.search-input-icon) {
           color: var(--text-soft, #94a3b8);
           flex-shrink: 0;
         }

@@ -212,7 +212,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
           <div className="modal-body" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', flex: 1 }}>
-            {error && <div style={{ background: 'var(--danger-dim)', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
+            {error && <div style={{ background: 'var(--danger-dim)', color: 'var(--bad)', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
             
             <div className="form-section">
               <div className="section-title">1. Identificación y Estado</div>
@@ -395,13 +395,13 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
 
               <div className="grid-3" style={{ gridTemplateColumns: selectedMags.length > 1 ? '1fr' : 'repeat(3, 1fr)' }}>
                 {selectedMags.length > 1 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, gridColumn: 'span 3', background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, gridColumn: 'span 3', background: 'var(--surface-field)', padding: 16, borderRadius: 12, border: '1px solid var(--border-field)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       📐 Tolerancias y Unidades por Magnitud
                     </div>
                     {selectedMags.map((mag: string) => (
                       <div key={mag} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: 12, alignItems: 'center' }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{mag}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{mag}</span>
                         <input
                           className="form-control"
                           type="number"
@@ -491,16 +491,16 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                       <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📄</div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{pdfFile.name}</span>
                     </div>
-                    <button type="button" onClick={() => setPdfFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar PDF</button>
+                    <button type="button" onClick={() => setPdfFile(null)} style={{ background: 'var(--danger-dim)', color: 'var(--bad)', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar PDF</button>
                   </div>
                 ) : (
                   <label 
                     style={{ 
-                      border: '2px dashed #cbd5e1', 
+                      border: '2px dashed var(--border-field)', 
                       borderRadius: 14, 
                       padding: '24px 20px', 
                       textAlign: 'center', 
-                      background: '#f8fafc', 
+                      background: 'var(--surface-field)', 
                       cursor: 'pointer', 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -541,16 +541,16 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
                       <div style={{ width: 36, height: 36, background: 'var(--cyan-dim)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--oxford-blue)' }}>{photoFile.name}</span>
                     </div>
-                    <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'var(--danger-dim)', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar Foto</button>
+                    <button type="button" onClick={() => setPhotoFile(null)} style={{ background: 'var(--danger-dim)', color: 'var(--bad)', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar Foto</button>
                   </div>
                 ) : (
                   <label 
                     style={{ 
-                      border: '2px dashed #cbd5e1', 
+                      border: '2px dashed var(--border-field)', 
                       borderRadius: 14, 
                       padding: '24px 20px', 
                       textAlign: 'center', 
-                      background: '#f8fafc', 
+                      background: 'var(--surface-field)', 
                       cursor: 'pointer', 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -585,7 +585,7 @@ export default function EditEquipoModal({ equipo, onClose, onSaved }: Props) {
       </div>
       <style jsx>{`
         .form-section {
-          background: #ffffff;
+          background: var(--card-bg);
           border: 1px solid var(--snow-3);
           border-radius: 12px;
           padding: 20px;

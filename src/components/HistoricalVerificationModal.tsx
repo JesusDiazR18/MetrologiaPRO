@@ -1,161 +1,14 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { calcularVariacion, calcularStatus } from '@/lib/metrologia'
+import { compressImage } from '@/lib/imageUtils'
 import { 
   CheckCircle2, XCircle, User, FileText, 
-  Calculator, AlertTriangle, Settings2, Activity, ClipboardList, Calendar
+  Calculator, Settings2, Activity, ClipboardList, Calendar
 } from 'lucide-react'
 
-// Componente de Selección Búsqueda Rápida (Combobox)
-function SearchableSelect({ 
-  options, 
-  value, 
-  onChange, 
-  placeholder = "Buscar y seleccionar...",
-  icon = <User size={14} />
-}: { 
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-  icon?: React.ReactNode;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const selectedOption = options.find(o => o.value === value);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <div 
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) setSearch('');
-        }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          borderRadius: '12px',
-          border: `2px solid ${isOpen ? '#0ea5e9' : '#f1f5f9'}`,
-          background: isOpen ? '#fff' : '#f8fafc',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          boxShadow: isOpen ? '0 0 0 4px rgba(14, 165, 233, 0.1)' : 'none'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
-          <span style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>{icon}</span>
-          {isOpen ? (
-            <input
-              autoFocus
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
-                  if (filtered.length > 0) {
-                    onChange(filtered[0].value);
-                    setIsOpen(false);
-                  }
-                } else if (e.key === 'Escape') {
-                  setIsOpen(false);
-                }
-              }}
-              placeholder="Escribir código o nombre..."
-              style={{
-                border: 'none',
-                background: 'transparent',
-                outline: 'none',
-                width: '100%',
-                fontSize: '15px',
-                fontWeight: 600,
-                color: '#1e293b',
-                padding: 0
-              }}
-            />
-          ) : (
-            <span style={{ fontSize: '15px', fontWeight: 600, color: selectedOption ? '#1e293b' : '#94a3b8', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-              {selectedOption ? selectedOption.label : placeholder}
-            </span>
-          )}
-        </div>
-        <span style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94a3b8', fontSize: '12px', marginLeft: 8 }}>
-          ▼
-        </span>
-      </div>
-
-      {isOpen && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            left: 0,
-            right: 0,
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15)',
-            border: '1px solid #cbd5e1',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            zIndex: 3000,
-            padding: '8px',
-            animation: 'fadeIn 0.2s ease-out'
-          }}
-        >
-          {options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
-            <div style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
-              No se encontraron coincidencias
-            </div>
-          ) : (
-            options.filter(o => o.label.toLowerCase().includes(search.toLowerCase())).map((opt) => (
-              <div
-                key={opt.value}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: opt.value === value ? 700 : 500,
-                  color: opt.value === value ? '#2563eb' : '#1e293b',
-                  background: opt.value === value ? '#eff6ff' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.15s',
-                  marginBottom: '2px'
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = opt.value === value ? '#eff6ff' : '#f1f5f9')}
-                onMouseLeave={e => (e.currentTarget.style.background = opt.value === value ? '#eff6ff' : 'transparent')}
-              >
-                <span>{opt.label}</span>
-                {opt.value === value && <CheckCircle2 size={16} color="#2563eb" />}
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import Modal from '@/components/ui/Modal'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 interface Equipo {
   ID_Equipo: string
@@ -471,7 +324,19 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
     try {
       let photoBase64 = ''
       if (photoFile) {
-        photoBase64 = await fileToBase64(photoFile)
+        try {
+          photoBase64 = await compressImage(photoFile)
+        } catch {
+          setError('No se pudo procesar la foto. Prueba con otra imagen o quítala.')
+          setSaving(false)
+          return
+        }
+        // Límite del cuerpo de petición en Vercel Serverless (4,5 MB): se valida ANTES de enviar
+        if (photoBase64.length > 3_800_000) {
+          setError(`La foto pesa ${(photoBase64.length / 1_048_576).toFixed(1)} MB incluso comprimida y el servidor admite ~3,6 MB. Usa otra imagen o quítala.`)
+          setSaving(false)
+          return
+        }
       }
 
       let formulaNote = ''
@@ -594,13 +459,21 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
       if (r.ok) { 
         onSaved() 
       }
-      else { 
-        const d = await r.json()
-        setError(d.error ?? 'Error al guardar la verificación')
-        setSaving(false) 
+      else {
+        let errorMsg = 'Error al guardar la verificación'
+        try {
+          const d = await r.json()
+          if (d?.error) errorMsg = d.error
+        } catch {
+          errorMsg = r.status === 413
+            ? 'El envío es demasiado grande para el servidor (413). Quita la foto o usa una de menor tamaño.'
+            : `Error del servidor (${r.status}: ${r.statusText || 'respuesta no válida'})`
+        }
+        setError(errorMsg)
+        setSaving(false)
       }
     } catch (err) {
-      setError('Error de conexión')
+      setError('No se pudo conectar con el servidor. Tus datos siguen en el formulario: revisa tu conexión y vuelve a intentarlo.')
       setSaving(false)
     }
   }
@@ -618,97 +491,62 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
   })
   const patronesAMostrar = patronesFiltrados.length > 0 ? patronesFiltrados : patrones
 
+  // ¿Hay datos ingresados que se perderían al cerrar? (solo registros nuevos)
+  const dirty = !saving && !logToEdit && Boolean(
+    tecnico.trim() || obs.trim() || accionesPendientes.trim() || photoFile || selectedPatronId ||
+    mediciones.some(m => m.patron || m.instrumento || m.masaInput)
+  )
+
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
-        <div className="modal-header" style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 42, height: 42, background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', borderRadius: 12, display: 'grid', placeItems: 'center', boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)' }}>
-              <Settings2 size={20} color="#fff" />
-            </div>
-            <div>
-              <h2 className="modal-title" style={{ fontSize: 18, fontWeight: 800 }}>
-                {logToEdit ? 'Editar Verificación' : 'Agregar Verificación Anterior'}
-              </h2>
-              <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                {logToEdit 
-                  ? `Modificando registro de control para ${selectedEquipo?.Codigo_Interno}` 
-                  : (selectedEquipo ? `Carga de historial metrológico previo para ${selectedEquipo.Codigo_Interno}` : 'Carga de historial metrológico previo')}
-              </p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="btn-close-large">
-            <XCircle size={24} color="#94a3b8" />
+    <Modal
+      title={logToEdit ? 'Editar Verificación' : 'Agregar Verificación Anterior'}
+      subtitle={logToEdit
+        ? `Modificando registro de control para ${selectedEquipo?.Codigo_Interno}`
+        : (selectedEquipo ? `Carga de historial metrológico previo para ${selectedEquipo.Codigo_Interno}` : 'Carga de historial metrológico previo')}
+      icon={<Settings2 size={20} />}
+      onClose={onClose}
+      dirty={dirty}
+      busy={saving}
+      maxWidth={600}
+      error={error}
+      onSubmit={handleSubmit}
+      toolbar={
+        <div className="ui-seg" role="tablist" aria-label="¿Qué tipo de control se realizó?">
+          {([
+            { id: 'OPERATIVIDAD' as const, label: '1. Operatividad', short: '1. Operatividad', Icon: Activity },
+            { id: 'CALIBRACION' as const, label: tab2Label, short: '2. Verificación', Icon: Calculator },
+          ]).map(({ id, label, short, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tipoVerif === id}
+              aria-label={label}
+              className="ui-seg-btn"
+              onClick={() => { setTipoVerif(id); setError('') }}
+            >
+              <Icon size={16} aria-hidden="true" />
+              <span className="ui-seg-long">{label}</span>
+              <span className="ui-seg-short" aria-hidden="true">{short}</span>
+            </button>
+          ))}
+        </div>
+      }
+      footer={
+        <>
+          <button type="button" className="ui-btn ui-btn-quiet" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="submit" className="ui-btn ui-btn-primary" disabled={saving}>
+            {saving
+              ? <><span className="ui-spin" aria-hidden="true" /> Guardando…</>
+              : <><CheckCircle2 size={18} aria-hidden="true" /> {logToEdit ? 'Guardar Cambios' : 'Guardar Histórico'}</>}
           </button>
-        </div>
-
-        {/* Tabs de Selección de Modalidad */}
-        <div style={{ padding: '20px 24px 0 24px', background: '#fff' }}>
-          <label style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, display: 'block' }}>
-            ¿Qué tipo de control se realizó? *
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, background: '#f1f5f9', padding: 6, borderRadius: 16 }}>
-            <button
-              type="button"
-              onClick={() => setTipoVerif('OPERATIVIDAD')}
-              style={{
-                padding: '12px',
-                borderRadius: 12,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                transition: 'all 0.2s',
-                background: tipoVerif === 'OPERATIVIDAD' ? '#fff' : 'transparent',
-                color: tipoVerif === 'OPERATIVIDAD' ? '#0f172a' : '#64748b',
-                boxShadow: tipoVerif === 'OPERATIVIDAD' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              <Activity size={16} color={tipoVerif === 'OPERATIVIDAD' ? '#2563eb' : '#64748b'} />
-              1. Operatividad
-            </button>
-            <button
-              type="button"
-              onClick={() => setTipoVerif('CALIBRACION')}
-              style={{
-                padding: '12px',
-                borderRadius: 12,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                transition: 'all 0.2s',
-                background: tipoVerif === 'CALIBRACION' ? '#fff' : 'transparent',
-                color: tipoVerif === 'CALIBRACION' ? '#0f172a' : '#64748b',
-                boxShadow: tipoVerif === 'CALIBRACION' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              <Calculator size={16} color={tipoVerif === 'CALIBRACION' ? '#0ea5e9' : '#64748b'} />
-              {tab2Label}
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-            {error && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: 12, fontSize: 13, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <AlertTriangle size={18} /> {error}
-              </div>
-            )}
-
+        </>
+      }
+    >
             {equipo && equipo.ID_Equipo ? (
-              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{equipo.Nombre_Equipo}</div>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Código: {equipo.Codigo_Interno}</div>
+              <div style={{ background: 'var(--surface-field)', padding: '12px 16px', borderRadius: 14, border: '1px solid var(--border-field)', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{equipo.Nombre_Equipo}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600 }}>Código: {equipo.Codigo_Interno}</div>
               </div>
             ) : (
               <div className="form-group-modern" style={{ marginBottom: 20 }}>
@@ -767,7 +605,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                     placeholder="Ej: Reemplazar sonda térmica la próxima semana, ajustar conector..." 
                     rows={2} 
                   />
-                  <span style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
+                  <span style={{ fontSize: 10, color: 'var(--text-soft)', marginTop: 4 }}>
                     💡 Ingresar las acciones que se necesitan cambiará automáticamente el estado a seguimiento.
                   </span>
                 </div>
@@ -785,9 +623,9 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                     const patronesAMostrar = filteredPatrons.length > 0 ? filteredPatrons : patrones
 
                     return (
-                      <div key={mag} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div key={mag} style={{ background: 'var(--surface-field)', border: '1px solid var(--border-field)', borderRadius: 16, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-field)', paddingBottom: 10 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
                             <Activity size={16} color="#0ea5e9" /> MAGNITUD: {mag}
                           </span>
                           {calcs && (
@@ -798,7 +636,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                               borderRadius: 20,
                               border: `1.5px solid ${calcs.status === 'APTO' ? '#10b981' : '#ef4444'}`,
                               color: calcs.status === 'APTO' ? '#10b981' : '#ef4444',
-                              background: calcs.status === 'APTO' ? '#ecfdf5' : '#fef2f2'
+                              background: calcs.status === 'APTO' ? 'var(--ok-bg)' : 'var(--bad-bg)'
                             }}>
                               {calcs.status === 'APTO' ? '✓ APTO' : '✗ NO APTO'}
                             </span>
@@ -823,7 +661,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>Puntos de Medición</span>
                             <button
                               type="button"
@@ -860,7 +698,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                       [mag]: { ...prev[mag], Mediciones: newMeds }
                                     }))
                                   }}
-                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid #cbd5e1', background: '#f8fafc', color: '#1e293b', outline: 'none', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--border-field)', background: 'var(--surface-field)', color: 'var(--text-main)', outline: 'none', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                                   required
                                 />
                                 <input
@@ -876,10 +714,10 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                       [mag]: { ...prev[mag], Mediciones: newMeds }
                                     }))
                                   }}
-                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid #cbd5e1', background: '#f8fafc', color: '#1e293b', outline: 'none', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                                  style={{ padding: '8px 10px', fontSize: 13, borderRadius: 8, border: '1.5px solid var(--border-field)', background: 'var(--surface-field)', color: 'var(--text-main)', outline: 'none', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                                   required
                                 />
-                                <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textAlign: 'center', background: '#f1f5f9', padding: '8px 2px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)', textAlign: 'center', background: 'var(--surface-sunken)', padding: '8px 2px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
                                 </div>
                                 <button
@@ -927,8 +765,8 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                         </div>
 
                         {calcs && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#475569' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--card-bg)', padding: 12, borderRadius: 10, border: '1px solid var(--border-field)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>
                               <span>Variación: {calcs.varNum > 0 ? '+' : ''}{calcs.varNum.toFixed(4)} {calcs.magUnidad}</span>
                               <span>Tolerancia: ±{calcs.magTolerancia} {calcs.magUnidad}</span>
                             </div>
@@ -969,7 +807,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                         icon={<CheckCircle2 size={14} />}
                       />
                       {patronesFiltrados.length === 0 && selectedEquipo?.Magnitud && (
-                        <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
+                        <div style={{ fontSize: 11, color: 'var(--warn)', fontWeight: 600, marginTop: 4 }}>
                           ⚠️ No hay patrones vigentes registrados para {selectedEquipo.Magnitud}. Se muestran todos.
                         </div>
                       )}
@@ -978,7 +816,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                     {/* Configuración Opcional: Unidad de Medición y Asistente de Fórmula */}
                     <div style={{
                       background: 'rgba(248, 250, 252, 0.8)',
-                      border: '1.5px solid #e2e8f0',
+                      border: '1.5px solid var(--border-field)',
                       borderRadius: 12,
                       padding: '12px 14px',
                       display: 'flex',
@@ -986,14 +824,14 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                       gap: 10
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#334155' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>
                           <span>📐 Unidad de Medición & Conversor</span>
-                          <span style={{ fontSize: 10, background: '#e0f2fe', color: '#0284c7', padding: '2px 6px', borderRadius: 10, fontWeight: 700 }}>
+                          <span style={{ fontSize: 10, background: 'var(--info-bg)', color: 'var(--accent)', padding: '2px 6px', borderRadius: 10, fontWeight: 700 }}>
                             OPCIONAL
                           </span>
                         </div>
                         {formulaActiva !== 'NINGUNA' && (
-                          <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 11, color: 'var(--ok)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                             ⚡ Conversor activo ({effectiveUnidad})
                           </span>
                         )}
@@ -1001,7 +839,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
                         <div>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)', display: 'block', marginBottom: 4 }}>
                             Asistente de Fórmula / Conversión:
                           </label>
                           <select
@@ -1019,11 +857,11 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                               width: '100%',
                               padding: '8px 10px',
                               borderRadius: 8,
-                              border: '1.5px solid #cbd5e1',
-                              background: '#fff',
+                              border: '1.5px solid var(--border-field)',
+                              background: 'var(--card-bg)',
                               fontSize: 12,
                               fontWeight: 600,
-                              color: '#1e293b',
+                              color: 'var(--text-main)',
                               outline: 'none'
                             }}
                           >
@@ -1036,24 +874,25 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                         </div>
 
                         <div>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)', display: 'block', marginBottom: 4 }}>
                             Unidad de Medición ({effectiveUnidad || 'N/A'}):
                           </label>
-                          <div style={{ display: 'flex', gap: 6 }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                             <input
                               type="text"
                               placeholder="Ej: N, kN, kgf, mm"
                               value={customUnidad}
                               onChange={e => setCustomUnidad(e.target.value)}
                               style={{
-                                flex: 1,
+                                flex: '1 1 110px',
+                                minWidth: 0,
                                 padding: '8px 10px',
                                 borderRadius: 8,
-                                border: '1.5px solid #cbd5e1',
-                                background: '#fff',
+                                border: '1.5px solid var(--border-field)',
+                                background: 'var(--card-bg)',
                                 fontSize: 12,
                                 fontWeight: 600,
-                                color: '#1e293b',
+                                color: 'var(--text-main)',
                                 outline: 'none'
                               }}
                             />
@@ -1064,9 +903,9 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                   type="button"
                                   onClick={() => setCustomUnidad(u)}
                                   style={{
-                                    border: '1px solid #cbd5e1',
-                                    background: customUnidad === u ? '#0ea5e9' : '#fff',
-                                    color: customUnidad === u ? '#fff' : '#475569',
+                                    border: '1px solid var(--border-field)',
+                                    background: customUnidad === u ? '#0ea5e9' : 'var(--card-bg)',
+                                    color: customUnidad === u ? '#fff' : 'var(--text-dim)',
                                     borderRadius: 6,
                                     padding: '0 6px',
                                     fontSize: 10,
@@ -1086,7 +925,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                       {formulaActiva === 'MASA_A_NEWTONS_KG' && (
                         <div style={{ 
                           background: 'rgba(14, 165, 233, 0.07)', 
-                          border: '1px dashed #38bdf8', 
+                          border: '1px dashed var(--info-border)', 
                           borderRadius: 8, 
                           padding: '8px 10px',
                           display: 'flex',
@@ -1094,10 +933,10 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                           gap: 6
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#0369a1' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--info)' }}>
                               ⚖️ Cargas Patrón de Laboratorio (PAT-008):
                             </span>
-                            <span style={{ fontSize: 10, color: '#0284c7', fontFamily: 'var(--font-mono)' }}>g = 9.80665 m/s²</span>
+                            <span style={{ fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>g = 9.80665 m/s²</span>
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                             {[
@@ -1125,9 +964,9 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                   })
                                 }}
                                 style={{
-                                  background: '#fff',
-                                  border: '1px solid #7dd3fc',
-                                  color: '#0369a1',
+                                  background: 'var(--card-bg)',
+                                  border: '1px solid var(--info-border)',
+                                  color: 'var(--info)',
                                   padding: '4px 8px',
                                   borderRadius: 6,
                                   fontSize: 11,
@@ -1148,7 +987,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>
                           Puntos de Medición {effectiveUnidad ? `(${effectiveUnidad})` : ''}
                         </span>
@@ -1216,9 +1055,9 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                     padding: '10px 10px', 
                                     fontSize: 13, 
                                     borderRadius: 10, 
-                                    border: '2px solid #f1f5f9', 
-                                    background: '#f8fafc', 
-                                    color: '#1e293b',
+                                    border: '2px solid var(--border-field)', 
+                                    background: 'var(--surface-field)', 
+                                    color: 'var(--text-main)',
                                     outline: 'none',
                                     width: '100%',
                                     minWidth: 0,
@@ -1227,7 +1066,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                   required
                                 />
                                 {med.patron && (
-                                  <div style={{ fontSize: 10, color: '#0284c7', fontWeight: 700, marginTop: 3, paddingLeft: 2 }}>
+                                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, marginTop: 3, paddingLeft: 2 }}>
                                     ⚡ = {med.patron} {effectiveUnidad || 'N'}
                                   </div>
                                 )}
@@ -1247,9 +1086,9 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                   padding: '10px 10px', 
                                   fontSize: 13, 
                                   borderRadius: 10, 
-                                  border: '2px solid #f1f5f9', 
-                                  background: '#f8fafc', 
-                                  color: '#1e293b',
+                                  border: '2px solid var(--border-field)', 
+                                  background: 'var(--surface-field)', 
+                                  color: 'var(--text-main)',
                                   outline: 'none',
                                   width: '100%',
                                   minWidth: 0,
@@ -1273,9 +1112,9 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                                 padding: '10px 10px', 
                                 fontSize: 13, 
                                 borderRadius: 10, 
-                                border: '2px solid #f1f5f9', 
-                                background: '#f8fafc', 
-                                color: '#1e293b',
+                                border: '2px solid var(--border-field)', 
+                                background: 'var(--surface-field)', 
+                                color: 'var(--text-main)',
                                 outline: 'none',
                                 width: '100%',
                                 minWidth: 0,
@@ -1283,7 +1122,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                               }}
                               required
                             />
-                            <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textAlign: 'center', background: '#f1f5f9', padding: '10px 2px', borderRadius: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)', textAlign: 'center', background: 'var(--surface-sunken)', padding: '10px 2px', borderRadius: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {diff !== null ? `${diff > 0 ? '+' : ''}${diff}` : 'Var.'}
                             </div>
                             <button
@@ -1358,23 +1197,23 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
             <div className="form-group-modern" style={{ marginTop: 20, marginBottom: 0 }}>
               <label style={{ marginBottom: 4, display: 'block' }}>📸 Evidencia Fotográfica (Opcional)</label>
               {photoFile || (logToEdit?.Evidencia_Foto && !photoRemoved) ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f1f5f9', border: '1px solid #0ea5e9', borderRadius: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface-sunken)', border: '1px solid #0ea5e9', borderRadius: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, background: '#e0f2fe', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                    <div style={{ width: 36, height: 36, background: 'var(--info-bg)', borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 18 }}>📸</div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>
                       {photoFile ? photoFile.name : 'Imagen Guardada'}
                     </span>
                   </div>
-                  <button type="button" onClick={() => { setPhotoFile(null); setPhotoRemoved(true); }} style={{ background: '#fee2e2', color: '#991b1b', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar</button>
+                  <button type="button" onClick={() => { setPhotoFile(null); setPhotoRemoved(true); }} style={{ background: 'var(--bad-bg)', color: 'var(--bad)', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Quitar</button>
                 </div>
               ) : (
                 <label 
                   style={{ 
-                    border: '2px dashed #cbd5e1', 
+                    border: '2px dashed var(--border-field)', 
                     borderRadius: 14, 
                     padding: '20px', 
                     textAlign: 'center', 
-                    background: '#f8fafc', 
+                    background: 'var(--surface-field)', 
                     cursor: 'pointer', 
                     display: 'flex', 
                     flexDirection: 'column', 
@@ -1384,10 +1223,10 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                   }}
                 >
                   <span style={{ fontSize: 24 }}>📸</span>
-                  <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: 13 }}>
                     Haz clic para subir o arrastra la foto de evidencia aquí
                   </div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-soft)' }}>Formatos JPG, PNG, WEBP (Máx 10 MB)</div>
                   <input 
                     type="file" 
                     accept="image/*" 
@@ -1397,49 +1236,8 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
                 </label>
               )}
             </div>
-          </div>
-
-          <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn-save-premium" disabled={saving}>
-              {saving ? 'Guardando...' : <><CheckCircle2 size={18} /> {logToEdit ? 'Guardar Cambios' : 'Guardar Histórico'}</>}
-            </button>
-          </div>
-        </form>
-      </div>
 
       <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(15, 23, 42, 0.7);
-          backdrop-filter: blur(8px);
-          display: grid;
-          place-items: center;
-          padding: 20px;
-          z-index: 2000;
-          animation: fadeIn 0.3s ease-out;
-        }
-        .modal {
-          background: #fff;
-          border-radius: 24px;
-          width: 100%;
-          overflow: hidden;
-          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .btn-close-large {
-          background: #f1f5f9;
-          border: none;
-          padding: 8px;
-          border-radius: 50%;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-        }
-        .btn-close-large:hover {
-          background: #e2e8f0;
-          transform: rotate(90deg);
-        }
         .form-group-modern {
           margin-bottom: 20px;
           display: flex;
@@ -1449,7 +1247,7 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
         .form-group-modern label {
           font-size: 11px;
           font-weight: 700;
-          color: #64748b;
+          color: var(--text-soft);
           text-transform: uppercase;
           letter-spacing: 0.05em;
           display: flex;
@@ -1457,20 +1255,22 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
           gap: 6px;
         }
         .form-group-modern input, .form-group-modern select, .form-group-modern textarea {
-          padding: 12px 16px;
-          border-radius: 12px;
-          border: 2px solid #f1f5f9;
-          background: #f8fafc;
-          font-size: 15px;
+          padding: 11px 14px;
+          border-radius: 10px;
+          border: 1.5px solid var(--border-field);
+          background: var(--surface-field);
+          font-size: 14px;
           font-weight: 500;
-          color: #1e293b;
+          font-family: inherit;
+          color: var(--text-main);
+          min-width: 0;
           transition: all 0.2s;
           outline: none;
         }
         .form-group-modern input:focus, .form-group-modern select:focus, .form-group-modern textarea:focus {
-          border-color: #0ea5e9;
-          background: #fff;
-          box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+          border-color: var(--accent);
+          background: var(--card-bg);
+          box-shadow: 0 0 0 3px var(--ring);
         }
         .metrology-grid {
           display: grid;
@@ -1484,16 +1284,8 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
           align-items: center;
           transition: all 0.3s;
         }
-        .is-apto {
-          background: #f0fdf4;
-          border: 1px solid #dcfce7;
-          color: #166534;
-        }
-        .is-no-apto {
-          background: #fef2f2;
-          border: 1px solid #fee2e2;
-          color: #991b1b;
-        }
+        .is-apto { background: var(--ok-bg); border: 1px solid var(--ok-border); color: var(--ok); }
+        .is-no-apto { background: var(--bad-bg); border: 1px solid var(--bad-border); color: var(--bad); }
         .status-label { font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.7; }
         .status-val { font-size: 24px; font-weight: 900; line-height: 1; margin: 4px 0; }
         .tolerance-info { font-size: 11px; font-weight: 600; opacity: 0.8; }
@@ -1505,53 +1297,13 @@ export default function HistoricalVerificationModal({ equipo, equipos = [], logT
           display: flex;
           align-items: center;
           gap: 8px;
-          background: #fff;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          background: var(--card-bg);
+          box-shadow: var(--shadow-md);
         }
-        .btn-cancel {
-          padding: 12px 24px;
-          border-radius: 12px;
-          border: none;
-          background: transparent;
-          font-weight: 700;
-          color: #64748b;
-          cursor: pointer;
-        }
-        .btn-save-premium {
-          padding: 12px 24px;
-          border-radius: 12px;
-          border: none;
-          background: #0f172a;
-          color: #fff;
-          font-weight: 700;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-          transition: all 0.2s;
-        }
-        .btn-save-premium:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-          background: #1e293b;
-        }
-        .btn-save-premium:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        @media (max-width: 768px) {
-          .modal {
-            border-radius: 0;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-          }
-          .modal-body { flex: 1; overflow-y: auto; }
+        @media (max-width: 640px) {
           .metrology-grid { grid-template-columns: 1fr; }
         }
       `}</style>
-    </div>
+    </Modal>
   )
 }

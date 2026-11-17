@@ -80,7 +80,7 @@ export default function RenewCertModal({ asset, onClose, onSaved }: Props) {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {error && <div style={{ background: 'var(--danger-dim)', color: '#991b1b', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
+            {error && <div style={{ background: 'var(--danger-dim)', color: 'var(--bad)', padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>{error}</div>}
             
             <div className="form-section">
               <div className="section-title">Archivo de Certificado</div>
@@ -149,7 +149,7 @@ export default function RenewCertModal({ asset, onClose, onSaved }: Props) {
       </div>
       <style jsx>{`
         .form-section {
-          background: #ffffff;
+          background: var(--card-bg);
           border: 1px solid var(--snow-3);
           border-radius: 12px;
           padding: 20px;
